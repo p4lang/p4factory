@@ -228,10 +228,6 @@ packet_handler(int port_num, const char *buffer, int length)
 }
 
 
-extern int lg_pd_ucli_create(char *prompt);
-extern int lg_pd_ucli_thread_spawn(void);
-
-
 static void
 parse_options(int argc, char **argv)
 {

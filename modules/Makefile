@@ -29,7 +29,7 @@ moduledir_show_targets::
 	@echo "    autogen                     Make autogen in all modules."
 
 autogen:
-	$(MAKE) -C lg_utils autogen
+	$(MAKE) -C p4_utils autogen
 	$(MAKE) -C common autogen
 
 
