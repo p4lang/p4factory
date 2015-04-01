@@ -1,0 +1,9 @@
+/build
+/.*_ts
+/dependmodules.x
+/__PROJECT_NAME__.mk
+/*.pcap
+/__PROJECT_NAME__
+/lg_pd.mk
+/main.c
+/of-tests/pd_thrift

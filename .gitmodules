@@ -1,0 +1,9 @@
+[submodule "submodules/p4c-behavioral"]
+	path = submodules/p4c-behavioral
+	url = git@github.com:p4lang/p4c-behavioral.git
+[submodule "submodules/oft-infra"]
+	path = submodules/oft-infra
+	url = git@github.com:p4lang/oftest.git
+[submodule "submodules/p4c-graphs"]
+	path = submodules/p4c-graphs
+	url = git@github.com:p4lang/p4c-graphs.git

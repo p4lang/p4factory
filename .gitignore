@@ -1,0 +1,7 @@
+*~
+*.pyc
+parser.out
+parsetab.py
+oft.log
+*.dot
+*.png

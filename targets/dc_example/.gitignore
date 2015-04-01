@@ -1,0 +1,8 @@
+/build
+/.*_ts
+/dependmodules.x
+/dc_example.mk
+/*.pcap
+/dc_example
+/lg_pd.mk
+/of-tests/pd_thrift
