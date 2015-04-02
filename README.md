@@ -28,7 +28,7 @@ To run a simple test, run this in a different terminal:
     cd p4factory/targets/basic_routing/  
     sudo python run_tests.py --test-dir of-tests/tests/  
 
-Quickstart
+Mininet Integration
 ========
 
 We provide a Mininet integration for one of our existing targets: simple_router  
@@ -71,4 +71,12 @@ directory in targets/ called project_name/, set it up to build the behavioral mo
 template for the P4 program there named project_name.p4. Then, edit that file or copy your P4 
 program to that file and make in that directory.
 
+P4 Dependency Graph Generator
+========
+
+The relationships between tables of more complex P4 program can be difficult to comprehend.  The p4c-graphs utility parses through the the P4 program and generates a dependency graph using graphviz.  The dependency graph can be generated with the following command:
+
+    p4c-graphs <p4 code>
+
+The resulting files can be viewed using xdot or with a PNG viewer.
 
