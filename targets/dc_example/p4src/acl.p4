@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+ * Acl metadata
+ */
 header_type acl_metadata_t {
     fields {
         acl_deny : 1;                          /* ifacl/vacl deny action */
@@ -29,6 +32,9 @@ header_type acl_metadata_t {
 
 metadata acl_metadata_t acl_metadata;
 
+/*
+ * Generic actions for acl tables
+ */
 action acl_log() {
 }
 
@@ -39,6 +45,7 @@ action acl_deny() {
 action acl_permit() {
 }
 
+/* MAC_AND_IP_ACL_CONTROL_BLOCK */
 action acl_redirect_nexthop(nexthop_index) {
     modify_field(acl_metadata.acl_redirect, TRUE);
     modify_field(acl_metadata.acl_nexthop, nexthop_index);
@@ -49,6 +56,11 @@ action acl_redirect_ecmp(ecmp_index) {
     modify_field(acl_metadata.acl_ecmp, ecmp_index);
 }
 
+/*
+ * Table: Mac acl
+ * Lookup: Ingress
+ * Mac acl lookup
+ */
 table mac_acl {
     reads {
         l2_metadata.if_label : ternary;
@@ -67,13 +79,18 @@ table mac_acl {
     size : INGRESS_MAC_ACL_TABLE_SIZE;
 }
 
+/*
+ * Table: ipv4 acl
+ * Lookup: Ingress
+ * ipv4 acl lookup
+ */
 table ip_acl {
     reads {
         l2_metadata.if_label : ternary;
         l2_metadata.bd_label : ternary;
 
-        l3_metadata.lkp_ipv4_sa : ternary;
-        l3_metadata.lkp_ipv4_da : ternary;
+        ipv4_metadata.lkp_ipv4_sa : ternary;
+        ipv4_metadata.lkp_ipv4_da : ternary;
         l3_metadata.lkp_ip_proto : ternary;
         l3_metadata.lkp_l4_sport : ternary;
         l3_metadata.lkp_l4_dport : ternary;
@@ -92,10 +109,43 @@ table ip_acl {
         acl_redirect_nexthop;
         acl_redirect_ecmp;
     }
-    size : INGRESS_IP_ACL_TABLE_SIZE;
+    size : INGRESS_IPV4_ACL_TABLE_SIZE;
 }
 
-control ip_and_mac_acl_lookup {
+/*
+ * Table: ipv6 acl
+ * Lookup: Ingress
+ * ipv6 acl lookup
+ */
+table ipv6_acl {
+    reads {
+        l2_metadata.if_label : ternary;
+        l2_metadata.bd_label : ternary;
+
+        ipv6_metadata.lkp_ipv6_sa : ternary;
+        ipv6_metadata.lkp_ipv6_da : ternary;
+        l3_metadata.lkp_ip_proto : ternary;
+        l3_metadata.lkp_l4_sport : ternary;
+        l3_metadata.lkp_l4_dport : ternary;
+
+        l2_metadata.lkp_mac_type : ternary;
+        ingress_metadata.msg_type : ternary; /* ICMP code */
+        tcp : valid;
+        tcp.flags : ternary;
+        l3_metadata.ttl : ternary;
+    }
+    actions {
+        nop;
+        acl_log;
+        acl_deny;
+        acl_permit;
+        acl_redirect_nexthop;
+        acl_redirect_ecmp;
+    }
+    size : INGRESS_IPV6_ACL_TABLE_SIZE;
+}
+
+control process_ip_and_mac_acl {
 #ifndef ACL_DISABLE
     /* port and vlan ACL */
     if (l3_metadata.lkp_ip_type == IPTYPE_NONE) {
@@ -103,11 +153,16 @@ control ip_and_mac_acl_lookup {
     } else {
         if (l3_metadata.lkp_ip_type == IPTYPE_IPV4) {
             apply(ip_acl);
+        } else {
+            if (l3_metadata.lkp_ip_type == IPTYPE_IPV6) {
+                apply(ipv6_acl);
+            }
         }
    }
 #endif /* ACL DISABLE */
 }
 
+/* ROUTE_ACL_CONTROL_BLOCK */
 action racl_log() {
 }
 
@@ -128,12 +183,17 @@ action racl_redirect_ecmp(ecmp_index) {
     modify_field(acl_metadata.racl_ecmp, ecmp_index);
 }
 
-table ip_racl {
+/*
+ * Table: Ipv4 route acl
+ * Lookup: Ingress
+ * Ipv4 route acl lookup
+ */
+table ipv4_racl {
     reads {
         l2_metadata.bd_label : ternary;
 
-        l3_metadata.lkp_ipv4_sa : ternary;
-        l3_metadata.lkp_ipv4_da : ternary;
+        ipv4_metadata.lkp_ipv4_sa : ternary;
+        ipv4_metadata.lkp_ipv4_da : ternary;
         l3_metadata.lkp_ip_proto : ternary;
         l3_metadata.lkp_l4_sport : ternary;
         l3_metadata.lkp_l4_dport : ternary;
@@ -146,16 +206,50 @@ table ip_racl {
         racl_redirect_nexthop;
         racl_redirect_ecmp;
     }
-    size : INGRESS_IP_RACL_TABLE_SIZE;
+    size : INGRESS_IPV4_RACL_TABLE_SIZE;
 }
 
-control ip_racl_lookup {
+control process_ipv4_racl {
 #ifndef ACL_DISABLE
     /* router ACL/PBR */
-    apply(ip_racl);
+    apply(ipv4_racl);
 #endif /* ACL_DISABLE */
 }
 
+/*
+ * Table: Ipv6 route acl
+ * Lookup: Ingress
+ * Ipv6 route acl lookup
+ */
+table ipv6_racl {
+    reads {
+        l2_metadata.bd_label : ternary;
+
+        ipv6_metadata.lkp_ipv6_sa : ternary;
+        ipv6_metadata.lkp_ipv6_da : ternary;
+        l3_metadata.lkp_ip_proto : ternary;
+        l3_metadata.lkp_l4_sport : ternary;
+        l3_metadata.lkp_l4_dport : ternary;
+    }
+    actions {
+        nop;
+        racl_log;
+        racl_deny;
+        racl_permit;
+        racl_redirect_nexthop;
+        racl_redirect_ecmp;
+    }
+    size : INGRESS_IPV6_RACL_TABLE_SIZE;
+}
+
+control process_ipv6_racl {
+#ifndef ACL_DISABLE
+    /* router ACL/PBR */
+    apply(ipv6_racl);
+#endif /* ACL_DISABLE */
+}
+
+/* SYSTEM_ACL_CONTROL_BLOCK */
 action redirect_to_cpu() {
     modify_field(standard_metadata.egress_spec, CPU_PORT);
     modify_field(intrinsic_metadata.eg_mcast_group, 0);
@@ -170,14 +264,19 @@ action drop_packet() {
     drop();
 }
 
+/*
+ * Table: System acl
+ * Lookup: Ingress
+ * System acl lookup
+ */
 table system_acl {
     reads {
         l2_metadata.if_label : ternary;
         l2_metadata.bd_label : ternary;
 
         /* ip acl */
-        l3_metadata.lkp_ipv4_sa : ternary;
-        l3_metadata.lkp_ipv4_da : ternary;
+        ipv4_metadata.lkp_ipv4_sa : ternary;
+        ipv4_metadata.lkp_ipv4_da : ternary;
         l3_metadata.lkp_ip_proto : ternary;
 
         /* mac acl */
@@ -209,13 +308,14 @@ table system_acl {
     size : SYSTEM_ACL_SIZE;
 }
 
-control system_acl_lookup {
+control process_system_acl {
 #ifndef ACL_DISABLE
     /* system acls */
     apply(system_acl);
 #endif /* ACL_DISABLE */
 }
 
+/* EGRESS_SYSTEM_ACL_CONTROL_BLOCK */
 action egress_redirect_to_cpu() {
 }
 
@@ -230,7 +330,11 @@ table egress_system_acl {
     size : EGRESS_SYSTEM_ACL_TABLE_SIZE;
 }
 
-control egress_system_acl_lookup {
+/*
+ * Table: Egress system acl
+ * Lookup: Egress
+ */
+control process_egress_system_acl {
 #ifndef ACL_DISABLE
     /* apply egress acl */
     apply(egress_system_acl);

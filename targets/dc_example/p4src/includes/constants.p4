@@ -27,6 +27,7 @@ limitations under the License.
 /* IP types */
 #define IPTYPE_NONE                            0
 #define IPTYPE_IPV4                            1
+#define IPTYPE_IPV6                            2
 
 /* Egress tunnel types */
 #define EGRESS_TUNNEL_TYPE_NONE                0
@@ -34,6 +35,10 @@ limitations under the License.
 #define EGRESS_TUNNEL_TYPE_IPV4_GENEVE         2
 #define EGRESS_TUNNEL_TYPE_IPV4_NVGRE          3
 #define EGRESS_TUNNEL_TYPE_IPV4_ERSPANV2       4
+#define EGRESS_TUNNEL_TYPE_IPV6_VXLAN          5
+#define EGRESS_TUNNEL_TYPE_IPV6_GENEVE         6
+#define EGRESS_TUNNEL_TYPE_IPV6_NVGRE          7
+#define EGRESS_TUNNEL_TYPE_IPV6_ERSPANV2       8
 
 #define VRF_BIT_WIDTH                          12
 #define BD_BIT_WIDTH                           16

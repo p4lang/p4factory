@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
+/* FWD_RESULT_CONTROL_BLOCK */
 action nop() {
 }
 
@@ -48,6 +48,11 @@ action set_fib_redirect_action() {
     add_to_field(l3_metadata.ttl, -1);
 }
 
+/*
+ * Table: Forward result
+ * Lookup: Ingress
+ * Derive nexthop based on priority
+ */
 table fwd_result {
     reads {
         l2_metadata.l2_redirect : ternary;
@@ -65,11 +70,12 @@ table fwd_result {
     size : FWD_RESULT_TABLE_SIZE;
 }
 
-control merge_results_lookup {
+control process_merge_results {
     /* merge the results and decide whice one to use */
     apply(fwd_result);
 }
 
+/* REWRITE_CONTROL_BLOCK */
 action set_l2_rewrite() {
     modify_field(l3_metadata.egress_routed, FALSE);
 }
@@ -125,6 +131,62 @@ action set_ipv4_erspan_v2_rewrite(outer_bd, tunnel_src_index, tunnel_dst_index,
     modify_field(tunnel_metadata.egress_tunnel_type, EGRESS_TUNNEL_TYPE_IPV4_ERSPANV2);
 }
 
+action set_ipv6_unicast_rewrite(smac_idx, dmac) {
+    modify_field(l2_metadata.egress_smac_idx, smac_idx);
+    modify_field(l2_metadata.egress_mac_da, dmac);
+    modify_field(l3_metadata.egress_routed, TRUE);
+    modify_field(ipv6.hopLimit, l3_metadata.ttl);
+}
+
+action set_ipv6_vxlan_rewrite(outer_bd, tunnel_src_index, tunnel_dst_index,
+        smac_idx, dmac) {
+    modify_field(egress_metadata.bd, outer_bd);
+    modify_field(l2_metadata.egress_smac_idx, smac_idx);
+    modify_field(l2_metadata.egress_mac_da, dmac);
+    modify_field(tunnel_metadata.tunnel_src_index, tunnel_src_index);
+    modify_field(tunnel_metadata.tunnel_dst_index, tunnel_dst_index);
+    modify_field(l3_metadata.egress_routed, TRUE);
+    modify_field(tunnel_metadata.egress_tunnel_type, EGRESS_TUNNEL_TYPE_IPV6_VXLAN);
+}
+
+action set_ipv6_geneve_rewrite(outer_bd, tunnel_src_index, tunnel_dst_index,
+        smac_idx, dmac) {
+    modify_field(egress_metadata.bd, outer_bd);
+    modify_field(l2_metadata.egress_smac_idx, smac_idx);
+    modify_field(l2_metadata.egress_mac_da, dmac);
+    modify_field(tunnel_metadata.tunnel_src_index, tunnel_src_index);
+    modify_field(tunnel_metadata.tunnel_dst_index, tunnel_dst_index);
+    modify_field(l3_metadata.egress_routed, TRUE);
+    modify_field(tunnel_metadata.egress_tunnel_type, EGRESS_TUNNEL_TYPE_IPV6_GENEVE);
+}
+
+action set_ipv6_nvgre_rewrite(outer_bd, tunnel_src_index, tunnel_dst_index,
+        smac_idx, dmac) {
+    modify_field(egress_metadata.bd, outer_bd);
+    modify_field(l2_metadata.egress_smac_idx, smac_idx);
+    modify_field(l2_metadata.egress_mac_da, dmac);
+    modify_field(tunnel_metadata.tunnel_src_index, tunnel_src_index);
+    modify_field(tunnel_metadata.tunnel_dst_index, tunnel_dst_index);
+    modify_field(l3_metadata.egress_routed, TRUE);
+    modify_field(tunnel_metadata.egress_tunnel_type, EGRESS_TUNNEL_TYPE_IPV6_NVGRE);
+}
+
+action set_ipv6_erspan_v2_rewrite(outer_bd, tunnel_src_index, tunnel_dst_index,
+        smac_idx, dmac) {
+    modify_field(egress_metadata.bd, outer_bd);
+    modify_field(l2_metadata.egress_smac_idx, smac_idx);
+    modify_field(l2_metadata.egress_mac_da, dmac);
+    modify_field(tunnel_metadata.tunnel_src_index, tunnel_src_index);
+    modify_field(tunnel_metadata.tunnel_dst_index, tunnel_dst_index);
+    modify_field(l3_metadata.egress_routed, TRUE);
+    modify_field(tunnel_metadata.egress_tunnel_type, EGRESS_TUNNEL_TYPE_IPV6_ERSPANV2);
+}
+
+/*
+ * Table: Rewrite
+ * Lookup: Egress
+ * Derives rewrite information for the packet in egress
+ */
 table rewrite {
     reads {
         l3_metadata.nexthop_index : exact;
@@ -133,19 +195,25 @@ table rewrite {
         nop;
         set_l2_rewrite;
         set_ipv4_unicast_rewrite;
+        set_ipv6_unicast_rewrite;
         set_ipv4_vxlan_rewrite;
+        set_ipv6_vxlan_rewrite;
         set_ipv4_geneve_rewrite;
+        set_ipv6_geneve_rewrite;
         set_ipv4_nvgre_rewrite;
+        set_ipv6_nvgre_rewrite;
         set_ipv4_erspan_v2_rewrite;
+        set_ipv6_erspan_v2_rewrite;
     }
     size : NEXTHOP_TABLE_SIZE;
 }
 
-control rewrite_lookup {
+control process_rewrite {
     /* apply nexthop_index based packet rewrites */
     apply(rewrite);
 }
 
+/* CPU_REWRITE_CONTROL_BLOCK */
 action set_cpu_tx_rewrite() {
     modify_field(ethernet.etherType, cpu_header.etherType);
     remove_header(cpu_header);
@@ -157,6 +225,11 @@ action set_cpu_rx_rewrite() {
     modify_field(cpu_header.ingress_lif, standard_metadata.ingress_port);
 }
 
+/*
+ * Table: cpu rewrite
+ * Lookup: Egress
+ * Send/Receive packet from CPU
+ */
 table cpu_rewrite {
     reads {
         standard_metadata.egress_port : ternary;
@@ -170,6 +243,6 @@ table cpu_rewrite {
     size : CPU_REWRITE_TABLE_SIZE;
 }
 
-control cpu_rewrite_lookup {
+control process_cpu_rewrite {
     apply(cpu_rewrite);
 }

@@ -22,6 +22,8 @@ limitations under the License.
 #include "includes/constants.p4"
 #include "l2.p4"
 #include "l3.p4"
+#include "ipv4.p4"
+#include "ipv6.p4"
 #include "tunnel.p4"
 #include "multicast.p4"
 #include "acl.p4"
@@ -58,60 +60,95 @@ control ingress {
 
     /* Check to see the whole stage needs to be bypassed */
     if(ingress_metadata.ingress_bypass == FALSE) {
+        /*validate outer l2 header */
         validate_outer_ethernet_header();
-        validate_outer_ipv4_header();
-        port_vlan_mapping_lookup();
-        spanning_tree_lookup();
-        tunnel_vtep_lookup();
+        if (valid(ipv4)) {
+            /* validate outer ipv4 header */
+            validate_outer_ipv4_header();
+        } else {
+            if (valid(ipv6)) {
+                /* validate outer ipv6 header */
+                validate_outer_ipv6_header();
+            }
+        }
+        process_port_vlan_mapping();
+        process_spanning_tree();
 
 #ifndef TUNNEL_DISABLE
+        process_tunnel_vtep();
         /* perform tunnel termination */
         if ((tunnel_metadata.src_vtep_miss == FALSE) and
             (((tunnel_metadata.outer_rmac_hit == TRUE) and
               (tunnel_metadata.tunnel_terminate == TRUE)) or
-             ((l2_metadata.lkp_pkt_type == L2_MULTICAST) and
+              ((l2_metadata.lkp_pkt_type == L2_MULTICAST) and
               (tunnel_metadata.tunnel_terminate == TRUE)))) {
-            tunnel_terminate_lookup();
+            /* tunnel termination */
+            process_tunnel_terminate();
         }
 	    else
-#endif /* TUNNEL_DISABLE */
         {
-            bd_lookup();
+#endif /* TUNNEL_DISABLE */
+            process_bd();
+#ifndef TUNNEL_DISABLE
         }
+#endif /* TUNNEL_DISABLE */
 
-        smac_lookup_and_learn();
-        ip_and_mac_acl_lookup();
+        /* mac learning */
+        process_smac_and_learn();
+        /* ip and mac acl */
+        process_ip_and_mac_acl();
 
+        /* router mac lookup */
         apply(rmac) {
-                on_miss {
-                    dmac_lookup();
-                }
-                default {
-                    if ((l3_metadata.lkp_ip_type == IPTYPE_IPV4) and
-                        (l3_metadata.ipv4_unicast_enabled == TRUE)) {
-                        ip_racl_lookup();
-                        fib_lookup();
+            on_miss {
+                /* dmac lookup */
+                process_dmac();
+            }
+            default {
+                if ((l3_metadata.lkp_ip_type == IPTYPE_IPV4) and
+                    (ipv4_metadata.ipv4_unicast_enabled == TRUE)) {
+                    /* ipv4 router acl */
+                    process_ipv4_racl();
+                    /* ipv4 fib */
+                    process_ipv4_fib();
+                } else {
+                    if ((l3_metadata.lkp_ip_type == IPTYPE_IPV6) and
+                        (ipv6_metadata.ipv6_unicast_enabled == TRUE)) {
+                        /* ipv6 router acl */
+                        process_ipv6_racl();
+                        /* ipv6 fib */
+                        process_ipv6_fib();
                     }
                 }
+            }
         }
-        merge_results_lookup();
-        nexthop_lookup();
-        lag_lookup();
-        system_acl_lookup();
+        process_merge_results();
+        /* nexthop */
+        process_nexthop();
+        /* link aggregation */
+        process_lag();
+        /* system acl */
+        process_system_acl();
     }
 }
 
 control egress {
     if (egress_metadata.egress_bypass == FALSE) {
-        replication_id_lookup();
-        tunnel_decap_lookup();
-        rewrite_lookup();
-        tunnel_rewrite_lookup();
-        mac_rewrite_lookup();
-        prune_and_xlate_lookup();
-        egress_system_acl_lookup();
-        cpu_rewrite_lookup();
+        /* process multicast replication */
+        process_replication_id();
+        /* decapculate tunnel header */
+        process_tunnel_decap();
+        /* rewrite info */
+        process_rewrite();
+        /* encapsulate tunnel header */
+        process_tunnel_rewrite();
+        /* rewrite smac, dmac */
+        process_mac_rewrite();
+        /* vlan translation and port pruning */
+        process_prune_and_xlate();
+        /* egress system acl */
+        process_egress_system_acl();
+        /* cpu rewrite */
+        process_cpu_rewrite();
     }
 }
-
-
