@@ -1,9 +1,9 @@
-# Copyright 2013-present Barefoot Networks, Inc. 
-# 
+# Copyright 2013-present Barefoot Networks, Inc.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -45,18 +45,17 @@ rewrite_index = 1
 vrf = 1
 rmac = '00:33:33:33:33:33'
 
+#Enable features based on p4src/p4feature.h
+tunnel_enabled =1
+ipv6_enabled = 1
+acl_enabled = 1
+
 def populate_default_entries(client_module, client, sess_hdl, dev_tgt):
     client.validate_outer_ethernet_set_default_action_set_valid_outer_unicast_packet(
                                      sess_hdl, dev_tgt)
     client.validate_outer_ipv4_packet_set_default_action_set_valid_outer_ipv4_packet(
                                      sess_hdl, dev_tgt)
-    client.outer_rmac_set_default_action_nop(
-                                     sess_hdl, dev_tgt)
-    client.ipv4_src_vtep_set_default_action_nop(
-                                     sess_hdl, dev_tgt)
-    client.ipv4_dest_vtep_set_default_action_nop(
-                                     sess_hdl, dev_tgt)
-    client.validate_packet_set_default_action_nop(
+    client.validate_outer_ipv6_packet_set_default_action_set_valid_outer_ipv6_packet(
                                      sess_hdl, dev_tgt)
     client.smac_set_default_action_smac_miss(
                                      sess_hdl, dev_tgt)
@@ -70,11 +69,31 @@ def populate_default_entries(client_module, client, sess_hdl, dev_tgt):
                                      sess_hdl, dev_tgt)
     client.nexthop_set_default_action_nop(
                                      sess_hdl, dev_tgt)
-    client.egress_bd_map_set_default_action_nop(
+    if acl_enabled:
+        client.ip_acl_set_default_action_nop(
                                      sess_hdl, dev_tgt)
-    client.ip_acl_set_default_action_nop(
+        client.ipv4_racl_set_default_action_nop(
                                      sess_hdl, dev_tgt)
-    client.ip_racl_set_default_action_nop(
+    client.validate_packet_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+    if tunnel_enabled:
+        client.outer_rmac_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+        client.ipv4_src_vtep_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+        client.ipv4_dest_vtep_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+        client.egress_bd_map_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+    if ipv6_enabled and tunnel_enabled:
+        client.ipv6_src_vtep_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+        client.ipv6_dest_vtep_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+    if ipv6_enabled and acl_enabled:
+        client.ipv6_acl_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+        client.ipv6_racl_set_default_action_nop(
                                      sess_hdl, dev_tgt)
 
 def populate_init_entries(client_module, client, sess_hdl, dev_tgt):
@@ -122,11 +141,12 @@ def populate_init_entries(client_module, client, sess_hdl, dev_tgt):
                            sess_hdl, dev_tgt,
                            match_spec)
 
-    #Add default outer rmac entry
-    match_spec = client_module.dc_example_outer_rmac_match_spec_t(
+    if tunnel_enabled:
+        #Add default outer rmac entry
+        match_spec = client_module.dc_example_outer_rmac_match_spec_t(
                             tunnel_metadata_outer_rmac_group=outer_rmac_group,
                             l2_metadata_lkp_mac_da=macAddr_to_string(rmac))
-    client.outer_rmac_table_add_with_set_outer_rmac_hit_flag(
+        client.outer_rmac_table_add_with_set_outer_rmac_hit_flag(
                             sess_hdl, dev_tgt,
                             match_spec)
 
@@ -154,13 +174,14 @@ def add_ports(client_module, client, sess_hdl, dev_tgt, port_count):
                               match_spec, mbr_hdl)
         count = count + 1
 
-def program_outer_vlan(client_module, client, sess_hdl, dev_tgt, vlan, port, v4_enabled, outer_rmac):
+def program_outer_vlan(client_module, client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_enabled, outer_rmac):
 
     action_spec = client_module.dc_example_set_bd_action_spec_t(
                             action_outer_vlan_bd=vlan,
                             action_vrf=vrf,
                             action_rmac_group=outer_rmac,
                             action_ipv4_unicast_enabled=v4_enabled,
+                            action_ipv6_unicast_enabled=v6_enabled,
                             action_stp_group=0)
     mbr_hdl = client.outer_bd_action_profile_add_member_with_set_bd(
                             sess_hdl, dev_tgt,
@@ -176,7 +197,7 @@ def program_outer_vlan(client_module, client, sess_hdl, dev_tgt, vlan, port, v4_
                             sess_hdl, dev_tgt,
                             match_spec, mbr_hdl)
 
-def program_inner_vlan(client_module, client, sess_hdl, dev_tgt, vlan, port, v4_enabled, inner_rmac):
+def program_inner_vlan(client_module, client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_enabled, inner_rmac):
     match_spec = client_module.dc_example_bd_match_spec_t(
                               l2_metadata_bd=vlan)
     action_spec = client_module.dc_example_set_bd_info_action_spec_t(
@@ -187,7 +208,9 @@ def program_inner_vlan(client_module, client, sess_hdl, dev_tgt, vlan, port, v4_
                             action_umc_mc_index=0,
                             action_bcast_mc_index=0,
                             action_ipv4_unicast_enabled=v4_enabled,
+                            action_ipv6_unicast_enabled=v6_enabled,
                             action_igmp_snooping_enabled=0,
+                            action_mld_snooping_enabled=0,
                             action_stp_group=0)
     client.bd_table_add_with_set_bd_info(
                             sess_hdl, dev_tgt,
@@ -250,11 +273,11 @@ def add_mac_with_nexthop(client_module, client, sess_hdl, dev_tgt, vlan, mac, po
                             sess_hdl, dev_tgt,
                             match_spec, action_spec)
 
-def add_route(client_module, client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
+def add_v4_route(client_module, client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
     if prefix == 32:
         match_spec = client_module.dc_example_ipv4_fib_match_spec_t(
                              l3_metadata_vrf=vrf,
-                             l3_metadata_lkp_ipv4_da=ip)
+                             ipv4_metadata_lkp_ipv4_da=ip)
         action_spec = client_module.dc_example_fib_hit_nexthop_action_spec_t(
                              action_nexthop_index=nhop)
         client.ipv4_fib_table_add_with_fib_hit_nexthop(
@@ -263,11 +286,34 @@ def add_route(client_module, client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
     else:
         match_spec = client_module.dc_example_ipv4_fib_lpm_match_spec_t(
                              l3_metadata_vrf=vrf,
-                             l3_metadata_lkp_ipv4_da=ip,
-                             l3_metadata_lkp_ipv4_da_prefix_length=prefix)
+                             ipv4_metadata_lkp_ipv4_da=ip,
+                             ipv4_metadata_lkp_ipv4_da_prefix_length=prefix)
         action_spec = client_module.dc_example_fib_hit_nexthop_action_spec_t(
                              action_nexthop_index=nhop)
         client.ipv4_fib_lpm_table_add_with_fib_hit_nexthop(
+                             sess_hdl, dev_tgt,
+                             match_spec, action_spec)
+
+def add_v6_route(client_module, client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
+    if ipv6_enabled == 0:
+        return
+    if prefix == 128:
+        match_spec = client_module.dc_example_ipv6_fib_match_spec_t(
+                             l3_metadata_vrf=vrf,
+                             ipv6_metadata_lkp_ipv6_da=ipv6Addr_to_string(ip))
+        action_spec = client_module.dc_example_fib_hit_nexthop_action_spec_t(
+                             action_nexthop_index=nhop)
+        client.ipv6_fib_table_add_with_fib_hit_nexthop(
+                             sess_hdl, dev_tgt,
+                             match_spec, action_spec)
+    else:
+        match_spec = client_module.dc_example_ipv6_fib_lpm_match_spec_t(
+                             l3_metadata_vrf=vrf,
+                             ipv6_metadata_lkp_ipv6_da=ip,
+                             ipv6_metadata_lkp_ipv6_da_prefix_length=prefix)
+        action_spec = client_module.dc_example_fib_hit_nexthop_action_spec_t(
+                             action_nexthop_index=nhop)
+        client.ipv6_fib_lpm_table_add_with_fib_hit_nexthop(
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
 
@@ -281,7 +327,7 @@ def add_nexthop(client_module, client, sess_hdl, dev_tgt, nhop, vlan, ifindex):
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
 
-def add_unicast_rewrite(client_module, client, sess_hdl, dev_tgt, nhop, dmac):
+def add_v4_unicast_rewrite(client_module, client, sess_hdl, dev_tgt, nhop, dmac):
     match_spec = client_module.dc_example_rewrite_match_spec_t(
                              l3_metadata_nexthop_index=nhop)
     action_spec = client_module.dc_example_set_ipv4_unicast_rewrite_action_spec_t(
@@ -290,6 +336,19 @@ def add_unicast_rewrite(client_module, client, sess_hdl, dev_tgt, nhop, dmac):
     client.rewrite_table_add_with_set_ipv4_unicast_rewrite(
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
+
+def add_v6_unicast_rewrite(client_module, client, sess_hdl, dev_tgt, nhop, dmac):
+    if ipv6_enabled == 0:
+        return
+    match_spec = client_module.dc_example_rewrite_match_spec_t(
+                             l3_metadata_nexthop_index=nhop)
+    action_spec = client_module.dc_example_set_ipv6_unicast_rewrite_action_spec_t(
+                             action_smac_idx=rewrite_index,
+                             action_dmac=macAddr_to_string(dmac))
+    client.rewrite_table_add_with_set_ipv6_unicast_rewrite(
+                             sess_hdl, dev_tgt,
+                             match_spec, action_spec)
+
 
 #Basic L2 Test case
 class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
@@ -315,15 +374,16 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
         port1=1
         port2=2
         v4_enabled=0
+        v6_enabled=0
 
         #Add ports to vlan
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, 0)
-        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, 0)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
 
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, 0)
-        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, 0)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
 
         #Add static macs to ports. (vlan, mac -> port)
         add_mac(self.client_module, self.client, sess_hdl, dev_tgt, vlan, '00:11:11:11:11:11', 1)
@@ -341,7 +401,7 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
         verify_packets(self, pkt, [2])
 
 #Basic L3 Test case
-class L3Test(pd_base_tests.ThriftInterfaceDataPlane):
+class L3Ipv4Test(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "pd_thrift.dc_example")
 
@@ -365,31 +425,32 @@ class L3Test(pd_base_tests.ThriftInterfaceDataPlane):
         port1=1
         port2=2
         v4_enabled=1
+        v6_enabled=0
 
         #For every L3 port, an implicit vlan will be allocated
         #Add ports to vlan
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, 0)
-        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, inner_rmac_group)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, inner_rmac_group)
 
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, 0)
-        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, inner_rmac_group)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, inner_rmac_group)
 
         #Create nexthop
         nhop1=1
         add_nexthop(self.client_module, self.client, sess_hdl, dev_tgt, nhop1, vlan1, port1)
         #Add rewrite information (ARP info)
-        add_unicast_rewrite(self.client_module, self.client, sess_hdl, dev_tgt, nhop1, '00:11:11:11:11:11')
+        add_v4_unicast_rewrite(self.client_module, self.client, sess_hdl, dev_tgt, nhop1, '00:11:11:11:11:11')
         #Add route
-        add_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x0a0a0a01, 32, nhop1)
+        add_v4_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x0a0a0a01, 32, nhop1)
         #Create nexthop
         nhop2=2
         add_nexthop(self.client_module, self.client, sess_hdl, dev_tgt, nhop2, vlan2, port2)
         #Add rewrite information (ARP info)
-        add_unicast_rewrite(self.client_module, self.client, sess_hdl, dev_tgt, nhop2, '00:22:22:22:22:22')
+        add_v4_unicast_rewrite(self.client_module, self.client, sess_hdl, dev_tgt, nhop2, '00:22:22:22:22:22')
         #Add route
-        add_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x14141401, 32, nhop2)
+        add_v4_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x14141401, 32, nhop2)
 
         print "Sending packet port 1 -> port 2 (10.10.10.1 -> 20.20.20.1 [id = 101])"
         pkt = simple_tcp_packet(eth_dst='00:33:33:33:33:33',
@@ -409,6 +470,75 @@ class L3Test(pd_base_tests.ThriftInterfaceDataPlane):
         self.dataplane.send(1, str(pkt))
         verify_packets(self, exp_pkt, [2])
 
+class L3Ipv6Test(pd_base_tests.ThriftInterfaceDataPlane):
+    def __init__(self):
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "pd_thrift.dc_example")
+
+    def runTest(self):
+        print
+        if ipv6_enabled == 0:
+            print "ipv6 not enabled"
+            return
+
+        sess_hdl = self.client.client_init(16)
+        dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
+
+        print "Cleaning state"
+        self.client.clean_all(sess_hdl, dev_tgt)
+
+        #Add the default entries
+        populate_default_entries(self.client_module, self.client, sess_hdl, dev_tgt)
+        populate_init_entries(self.client_module, self.client, sess_hdl, dev_tgt)
+
+        #Create two ports
+        add_ports(self.client_module, self.client, sess_hdl, dev_tgt, 2)
+
+        vlan1=10
+        vlan2=11
+        port1=1
+        port2=2
+        v4_enabled=0
+        v6_enabled=1
+
+        #For every L3 port, an implicit vlan will be allocated
+        #Add ports to vlan
+        #Outer vlan table programs (port, vlan) mapping and derives the bd
+        #Inner vlan table derives the bd state
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, inner_rmac_group)
+
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, inner_rmac_group)
+
+        #Create nexthop
+        nhop1=1
+        add_nexthop(self.client_module, self.client, sess_hdl, dev_tgt, nhop1, vlan1, port1)
+        #Add rewrite information (ARP info)
+        add_v6_unicast_rewrite(self.client_module, self.client, sess_hdl, dev_tgt, nhop1, '00:11:11:11:11:11')
+        #Add route
+        add_v6_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, '2000::1', 128, nhop1)
+        #Create nexthop
+        nhop2=2
+        add_nexthop(self.client_module, self.client, sess_hdl, dev_tgt, nhop2, vlan2, port2)
+        #Add rewrite information (ARP info)
+        add_v6_unicast_rewrite(self.client_module, self.client, sess_hdl, dev_tgt, nhop2, '00:22:22:22:22:22')
+        #Add route
+        add_v6_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, '3000::1', 128, nhop2)
+
+        print "Sending packet port 1 -> port 2 (10.10.10.1 -> 20.20.20.1 [id = 101])"
+        pkt = simple_tcpv6_packet(eth_dst='00:33:33:33:33:33',
+                                eth_src='00:11:11:11:11:11',
+                                ipv6_dst='3000::1',
+                                ipv6_src='2000::1',
+                                ipv6_hlim=64)
+        exp_pkt = simple_tcpv6_packet(eth_dst='00:22:22:22:22:22',
+                                eth_src='00:33:33:33:33:33',
+                                ipv6_dst='3000::1',
+                                ipv6_src='2000::1',
+                                ipv6_hlim=63)
+        self.dataplane.send(1, str(pkt))
+        verify_packets(self, exp_pkt, [2])
+
 #Basic Vxlan Tunneling Test case
 class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
@@ -416,6 +546,10 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
 
     def runTest(self):
         print
+        if tunnel_enabled == 0:
+            print "tunnel not enabled"
+            return
+
         sess_hdl = self.client.client_init(16)
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
@@ -433,6 +567,8 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         port2=2
         outer_v4_enabled=1
         inner_v4_enabled=0
+        outer_v6_enabled=0
+        inner_v6_enabled=0
         core_vlan=10
         tenant_vlan=1000
         vnid=0x1234
@@ -441,18 +577,18 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         tunnel_type=1
         #Port2 belong to core vlan
         #Outer vlan table will derive core bd and the src vtep, dest vtep and vnid will derive the tenant bd
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, core_vlan, port2, outer_v4_enabled, outer_rmac_group)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, core_vlan, port2, outer_v4_enabled, outer_v6_enabled, outer_rmac_group)
         program_tunnel_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan, port2, vnid, tunnel_type, inner_v4_enabled, 0)
 
         #Port1 belong to tenant vlan
         #Outer vlan table will derive tenant bd and inner bd table will derive bd state
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan, port1, inner_v4_enabled, 0)
-        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan, port1, inner_v4_enabled, 0)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan, port1, inner_v4_enabled, inner_v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan, port1, inner_v4_enabled, inner_v6_enabled, 0)
 
         #Ingress Tunnel Decap - src vtep entry
         match_spec = self.client_module.dc_example_ipv4_src_vtep_match_spec_t(
                                   l3_metadata_vrf=vrf,
-                                  l3_metadata_lkp_ipv4_sa=0x0a0a0a02)
+                                  ipv4_metadata_lkp_ipv4_sa=0x0a0a0a02)
         action_spec = self.client_module.dc_example_set_tunnel_lif_action_spec_t(
                                   action_lif=0)
         self.client.ipv4_src_vtep_table_add_with_set_tunnel_lif(
@@ -462,7 +598,7 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         #Ingress Tunnel Decap - dest vtep entry
         match_spec = self.client_module.dc_example_ipv4_dest_vtep_match_spec_t(
                                   l3_metadata_vrf=vrf,
-                                  l3_metadata_lkp_ipv4_da=0x0a0a0a01,
+                                  ipv4_metadata_lkp_ipv4_da=0x0a0a0a01,
                                   l3_metadata_lkp_ip_proto=17,
                                   l3_metadata_lkp_l4_dport=4789)
         self.client.ipv4_dest_vtep_table_add_with_set_tunnel_termination_flag(
@@ -593,6 +729,9 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
 
     def runTest(self):
         print
+        if tunnel_enabled == 0:
+            print "tunnel not enabled"
+            return
         sess_hdl = self.client.client_init(16)
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
@@ -610,6 +749,8 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         port2=2
         outer_v4_enabled=1
         inner_v4_enabled=1
+        outer_v6_enabled=0
+        inner_v6_enabled=0
         core_vlan=10
         tenant_vlan1=1000
         tenant_vlan2=2000
@@ -619,18 +760,18 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         tunnel_type=1
         #Port2 belong to core vlan
         #Outer vlan table will derive core bd and the src vtep, dest vtep and vnid will derive the tenant bd
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, core_vlan, port2, outer_v4_enabled, outer_rmac_group)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, core_vlan, port2, outer_v4_enabled, outer_v6_enabled, outer_rmac_group)
         program_tunnel_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan2, port2, vnid, tunnel_type, inner_v4_enabled, inner_rmac_group)
 
         #Port1 belong to tenant vlan
         #Outer vlan table will derive tenant bd and inner bd table will derive bd state
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, 0)
-        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, inner_rmac_group)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, inner_v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, inner_v6_enabled, inner_rmac_group)
 
         #Ingress Tunnel Decap - src vtep entry
         match_spec = self.client_module.dc_example_ipv4_src_vtep_match_spec_t(
                                   l3_metadata_vrf=vrf,
-                                  l3_metadata_lkp_ipv4_sa=0x0a0a0a02)
+                                  ipv4_metadata_lkp_ipv4_sa=0x0a0a0a02)
         action_spec = self.client_module.dc_example_set_tunnel_lif_action_spec_t(
                                   action_lif=0)
         self.client.ipv4_src_vtep_table_add_with_set_tunnel_lif(
@@ -640,7 +781,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         #Ingress Tunnel Decap - dest vtep entry
         match_spec = self.client_module.dc_example_ipv4_dest_vtep_match_spec_t(
                                   l3_metadata_vrf=vrf,
-                                  l3_metadata_lkp_ipv4_da=0x0a0a0a01,
+                                  ipv4_metadata_lkp_ipv4_da=0x0a0a0a01,
                                   l3_metadata_lkp_ip_proto=17,
                                   l3_metadata_lkp_l4_dport=4789)
         self.client.ipv4_dest_vtep_table_add_with_set_tunnel_termination_flag(
@@ -651,8 +792,8 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         #Add L3 routes
         nhop1=1
         nhop2=2
-        add_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x0aa80a01, 32, nhop1)
-        add_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x0aa80b01, 32, nhop2)
+        add_v4_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x0aa80a01, 32, nhop1)
+        add_v4_route(self.client_module, self.client, sess_hdl, dev_tgt, vrf, 0x0aa80b01, 32, nhop2)
 
         #Add nexthop table
         add_nexthop(self.client_module, self.client, sess_hdl, dev_tgt, nhop1, tenant_vlan1, port1)
