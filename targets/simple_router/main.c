@@ -205,7 +205,7 @@ static void *ctl_listen(void *arg) {
 
 /* Wrapper for transmit operation */
 static void
-transmit_wrapper(p4_port_t egress, void *pkt, int len) {
+transmit_wrapper(p4_port_t egress, void *pkt, int len, p4_port_t ingress) {
     if (bmi_port_send(port_mgr, egress, pkt, len) < 0) {
         printf("Error sending packet\n");
     }
