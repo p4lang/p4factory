@@ -4,14 +4,12 @@
 #include "includes/p4_l2l3_headers.p4"
 #include "includes/p4_l2l3_parser.p4"
 
-#define MAC_LEARN_RECEIVER  1024
+#define MAC_LEARN_RECEIVER  1024 // Must be 1024 for L2 learning
 
 /* METADATA */
 header_type ingress_metadata_t {
     fields {
         fid           : 16;
-        // srcAddr       : 48;
-        // ingress_port  : 32;
     }
 }
 
@@ -81,10 +79,8 @@ table dmac {
 
 field_list mac_learn_digest {
     ethernet.srcAddr;
-    // ingress_metadata.srcAddr;
     ingress_metadata.fid;
     standard_metadata.ingress_port;
-    // ingress_metadata.ingress_port;
 }
 
 /* smac table and actions */
@@ -115,8 +111,9 @@ control ingress {
     apply(port_vlan_mapping);
     /* Add router-mac check here for doing route-lookups */
     apply(dmac);    /* L2 forwarding */
-    /* perform smac lookup after dmac so that unknown-sa packets
-     * will be sent to linux for learning and s/w forwarding
+    /* perform smac lookup,
+     * send notification unknown-sa (smac_miss) to CPU
+     * packet is forwarded based on dmac lookup result
      */
     apply(smac);
 }
