@@ -86,6 +86,30 @@ header_type ipv4_t {
     //max_length 32;
 }
 
+header_type tcp_t {
+    fields {
+        srcPort : 16;
+        dstPort : 16;
+        seqNo : 32;
+        ackNo : 32;
+        dataOffset : 4;
+        res : 4;
+        flags : 8;
+        window : 16;
+        checksum : 16;
+        urgentPtr : 16;
+    }
+}
+
+header_type udp_t {
+    fields {
+        srcPort : 16;
+        dstPort : 16;
+        length_ : 16;
+        checksum : 16;
+    }
+}
+
 header_type ingress_metadata_t {
 	fields {
 		eg_port : 16;
@@ -128,6 +152,8 @@ header_type ingress_metadata_t {
         v4_enable : 1;
         v6_enable : 1;
         vlan_id : 12;       // vlan id for the packet
+        srcPort : 16;
+        dstPort : 16;
 	}
 }
 
@@ -224,6 +250,7 @@ action  set_in_port(port, type_, oper_status, speed, admin_state, default_vlan, 
     modify_field(ingress_metadata.port_lag, port);
     modify_field(ingress_metadata.mac_limit, max_learned_address);
     modify_field(ingress_metadata.port_type, type_);
+    modify_field(ingress_metadata.oper_status, oper_status);
     modify_field(ingress_metadata.flow_ctrl, global_flow_control);
     modify_field(ingress_metadata.port_speed, speed);
     modify_field(ingress_metadata.drop_vlan, ingress_filtering);
@@ -388,10 +415,33 @@ action set_next_hop_group(next_hop_count, type_, router_interface_id/*next_hop_l
     modify_field(ingress_metadata.router_intf, router_interface_id);
 }
 
+field_list l3_hash_fields {
+    ipv4.srcAddr;
+    ipv4.dstAddr;
+    ipv4.protocol;
+    /*
+    ingress_metadata.srcPort;
+    ingress_metadata.dstPort;
+    */
+}
+
+field_list_calculation ecmp_hash {
+    input {
+        l3_hash_fields;
+    }
+    algorithm : crc16;
+    output_width : 16;
+}
+
+action_selector ecmp_selector {
+    selection_key : ecmp_hash;
+}
+
 action_profile next_hop_group {
     actions {
         set_next_hop_group;
     }
+    selector : ecmp_selector;
 }
 
 table nexthop {
@@ -509,10 +559,10 @@ table virtual_router {
 
 
 control ingress {
+    apply(switch);
+    /* get the port properties */
+    apply(port);
     if(ingress_metadata.oper_status == UP) {
-        apply(switch);
-        /* get the port properties */
-        apply(port);
         /* get the VLAN properties */
         apply(ports);
         /* router interface properties */
