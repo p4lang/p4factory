@@ -412,7 +412,7 @@ main(int argc, char* argv[])
     rmt_init();
     rmt_logger_set((p4_logging_f) printf);
     rmt_log_level_set(P4_LOG_LEVEL_TRACE);
-    rmt_transmit_register(transmit_wrapper);
+    rmt_transmit_register(transmit_wrapper, NULL);
 
     /* Start up the RPC server */
     CHECK(start_p4_pd_rpc_server(pd_server_addr.port));
