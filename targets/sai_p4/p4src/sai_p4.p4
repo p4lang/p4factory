@@ -441,7 +441,7 @@ action_profile next_hop_group {
     actions {
         set_next_hop_group;
     }
-    selector : ecmp_selector;
+    dynamic_action_selection : ecmp_selector;
 }
 
 table nexthop {

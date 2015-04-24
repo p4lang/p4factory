@@ -415,7 +415,7 @@ action_profile lag_action_profile {
         set_lag_port;
     }
     size : LAG_GROUP_TABLE_SIZE;
-    selector : lag_selector;
+    dynamic_action_selection : lag_selector;
 }
 
 /*
