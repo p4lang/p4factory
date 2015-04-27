@@ -14,9 +14,9 @@ wireshark
 mkdir install_tmp
 
 cd install_tmp
-wget -c http://archive.apache.org/dist/thrift/0.9.1/thrift-0.9.1.tar.gz
-tar zxvf thrift-0.9.1.tar.gz
-cd thrift-0.9.1
+wget -c http://archive.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz
+tar zxvf thrift-0.9.2.tar.gz
+cd thrift-0.9.2
 ./configure
 cd test/cpp ; ln -s . .libs ; cd ../..
 make -j4
