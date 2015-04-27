@@ -49,6 +49,7 @@ rmac = '00:33:33:33:33:33'
 tunnel_enabled =1
 ipv6_enabled = 1
 acl_enabled = 1
+learn_timeout = 6
 
 def populate_default_entries(client_module, client, sess_hdl, dev_tgt):
     client.validate_outer_ethernet_set_default_action_set_valid_outer_unicast_packet(
@@ -349,6 +350,18 @@ def add_v6_unicast_rewrite(client_module, client, sess_hdl, dev_tgt, nhop, dmac)
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
 
+def enable_learning(client_module, client, sess_hdl, dev_tgt):
+    match_spec = client_module.dc_example_learn_notify_match_spec_t(
+                             l2_metadata_l2_src_miss=1,
+                             l2_metadata_l2_src_miss_mask=1,
+                             l2_metadata_l2_src_move=0,
+                             l2_metadata_l2_src_move_mask=0,
+                             l2_metadata_stp_state=0,
+                             l2_metadata_stp_state_mask=0)
+
+    client.learn_notify_table_add_with_generate_learn_notify(
+                             sess_hdl, dev_tgt,
+                             match_spec, 1000)
 
 #Basic L2 Test case
 class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
@@ -382,8 +395,8 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
         program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
         program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
 
-        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
 
         #Add static macs to ports. (vlan, mac -> port)
         add_mac(self.client_module, self.client, sess_hdl, dev_tgt, vlan, '00:11:11:11:11:11', 1)
@@ -913,3 +926,57 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 inner_frame=pkt)
         self.dataplane.send(2, str(vxlan_pkt))
         verify_packets(self, pkt, [1])
+
+class L2LearningTest(pd_base_tests.ThriftInterfaceDataPlane):
+    def __init__(self):
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "pd_thrift.dc_example")
+
+    def runTest(self):
+        sess_hdl = self.client.client_init(16)
+        dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
+
+        print "Cleaning state"
+        self.client.clean_all(sess_hdl, dev_tgt)
+
+        #Add the default entries
+        populate_default_entries(self.client_module, self.client, sess_hdl, dev_tgt)
+        populate_init_entries(self.client_module, self.client, sess_hdl, dev_tgt)
+
+        #Create two ports
+        add_ports(self.client_module, self.client, sess_hdl, dev_tgt, 2)
+
+        vlan=10
+        port1=1
+        port2=2
+        v4_enabled=0
+        v6_enabled=0
+
+        #Add ports to vlan
+        #Outer vlan table programs (port, vlan) mapping and derives the bd
+        #Inner vlan table derives the bd state
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
+
+        program_outer_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
+        program_inner_vlan(self.client_module, self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
+
+        enable_learning(self.client_module, self.client, sess_hdl, dev_tgt)
+
+        self.client.set_learning_timeout(sess_hdl, 0, learn_timeout * 1000)
+        self.client.mac_learn_digest_register(sess_hdl, 0)
+        pkt = simple_tcp_packet(eth_dst='00:44:44:44:44:44',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.168.10.1',
+                                ip_src='10.168.11.1',
+                                ip_id=101,
+                                ip_ttl=64)
+        self.dataplane.send(1, str(pkt))
+        time.sleep(learn_timeout + 1)
+        digests = self.client.mac_learn_digest_get_digest(sess_hdl)
+        assert len(digests.msg) == 1
+        print "new mac learnt ",
+        for b in digests.msg[0].l2_metadata_lkp_mac_sa:
+            print("%02x:" % (b)),
+        print "on port ", digests.msg[0].l2_metadata_ifindex
+        self.client.mac_learn_digest_digest_notify_ack(sess_hdl, digests.msg_ptr)
+        self.client.mac_learn_digest_deregister(sess_hdl, 0)
