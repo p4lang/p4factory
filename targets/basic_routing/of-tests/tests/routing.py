@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pd_thrift
-
-#import unittest
-
 import oftest.dataplane as dataplane
 import oftest.pd_base_tests as pd_base_tests
 
@@ -23,7 +19,8 @@ from oftest.testutils import *
 
 from utils import *
 
-from pd_thrift.ttypes import *
+from p4_pd_rpc.ttypes import *
+from res_pd_rpc.ttypes import *
 
 priority = 100
 
@@ -42,10 +39,10 @@ def setup_default_table_configurations(client, sess_hdl, dev_tgt):
 
 class TwoBdLpmTest(pd_base_tests.ThriftInterfaceDataPlane):
     def __init__(self):
-        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "pd_thrift.basic_routing")
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "basic_routing")
 
     def runTest(self):
-        sess_hdl = self.client.client_init(16)
+        sess_hdl = self.conn_mgr.client_init(16)
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
         setup_default_table_configurations(self.client, sess_hdl, dev_tgt)

@@ -1,1 +1,1 @@
-python ../../cli/pd_cli.py -p dc_example -i pd_thrift.dc_example -s $PWD/of-tests:$PWD/../../submodules/oft-infra
+python ../../cli/pd_cli.py -p dc_example -i p4_pd_rpc.dc_example -s $PWD/of-tests/pd_thrift:$PWD/../../submodules/oft-infra

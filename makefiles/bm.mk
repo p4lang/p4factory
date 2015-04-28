@@ -93,8 +93,8 @@ MAKE_DIR := ${BM_THRIFT_PY_OUTPUT_DIR}
 include ${MAKEFILES_DIR}/makedir.mk
 
 include ${SUBMODULE_P4C_BEHAVIORAL}/p4c-bm.mk
-ifndef p4_pd_rpc_THRIFT_PY
-  $(error p4c-bm does not define thrift-generated Python files in p4_pd_rpc_THRIFT_PY)
+ifndef GEN_THRIFT_PY_MODULE
+  $(error p4c-bm does not define thrift-generated Python files in GEN_THRIFT_PY_MODULE)
 endif
 ifndef PD_PUBLIC_HEADERS_DIR
   $(error p4c-bm does not define PD headers in PD_PUBLIC_HEADERS_DIR
@@ -114,7 +114,7 @@ behavioral-model_LINK_LIBS := $(OBJ_FILES) $(BM_LIB) $(p4utils_LIB) $(p4ns_commo
 behavioral-model_EXTRA_LINK_LIBS ?= ${BM_LIB} ${BM_LIBS_OPTIONAL} ${p4utils_LIB} ${BM_LIB} -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
 include ${MAKEFILES_DIR}/bin.mk
 
-bm : ${BM_LIB} behavioral-model ${p4_pd_rpc_THRIFT_PY}
-	cp ${p4_pd_rpc_THRIFT_PY} ${BM_THRIFT_PY_OUTPUT_DIR}/
+bm : ${BM_LIB} behavioral-model ${GEN_THRIFT_PY_MODULE}
+	cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
 .PHONY: bm

@@ -49,7 +49,7 @@ limitations under the License.
 #include <signal.h>
 
 #include <p4_sim/rmt.h>
-#include <p4_sim/p4_pd_rpc_server.h>
+#include <p4_sim/pd_rpc_server.h>
 
 #include <pthread.h>
 

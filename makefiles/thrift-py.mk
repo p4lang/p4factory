@@ -19,12 +19,16 @@
 ###############################################################################
 THIS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-ifndef THRIFT_INPUT_FILE
-  $(error Thrift input file not defined in THRIFT_INPUT_FILE)
+ifndef THRIFT_INPUT_FILES
+  $(error Thrift input files not defined in THRIFT_INPUT_FILES)
 endif
 
-ifndef THRIFT_SERVICE_NAME
-  $(error Thrift service name not defined in THRIFT_SERVICE_NAME)
+ifndef THRIFT_DEP_FILES
+  $(error Thrift dep files not defined in THRIFT_DEP_FILES)
+endif
+
+ifndef THRIFT_SERVICE_NAMES
+  $(error Thrift service names not defined in THRIFT_SERVICE_NAMES)
 endif
 
 ifndef BUILD_DIR
@@ -35,21 +39,36 @@ THRIFT_TEMP_DIR := ${BUILD_DIR}/thrift
 MAKE_DIR := ${THRIFT_TEMP_DIR}
 include ${THIS_DIR}/makedir.mk
 
+ifndef THRIFT_INPUT_FILES_ALL
+  THRIFT_INPUT_FILES_ALL :=
+endif
+THRIFT_INPUT_FILES_ALL += ${THRIFT_INPUT_FILES}
+
+ifndef THRIFT_DEP_FILES_ALL
+  THRIFT_DEP_FILES_ALL :=
+endif
+THRIFT_DEP_FILES_ALL += ${THRIFT_DEP_FILES}
+
 # We expect the Python namespace in the Thrift file to be same as the Thrift
 # source file name.
-THRIFT_FILE_PREFIX := $(basename $(notdir ${THRIFT_INPUT_FILE}))
+THRIFT_FILE_PREFIXS := $(basename $(notdir ${THRIFT_INPUT_FILES}))
 
-THRIFT_PY_OUTPUT_BASENAMES := $(addprefix ${THRIFT_SERVICE_NAME}, .py -remote)
-THRIFT_PY_OUTPUT_BASENAMES += constants.py ttypes.py
 THRIFT_PY_OUTPUT_BASENAMES_PREREQ := __init__.py
 
-# ${THRIFT_FILE_PREFIX}_THRIFT_PY will contain a list of all Thrift-generated
-# Python files. Can be useful for copying the generated files to a different
-# directory.
-${THRIFT_FILE_PREFIX}_THRIFT_PY := $(addprefix ${THRIFT_TEMP_DIR}/${THRIFT_FILE_PREFIX}/, ${THRIFT_PY_OUTPUT_BASENAMES})
-${THRIFT_FILE_PREFIX}_THRIFT_PY += $(addprefix ${THRIFT_TEMP_DIR}/${THRIFT_FILE_PREFIX}/, ${THRIFT_PY_OUTPUT_BASENAMES_PREREQ})
-${THRIFT_FILE_PREFIX}_THRIFT_PY_PREREQ := $(addprefix ${THRIFT_TEMP_DIR}/${THRIFT_FILE_PREFIX}/, ${THRIFT_PY_OUTPUT_BASENAMES_PREREQ})
+THRIFT_PY_MODULES := $(addprefix ${THRIFT_TEMP_DIR}/, ${THRIFT_FILE_PREFIXS})
 
-$(filter-out ${${THRIFT_FILE_PREFIX}_THRIFT_PY_PREREQ}, ${${THRIFT_FILE_PREFIX}_THRIFT_PY}) : ${${THRIFT_FILE_PREFIX}_THRIFT_PY_PREREQ}
-${${THRIFT_FILE_PREFIX}_THRIFT_PY_PREREQ} : ${THRIFT_INPUT_FILE}
-	thrift --gen py --out ${THRIFT_TEMP_DIR}/${${THRIFT_TEMP_DIR}_THRIFT_DIR} $<
+ifndef THRIFT_PY_PREREQS_ALL
+  THRIFT_PY_PREREQS_ALL := 
+endif
+THRIFT_PY_PREREQS = $(addsuffix /${THRIFT_PY_OUTPUT_BASENAMES_PREREQ}, ${THRIFT_PY_MODULES})
+THRIFT_PY_PREREQS_ALL += ${THRIFT_PY_PREREQS}
+
+ifndef GEN_THRIFT_PY_MODULE
+  GEN_THRIFT_PY_MODULE :=
+endif
+GEN_THRIFT_PY_MODULE += ${THRIFT_PY_MODULES}
+
+${THRIFT_PY_MODULES}: ${THRIFT_PY_PREREQS}
+
+${THRIFT_PY_PREREQS}: ${THRIFT_DEP_FILES_ALL}
+	$(foreach t,${THRIFT_INPUT_FILES_ALL},thrift -r --gen py --out ${THRIFT_TEMP_DIR}/${${THRIFT_TEMP_DIR}_THRIFT_DIR} ${t} && ) true
