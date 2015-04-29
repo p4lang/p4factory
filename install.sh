@@ -10,7 +10,7 @@ python-pandas python-pip python-pygraph python-pygraphviz python-scipy \
 python-setuptools python-sympy python-yaml redis-server thrift-compiler \
 wireshark
 
-sudo pip install thrift
+sudo pip install --upgrade thrift
 
 # build thrift from sources
 mkdir install_tmp
