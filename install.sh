@@ -7,8 +7,10 @@ libedit-dev libevent-dev libfreetype6-dev libhiredis-dev libjudy-dev libpcap-dev
 libpng-dev libssl-dev libtool libyaml-0-2 libbz2-dev mininet openssl pkg-config python-dev \
 python-dpkt python-jsonpickle python-imaging-tk python-matplotlib python-nose python-numpy \
 python-pandas python-pip python-pygraph python-pygraphviz python-scipy \
-python-setuptools python-sympy python-thrift python-yaml redis-server thrift-compiler \
+python-setuptools python-sympy python-yaml redis-server thrift-compiler \
 wireshark
+
+sudo pip install thrift
 
 # build thrift from sources
 mkdir install_tmp
