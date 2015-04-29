@@ -109,8 +109,12 @@ $(OBJ_FILES) : $(OBJ_DIR)/%.o : %.c ${BM_TENJIN_TARGET}
 	@echo Compiling : $(notdir $@)
 	$(VERBOSE)gcc -o $@ $(COVERAGE_FLAGS) $(DEBUG_FLAGS) $(GLOBAL_INCLUDES) -I $(PUBLIC_INC_PATH) $(GLOBAL_CFLAGS) $(MAIN_CFLAGS) -c $<
 
+ifdef PLUGIN_LIBS
+BM_PLUGIN_LIBS := $(addprefix $(LIB_DIR)/, $(PLUGIN_LIBS))
+endif
+
 BINARY := behavioral-model
-behavioral-model_LINK_LIBS := $(OBJ_FILES) $(BM_LIB) $(p4utils_LIB) $(p4ns_common_LIB) $(BMI_LIB) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS)) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS))
+behavioral-model_LINK_LIBS := $(OBJ_FILES) $(BM_LIB) $(p4utils_LIB) $(p4ns_common_LIB) $(BMI_LIB) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS)) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS))  $(BM_PLUGIN_LIBS)
 behavioral-model_EXTRA_LINK_LIBS ?= ${BM_LIB} ${BM_LIBS_OPTIONAL} ${p4utils_LIB} ${BM_LIB} -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
 include ${MAKEFILES_DIR}/bin.mk
 
