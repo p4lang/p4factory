@@ -1,36 +1,46 @@
+Sample SAI Pipeline (v0.1)
+==========================
+This target implements a logical pipeline which can be used to generate v0.9.1 of SAI API.
 
-Sample SAI p4
+Details
+=======
+1. Basic SAI header file autogeneration from the sai_p4.p4
+2. Makefile to 
+   a. Build the SAI wrappers
+   b. Auto-generate the handlers to run the softswitch with SAI interfaces
+3. Sample test functions (in C, in process callable) and using of-test framework
+4. Sample L2 and L3 tests
 
-This target defines a logical pipeline to describe the SAI API (v0.9.1).
+Run
+===
 
-SAI Preview version(v 0.1)
+1. Build behavioral-model
+   In targets/sai_p4, type make (or make bm).
+   This should result in behavioral-model executable.
 
-Basic SAI header file autogeneration from the sai_p4.p4
-Makefile to build the SAI wrappers and autogenerate the handlers to
-run the softswitch with SAI interfaces on a pipeline
-Sample test functions (in C, in process callable) and using of-test framework
-Sample L2 and L3 tests (sudo ./run_tests.py --test-dir of-tests/tests/sai_thrift sai.L3Test or sudo ./run_tests.py --test-dir of-tests/tests/sai_thrift sai.L2Test)
+2. Run behavioral-model
+   In tragets/sai_p4, type sudo ./behavioral-model
+
+3. Run tests
+   In another shell run the tests using SAI thrift IPC to test
+   sudo ./run_tests.py --test-dir of-tests/tests/sai_thrift sai.L3Test
+   or
+   sudo ./run_tests.py --test-dir of-tests/tests/sai_thrift sai.L2Test
+
+4. To terminate behavioral-model
+   Type Control+'C' in the shell running the behavioral-model
 
 
-To run:
-1. In targets/sai_p4, type make (or make bm)
-2. This should result in behavioral-model executable.
-3. Run as: sudo ./behavioral-model
-4. In another shell run the tests using SAI thrift IPC to test
-5. To terminate control 'C'
+Notes
+=====
 
+Currently the pipeline is defined WITHOUT VLAN and ECMP groups.
 
-Status:
+Create and Remove SAI functions are the auto-generated from P4 program
 
-Currently the basic pipeline WITHOUT VLAN and ECMP groups is implemented.
+Coming soon
+===========
 
-Create and remove SAI functions implemented with the autogeneration from P4 program
-
-TODO:
-1. set and get attribute
+1. Set and Get attributes
 2. VLAN and ECMP group functions (fucntion prototypes are in sai_templ.h.txt)
 3. ACL and QoS table implementations
-
-Soon to be updated!
-
-
