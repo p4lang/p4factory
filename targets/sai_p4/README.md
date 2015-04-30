@@ -36,11 +36,11 @@ Notes
 
 Currently the pipeline is defined WITHOUT VLAN and ECMP groups.
 
-Create and Remove SAI functions are the auto-generated from P4 program
+Create and Remove SAI functions are auto-generated from P4 program
 
 Coming soon
 ===========
 
 1. Set and Get attributes
-2. VLAN and ECMP group functions (fucntion prototypes are in sai_templ.h.txt)
+2. VLAN and ECMP group functions (function prototypes are in sai_templ.h.txt)
 3. ACL and QoS table implementations
