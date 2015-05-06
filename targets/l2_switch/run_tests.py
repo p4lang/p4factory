@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright 2013-present Barefoot Networks, Inc. 
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-################################################################
-#
-# Makefile for basic_routing P4 project
-#
-################################################################
+import sys
+import os
+from subprocess import Popen
 
-export TARGET_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+root_dir = os.path.dirname(os.path.realpath(__file__))
+pd_dir = os.path.join(root_dir, 'of-tests/pd_thrift')
 
-include ../../init.mk
+oft_path = os.path.join(root_dir, '..', '..', 'submodules', 'oft-infra', 'oft')
 
-# This target's P4 name
-export P4_INPUT := p4src/basic_routing.p4
-export P4_NAME := basic_routing
-
-# Common defines targets for P4 programs
-COMMON_DIR := ${ROOT}/targets/common
-include ${COMMON_DIR}/common.mk
-
-# Put custom targets in basic_routing-local.mk
--include basic_routing-local.mk
-
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    args += ["--pd-thrift-path", pd_dir]
+    args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve"]
+    child = Popen([oft_path] + args)
+    child.wait()
+    sys.exit(child.returncode)
