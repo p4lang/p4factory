@@ -319,12 +319,18 @@ control process_system_acl {
 action egress_redirect_to_cpu() {
 }
 
+action egress_drop() {
+    drop();
+}
+
 table egress_system_acl {
     reads {
         l3_metadata.mtu_check_fail : ternary;
+        l2_metadata.prune : ternary;
     }
     actions {
         nop;
+        egress_drop;
         egress_redirect_to_cpu;
     }
     size : EGRESS_SYSTEM_ACL_TABLE_SIZE;
