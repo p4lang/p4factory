@@ -44,6 +44,7 @@ header_type l2_metadata_t {
         /* Egress Metadata */
         egress_smac_idx : 9;                   /* index into source mac table */
         egress_mac_da : 48;                    /* final mac da */
+        prune: 10;                             /* egress pruning */
     }
 }
 
@@ -501,8 +502,8 @@ table egress_vlan_xlate {
     size : EGRESS_VLAN_XLATE_TABLE_SIZE;
 }
 
-action egress_drop () {
-    drop();
+action set_egress_drop () {
+    bit_xor(l2_metadata.prune, standard_metadata.ingress_port, standard_metadata.egress_port);
 }
 
 /*
@@ -511,22 +512,18 @@ action egress_drop () {
  * Prune the packet when sent back on same interface
  */
 table egress_block {
-    reads {
-        standard_metadata.egress_port : exact;
-        intrinsic_metadata.replication_id : exact;
-    }
     actions {
-        on_miss;
-        egress_drop;
+        set_egress_drop;
     }
     size : EGRESS_BLOCK_TABLE_SIZE;
 }
 
-control process_prune_and_xlate {
-    apply(egress_block) {
-	    on_miss {
-        /* egress vlan translation */
-            apply(egress_vlan_xlate);
-        }
-    }
+control process_prune {
+    /* process pruning */
+    apply(egress_block);
+}
+
+control process_vlan_xlate {
+    /* egress vlan translation */
+    apply(egress_vlan_xlate);
 }
