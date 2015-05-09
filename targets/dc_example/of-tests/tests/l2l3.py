@@ -993,7 +993,7 @@ class L2LearningTest(pd_base_tests.ThriftInterfaceDataPlane):
         digests = self.client.mac_learn_digest_get_digest(sess_hdl)
         assert len(digests.msg) == 1
         print "new mac learnt ",
-        for b in digests.msg[0].l2_metadata_lkp_mac_sa:
+        for b in string_to_bytes(digests.msg[0].l2_metadata_lkp_mac_sa):
             print("%02x:" % (b)),
         print "on port ", digests.msg[0].l2_metadata_ifindex
         self.client.mac_learn_digest_digest_notify_ack(sess_hdl, digests.msg_ptr)
