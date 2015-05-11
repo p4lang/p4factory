@@ -34,6 +34,7 @@ from utils import *
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
+from mc_pd_rpc.ttypes import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -59,6 +60,8 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
                                      sess_hdl, dev_tgt)
     client.smac_set_default_action_smac_miss(
                                      sess_hdl, dev_tgt)
+    client.dmac_set_default_action_dmac_miss(
+                                     sess_hdl, dev_tgt)
     client.learn_notify_set_default_action_nop(
                                      sess_hdl, dev_tgt)
     client.rmac_set_default_action_on_miss(
@@ -69,6 +72,15 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
                                      sess_hdl, dev_tgt)
     client.nexthop_set_default_action_nop(
                                      sess_hdl, dev_tgt)
+    client.egress_block_set_default_action_set_egress_drop(
+                                     sess_hdl, dev_tgt)
+    client.rid_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+    client.rewrite_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+    client.egress_vlan_xlate_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+
     if acl_enabled:
         client.ip_acl_set_default_action_nop(
                                      sess_hdl, dev_tgt)
@@ -141,6 +153,15 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
                            sess_hdl, dev_tgt,
                            match_spec)
 
+    match_spec = dc_example_egress_system_acl_match_spec_t(
+                           l3_metadata_mtu_check_fail=0,
+                           l3_metadata_mtu_check_fail_mask=0,
+                           l2_metadata_prune=0,
+                           l2_metadata_prune_mask=0x3FF)
+    client.egress_system_acl_table_add_with_egress_drop(
+                            sess_hdl, dev_tgt,
+                            match_spec, 1000)
+
     if tunnel_enabled:
         #Add default outer rmac entry
         match_spec = dc_example_outer_rmac_match_spec_t(
@@ -197,14 +218,14 @@ def program_outer_vlan(client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_ena
                             sess_hdl, dev_tgt,
                             match_spec, mbr_hdl)
 
-def program_inner_vlan(client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_enabled, inner_rmac):
+def program_inner_vlan(client, sess_hdl, dev_tgt, vlan, v4_enabled, v6_enabled, inner_rmac, uuc_mc_index):
     match_spec = dc_example_bd_match_spec_t(
                               l2_metadata_bd=vlan)
     action_spec = dc_example_set_bd_info_action_spec_t(
                             action_vrf=vrf,
                             action_rmac_group=inner_rmac,
                             action_bd_label=0,
-                            action_uuc_mc_index=0,
+                            action_uuc_mc_index=uuc_mc_index,
                             action_umc_mc_index=0,
                             action_bcast_mc_index=0,
                             action_ipv4_unicast_enabled=v4_enabled,
@@ -392,10 +413,9 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
-
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
+
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, v4_enabled, v6_enabled, 0, 0)
 
         #Add static macs to ports. (vlan, mac -> port)
         add_mac(self.client, sess_hdl, dev_tgt, vlan, '00:11:11:11:11:11', 1)
@@ -444,10 +464,10 @@ class L3Ipv4Test(pd_base_tests.ThriftInterfaceDataPlane):
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, inner_rmac_group)
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan1, v4_enabled, v6_enabled, inner_rmac_group, 0)
 
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, inner_rmac_group)
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan2, v4_enabled, v6_enabled, inner_rmac_group, 0)
 
         #Create nexthop
         nhop1=1
@@ -517,10 +537,10 @@ class L3Ipv6Test(pd_base_tests.ThriftInterfaceDataPlane):
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, inner_rmac_group)
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan1, v4_enabled, v6_enabled, inner_rmac_group, 0)
 
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, inner_rmac_group)
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan2, v4_enabled, v6_enabled, inner_rmac_group, 0)
 
         #Create nexthop
         nhop1=1
@@ -595,7 +615,7 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         #Port1 belong to tenant vlan
         #Outer vlan table will derive tenant bd and inner bd table will derive bd state
         program_outer_vlan(self.client, sess_hdl, dev_tgt, tenant_vlan, port1, inner_v4_enabled, inner_v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, tenant_vlan, port1, inner_v4_enabled, inner_v6_enabled, 0)
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, tenant_vlan, inner_v4_enabled, inner_v6_enabled, 0, 0)
 
         #Ingress Tunnel Decap - src vtep entry
         match_spec = dc_example_ipv4_src_vtep_match_spec_t(
@@ -778,7 +798,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         #Port1 belong to tenant vlan
         #Outer vlan table will derive tenant bd and inner bd table will derive bd state
         program_outer_vlan(self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, inner_v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, inner_v6_enabled, inner_rmac_group)
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, tenant_vlan1, inner_v4_enabled, inner_v6_enabled, inner_rmac_group, 0)
 
         #Ingress Tunnel Decap - src vtep entry
         match_spec = dc_example_ipv4_src_vtep_match_spec_t(
@@ -954,10 +974,9 @@ class L2LearningTest(pd_base_tests.ThriftInterfaceDataPlane):
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
-
         program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
-        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
+
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, v4_enabled, v6_enabled, 0, 0)
 
         enable_learning(self.client, sess_hdl, dev_tgt)
 
@@ -974,8 +993,65 @@ class L2LearningTest(pd_base_tests.ThriftInterfaceDataPlane):
         digests = self.client.mac_learn_digest_get_digest(sess_hdl)
         assert len(digests.msg) == 1
         print "new mac learnt ",
-        for b in digests.msg[0].l2_metadata_lkp_mac_sa:
+        for b in string_to_bytes(digests.msg[0].l2_metadata_lkp_mac_sa):
             print("%02x:" % (b)),
         print "on port ", digests.msg[0].l2_metadata_ifindex
         self.client.mac_learn_digest_digest_notify_ack(sess_hdl, digests.msg_ptr)
         self.client.mac_learn_digest_deregister(sess_hdl, 0)
+
+class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
+    def __init__(self):
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "dc_example")
+
+    def runTest(self):
+        sess_hdl = self.conn_mgr.client_init(16)
+        dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
+
+        print "Cleaning state"
+        self.client.clean_all(sess_hdl, dev_tgt)
+
+        #Add the default entries
+        populate_default_entries(self.client, sess_hdl, dev_tgt)
+        populate_init_entries(self.client, sess_hdl, dev_tgt)
+
+        #Create two ports
+        add_ports(self.client, sess_hdl, dev_tgt, 4)
+
+        vlan=10
+        port1=1
+        port2=2
+        port3=3
+        port4=4
+        v4_enabled=0
+        v6_enabled=0
+        mgid = 0x100
+        rid = 0x200
+
+        #Add ports to vlan
+        program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port1, v4_enabled, v6_enabled, 0)
+        program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0)
+        program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port3, v4_enabled, v6_enabled, 0)
+        program_outer_vlan(self.client, sess_hdl, dev_tgt, vlan, port4, v4_enabled, v6_enabled, 0)
+
+        program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, v4_enabled, v6_enabled, 0, mgid)
+
+        port_map = [0] * 32
+        port_map[0] = (1 << (port1 - 1)) + (1 << (port2- 1)) + (1 << (port3 - 1)) + (1 << (port4 - 1))
+        mgrp_hdl = self.mc.mc_mgrp_create(sess_hdl, dev_tgt, mgid)
+        l1_hdl = self.mc.mc_l1_node_create(sess_hdl, dev_tgt, rid)
+        self.mc.mc_l1_associate_node(sess_hdl, dev_tgt, mgrp_hdl, l1_hdl)
+        l2_hdl = self.mc.mc_l2_node_create(sess_hdl, dev_tgt, l1_hdl, port_map)
+
+        pkt = simple_tcp_packet(eth_dst='00:44:44:44:44:44',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.168.10.1',
+                                ip_src='10.168.11.1',
+                                ip_id=101,
+                                ip_ttl=64)
+
+        self.dataplane.send(1, str(pkt))
+        verify_packets(self, pkt, [port2, port3, port4])
+        time.sleep(1)
+        self.mc.mc_l2_node_destroy(sess_hdl, dev_tgt, l2_hdl)
+        self.mc.mc_l1_node_destroy(sess_hdl, dev_tgt, l1_hdl)
+        self.mc.mc_mgrp_destroy(sess_hdl, dev_tgt, mgrp_hdl)

@@ -69,14 +69,3 @@ class SimpleReplicationTest(pd_base_tests.ThriftInterfaceDataPlane):
         self.dataplane.send(2, str(pkt))
         exp_pkt = pkt
         verify_packets(self, exp_pkt, [1, 3]) # port 2 should have been pruned
-
-        # pkt = simple_ip_packet(ip_dst='192.168.1.2',
-        #                        ip_id=101,
-        #                        ip_ttl=64)
-        # exp_pkt = simple_ip_packet(eth_dst='00:01:01:01:01:01',
-        #                            eth_src='01:01:01:01:01:01',
-        #                            ip_dst='192.168.1.2',
-        #                            ip_id=101,
-        #                            ip_ttl=63)
-        # self.dataplane.send(4, str(pkt))
-        # verify_packets(self, exp_pkt, [1])

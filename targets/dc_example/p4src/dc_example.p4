@@ -144,8 +144,10 @@ control egress {
         process_tunnel_rewrite();
         /* rewrite smac, dmac */
         process_mac_rewrite();
-        /* vlan translation and port pruning */
-        process_prune_and_xlate();
+        /* port pruning */
+        process_prune();
+        /* vlan translation */
+        process_vlan_xlate();
         /* egress system acl */
         process_egress_system_acl();
         /* cpu rewrite */
