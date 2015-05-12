@@ -50,6 +50,9 @@ limitations under the License.
 
 #include <p4_sim/rmt.h>
 #include <p4_sim/pd_rpc_server.h>
+#if ENABLE_PLUGIN_SAI
+#include <p4_sim/p4_sai_rpc_server.h>
+#endif
 
 #include <pthread.h>
 
