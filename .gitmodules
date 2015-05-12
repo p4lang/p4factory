@@ -9,4 +9,4 @@
 	url = https://github.com/p4lang/p4c-graphs.git
 [submodule "submodules/switchapi"]
 	path = submodules/switchapi
-	url = git@github.com:p4lang/switchapi.git
+	url = https://github.com/p4lang/switchapi.git
