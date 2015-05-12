@@ -1,0 +1,82 @@
+/*
+Copyright 2013-present Barefoot Networks, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#ifdef BASIC_PROFILE
+#define MIN_PROFILE
+#define MULTICAST_DISABLE
+#define STORM_CONTROL_DISABLE
+#define IPSG_DISABLE
+#define ACL_DISABLE
+#define QOS_DISABLE
+#define MTU_DISABLE
+#endif
+
+// Defines for semantic library
+#ifdef URPF_DISABLE
+#define P4_URPF_DISABLE
+#endif
+
+#ifdef IPV6_DISABLE
+#define P4_IPV6_DISABLE
+#endif
+
+#ifdef MPLS_DISABLE
+#define P4_MPLS_DISABLE
+#endif
+
+#ifdef MULTICAST_DISABLE
+#define P4_MULTICAST_DISABLE
+#endif
+
+#ifdef TUNNEL_DISABLE
+#define P4_TUNNEL_DISABLE
+#endif
+
+#ifdef STORM_CONTROL_DISABLE
+#define P4_STORM_CONTROL_DISABLE
+#endif
+
+#ifdef IPSG_DISABLE
+#define P4_IPSG_DISABLE
+#endif
+
+#ifdef ACL_DISABLE
+#define P4_ACL_DISABLE
+#endif
+
+#ifdef QOS_DISABLE
+#define P4_QOS_DISABLE
+#endif
+
+#ifdef MTU_DISABLE
+#define P4_MTU_DISABLE
+#endif
+
+#ifdef STP_DISABLE
+#define P4_STP_DISABLE
+#endif
+
+#ifdef L2_DISABLE
+#define P4_L2_DISABLE
+#endif
+
+#ifdef L3_DISABLE
+#define P4_L3_DISABLE
+#endif
+
+#ifdef IPV4_DISABLE
+#define P4_IPV4_DISABLE
+#endif
