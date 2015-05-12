@@ -18,6 +18,7 @@ header_type intrinsic_metadata_t {
     fields {
         eg_mcast_group : 16; // multicast group id (key for the mcast replication table)
         replication_id : 16; // Replication ID for multicast
+        lag_hash : 16;
         lf_field_list : 32; // Learn filter field list
     }
 }

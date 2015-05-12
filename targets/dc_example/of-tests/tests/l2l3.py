@@ -1036,11 +1036,12 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         program_inner_vlan(self.client, sess_hdl, dev_tgt, vlan, v4_enabled, v6_enabled, 0, mgid)
 
         port_map = [0] * 32
-        port_map[0] = (1 << (port1 - 1)) + (1 << (port2- 1)) + (1 << (port3 - 1)) + (1 << (port4 - 1))
+        lag_map = [0] * 32
+        port_map[0] = (1 << port1) + (1 << port2) + (1 << port3) + (1 << port4)
         mgrp_hdl = self.mc.mc_mgrp_create(sess_hdl, dev_tgt, mgid)
         l1_hdl = self.mc.mc_l1_node_create(sess_hdl, dev_tgt, rid)
         self.mc.mc_l1_associate_node(sess_hdl, dev_tgt, mgrp_hdl, l1_hdl)
-        l2_hdl = self.mc.mc_l2_node_create(sess_hdl, dev_tgt, l1_hdl, port_map)
+        l2_hdl = self.mc.mc_l2_node_create(sess_hdl, dev_tgt, l1_hdl, port_map, lag_map)
 
         pkt = simple_tcp_packet(eth_dst='00:44:44:44:44:44',
                                 eth_src='00:22:22:22:22:22',
