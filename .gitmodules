@@ -7,3 +7,6 @@
 [submodule "submodules/p4c-graphs"]
 	path = submodules/p4c-graphs
 	url = https://github.com/p4lang/p4c-graphs.git
+[submodule "submodules/switchapi"]
+	path = submodules/switchapi
+	url = https://github.com/p4lang/switchapi.git
