@@ -61,6 +61,6 @@ switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
 bm-switchapi : ${bm-switchapi_BINARY}
 	cp ${bm-switchapi_BINARY} behavioral-model
 
-all: bm-switchapi
+all: bm
 
 .PHONY: bm-switchapi

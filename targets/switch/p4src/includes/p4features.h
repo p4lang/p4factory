@@ -24,7 +24,7 @@ limitations under the License.
 #define MTU_DISABLE
 #endif
 
-// Defines for semantic library
+// Defines for switchapi library
 #ifdef URPF_DISABLE
 #define P4_URPF_DISABLE
 #endif

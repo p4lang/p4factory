@@ -1,44 +1,55 @@
 switch.p4
 =========
 
-Behavioral model with PD library
---------------------------------
+The switch.p4 program describes a data plane of an L2/L3 switch.
 
-To build the softswitch with only the API auto-generated from P4 (PD API) in a thrift server,
+Supported Features
+------------------
+1. Basic L2 switching: VLAN flooding and STP
+2. Basic L3 Routing: IPv4 and IPv6 and VRF
+3. LAG
+4. ECMP
+5. Tunneling: VXLAN and NVGRE (including L2/L3 Gateway), Geneve, and GRE 
+6. Basic ACL: MAC and IP ACLs
+7. Unicast RPF check
+8. MPLS: LER, LSR, IPVPN, VPLS, L2VPN
 
-make bm
+Upcoming Features
+-----------------
+1. Mirroring
+2. Multicast: IP, PIM-SM
+3. NAT
+4. Counters/Statistics
+5. Ingress Policers
+6. QoS
 
+Building Soft Switch
+--------------------
 
-Behavioral model with Semantic library
----------------------------------------
+The soft switch can be built with the auto-generated API or switchapi.
 
-To build the softswitch with the semantic library APIs,
+To build the softswitch with only the auto-generated API in a thrift server,
 
-make bm-switchapi (this is the default)
+    make bm
+
+To build the softswitch with the switchapi library
+
+    make bm-switchapi
+
+By default, the softswitch is built with only the auto-generated API.
 
 When built with this option, there are two thrift servers (ports 9090 and 9091)
-one for the auto-generated table APIs (PD APIs) and the other for the semantic library APIs
+one for the auto-generated table APIs and the other for the switchapi library APIs
 
-For details on the semantic library features please refer to the README.md file in the switchapi repository.
+For details on the switchapi library features please refer to the README.md file in the switchapi repository.
 
-Below is the list of features supported by switch.p4
----------------------------------------------------------------
+Running Tests
+-------------
 
-1. Basic L2 switching: VLAN flooding and STP support
-2. Basic L3 Routing: IPv4 and IPv6 and VRF support
-3. Support for LAG
-4. Support for ECMP
-5. Tunnels: Support for VXLAN and NVGRE (including L2/L3 Gateway), Geneve, and GRE 
-6. Basic ACL: Support for MAC and IP ACLs
-7. Unicast RPF check
-8. MPLS support - LER, LSR, IPVPN, VPLS, L2VPN
+To run the pd thrift testcases,
 
-Soon to follow
---------------
+    sudo ./run_tests.py --test-dir of-tests/tests/pd-tests switch
 
-1. Support for Mirroring
-2. Complete multicast support - IP, PIM-SM
-3. NAT support
-4. Counters/Statistics support
-5. QoS support
-6. Ingress Policers support
+To run the api thrift testcases,
+
+    sudo ./run_tests.py --test-dir of-tests/tests/api-tests switch
