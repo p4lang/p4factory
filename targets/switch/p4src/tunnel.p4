@@ -159,9 +159,9 @@ action terminate_tunnel_inner_non_ip(bd, bd_label,
 
 #ifndef IPV4_DISABLE
 action terminate_tunnel_inner_ethernet_ipv4(bd, vrf,
-        rmac_group, mrpf_group, bd_label,
+        rmac_group, bd_label,
         uuc_mc_index, bcast_mc_index, umc_mc_index,
-        ipv4_unicast_enabled, ipv4_multicast_mode, igmp_snooping_enabled,
+        ipv4_unicast_enabled, igmp_snooping_enabled,
         ipv4_urpf_mode, stats_idx) {
     modify_field(ingress_metadata.bd, bd);
     modify_field(ingress_metadata.vrf, vrf);
@@ -195,8 +195,8 @@ action terminate_tunnel_inner_ethernet_ipv4(bd, vrf,
 }
 
 action terminate_tunnel_inner_ipv4(vrf, rmac_group,
-        mrpf_group, ipv4_unicast_enabled,
-        ipv4_multicast_mode, ipv4_urpf_mode, stats_idx) {
+        ipv4_unicast_enabled,
+        ipv4_urpf_mode, stats_idx) {
     modify_field(ingress_metadata.vrf, vrf);
     modify_field(ingress_metadata.outer_dscp, l3_metadata.lkp_ip_tc);
 
@@ -222,9 +222,9 @@ action terminate_tunnel_inner_ipv4(vrf, rmac_group,
 
 #ifndef IPV6_DISABLE
 action terminate_tunnel_inner_ethernet_ipv6(bd, vrf,
-        rmac_group, mrpf_group, bd_label,
+        rmac_group, bd_label,
         uuc_mc_index, bcast_mc_index, umc_mc_index,
-        ipv6_unicast_enabled, ipv6_multicast_mode, mld_snooping_enabled,
+        ipv6_unicast_enabled, mld_snooping_enabled,
         ipv6_urpf_mode, stats_idx) {
     modify_field(ingress_metadata.bd, bd);
     modify_field(ingress_metadata.vrf, vrf);
@@ -258,8 +258,8 @@ action terminate_tunnel_inner_ethernet_ipv6(bd, vrf,
 }
 
 action terminate_tunnel_inner_ipv6(vrf, rmac_group, 
-        mrpf_group, ipv6_unicast_enabled,
-        ipv6_multicast_mode, ipv6_urpf_mode, stats_idx) {
+        ipv6_unicast_enabled,
+        ipv6_urpf_mode, stats_idx) {
     modify_field(ingress_metadata.vrf, vrf);
     modify_field(ingress_metadata.outer_dscp, l3_metadata.lkp_ip_tc);
 

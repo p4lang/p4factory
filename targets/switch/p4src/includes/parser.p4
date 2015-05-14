@@ -424,8 +424,8 @@ field_list_calculation inner_ipv4_checksum {
 }
 
 calculated_field inner_ipv4.hdrChecksum {
-    verify inner_ipv4_checksum if(valid(ipv4));
-    update inner_ipv4_checksum if(valid(ipv4));
+    verify inner_ipv4_checksum if(valid(inner_ipv4));
+    update inner_ipv4_checksum if(valid(inner_ipv4));
 }
 
 header udp_t outer_udp;
