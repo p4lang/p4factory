@@ -36,10 +36,10 @@ To build the softswitch with the switchapi library
 
     make bm-switchapi
 
-By default, the softswitch is built with only the auto-generated API.
-
 When built with this option, there are two thrift servers (ports 9090 and 9091)
 one for the auto-generated table APIs and the other for the switchapi library APIs
+
+By default, the softswitch is built with only the auto-generated API.
 
 For details on the switchapi library features please refer to the README.md file in the switchapi repository.
 

@@ -208,12 +208,12 @@ def program_ports(client, sess_hdl, dev_tgt, port_count):
                              match_spec, action_spec)
         count = count + 1
 
-def program_vlan_mapping(client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_enabled, outer_rmac, mc_index):
+def program_vlan_mapping(client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_enabled, rmac, mc_index):
 
     action_spec = dc_set_bd_action_spec_t(
                             action_bd=vlan,
                             action_vrf=vrf,
-                            action_rmac_group=outer_rmac,
+                            action_rmac_group=rmac,
                             action_ipv4_unicast_enabled=v4_enabled,
                             action_ipv6_unicast_enabled=v6_enabled,
                             action_bd_label=0,
@@ -606,8 +606,8 @@ class L3Ipv4Test(pd_base_tests.ThriftInterfaceDataPlane):
         #Add ports to vlan
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
-        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, 0, 0)
-        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, 0, 0)
+        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, inner_rmac_group, 0)
+        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, inner_rmac_group, 0)
 
         #Create nexthop
         nhop1=1
@@ -676,8 +676,8 @@ class L3Ipv6Test(pd_base_tests.ThriftInterfaceDataPlane):
         #Add ports to vlan
         #Outer vlan table programs (port, vlan) mapping and derives the bd
         #Inner vlan table derives the bd state
-        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, 0, 0)
-        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, 0, 0)
+        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan1, port1, v4_enabled, v6_enabled, inner_rmac_group, 0)
+        program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan2, port2, v4_enabled, v6_enabled, inner_rmac_group, 0)
 
         #Create nexthop
         nhop1=1
@@ -880,7 +880,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
 
         #Port1 belong to tenant vlan
         #Outer vlan table will derive tenant bd and inner bd table will derive bd state
-        program_vlan_mapping(self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, inner_v6_enabled, 0, 0)
+        program_vlan_mapping(self.client, sess_hdl, dev_tgt, tenant_vlan1, port1, inner_v4_enabled, inner_v6_enabled, inner_rmac_group, 0)
 
         #Add L3 routes
         nhop1=1
