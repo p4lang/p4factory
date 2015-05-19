@@ -140,7 +140,7 @@ control ingress {
 
     /* outer RMAC lookup for tunnel termination */
     apply(outer_rmac) {
-        default {
+    set_outer_rmac_hit_flag {
             if (valid(ipv4)) {
                 process_ipv4_vtep();
             } else {
@@ -183,7 +183,7 @@ control ingress {
         process_qos();
 
         apply(rmac) {
-            default {
+            rmac_hit {
                 if ((l3_metadata.lkp_ip_type == IPTYPE_IPV4) and
                     (ipv4_metadata.ipv4_unicast_enabled == TRUE)) {
                     /* router ACL/PBR */
