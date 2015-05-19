@@ -67,6 +67,10 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
     if test_subdir != "":
         test_name += "--" + test_subdir
 
+    my_uniteresting_user_uid = int(os.environ['SUDO_UID'])
+
+    os.seteuid(my_uniteresting_user_uid)
+
     if do_make_clean:
         cmd = ['make', 'clean']
         print ' '.join(cmd)
@@ -78,6 +82,8 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
         cmd = ['make']
     print ' '.join(cmd)
     subprocess.call(cmd)
+
+    os.seteuid(0)
 
     cmd = ['sudo', './behavioral-model']
     print ' '.join(cmd)
@@ -133,6 +139,11 @@ def check_ifaces():
              "red")
 
 def main():
+    if(os.getuid() != 0):
+        my_print("I cannot run as a mortal, I need to be root rrrOOOOOOTTTTT",
+                 "red")
+        sys.exit(1)
+
     check_ifaces()
 
     pd_tests()
@@ -150,8 +161,7 @@ def main():
         else:
             logfile = "/tmp/" + test_name + ".log"
             print_failure(test_name)
-            print_failure("take a look at the BM log file: " +\
-                          logfile, "red")
+            my_print("take a look at the BM log file: " + logfile, "red")
 
     print
     print

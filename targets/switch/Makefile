@@ -20,6 +20,9 @@
 
 export TARGET_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
+# force main.c to be recompiled, in case switchapi was enabled / disabled
+TOUCH_MAIN := $(shell touch main.c)
+
 include ../../init.mk
 
 ifndef P4FACTORY
@@ -64,3 +67,4 @@ bm-switchapi : ${bm-switchapi_BINARY}
 all: bm
 
 .PHONY: bm-switchapi
+
