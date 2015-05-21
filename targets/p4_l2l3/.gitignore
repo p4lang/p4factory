@@ -4,5 +4,4 @@
 /p4_l2l3.mk
 /*.pcap
 /p4_l2l3
-/main.c
 /of-tests/pd_thrift
