@@ -54,6 +54,15 @@ ifndef SUBMODULE_P4C_GRAPHS
   endif
 endif
 
+ifndef SUBMODULE_SWITCHAPI
+  ifdef SUBMODULES
+    SUBMODULE_SWITCHAPI := $(SUBMODULES)/switchapi
+  else
+    SUBMODULE_SWITCHAPI := $(ROOT)/submodules/switchapi
+    SUBMODULES_LOCAL += switchapi
+  endif
+endif
+
 ifdef SUBMODULES_LOCAL
   SUBMODULES_LOCAL_UPDATE := $(shell python $(ROOT)/submodules/init.py --update $(SUBMODULES_LOCAL))
   ifneq ($(lastword $(SUBMODULES_LOCAL_UPDATE)),submodules:ok.)
@@ -67,6 +76,7 @@ endif
 export SUBMODULE_OFT_INFRA
 export SUBMODULE_P4C_BEHAVIORAL
 export SUBMODULE_P4C_GRAPHS
+export SUBMODULE_SWITCHAPI
 
 MODULE_DIRS := $(ROOT)/modules
 
@@ -74,4 +84,5 @@ MODULE_DIRS := $(ROOT)/modules
 	@echo oft_infra @ $(SUBMODULE_OFT_INFRA)
 	@echo p4c_behavioral @ $(SUBMODULE_P4C_BEHAVIORAL)
 	@echo p4c_graphs @ $(SUBMODULE_P4C_GRAPHS)
+	@echo switchapi @ $(SUBMODULE_SWITCHAPI)
 

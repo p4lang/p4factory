@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+ * Tunnel Metadata
+ */
 header_type tunnel_metadata_t {
     fields {
         /* Ingress Metadata */
@@ -37,10 +40,16 @@ header_type tunnel_metadata_t {
 
 metadata tunnel_metadata_t tunnel_metadata;
 
+/* OUTER_RMAC_CONTROL_BLOCK */
 action set_outer_rmac_hit_flag() {
     modify_field(tunnel_metadata.outer_rmac_hit, TRUE);
 }
 
+/*
+ * Table: Outer Router Mac
+ * Lookup: Ingress
+ * Outer rmac lookup for tunnel termination
+ */
 table outer_rmac {
     reads {
         tunnel_metadata.outer_rmac_group : exact;
@@ -53,6 +62,7 @@ table outer_rmac {
     size : OUTER_ROUTER_MAC_TABLE_SIZE;
 }
 
+/* VIRTUAL_TUNNEL_ENDPOINT_CONTROL_BLOCK */
 action set_src_vtep_miss_flag() {
     modify_field(tunnel_metadata.src_vtep_miss, TRUE);
 }
@@ -61,10 +71,15 @@ action set_tunnel_lif(lif) {
     modify_field(tunnel_metadata.tunnel_lif, lif);
 }
 
+/*
+ * Table: Ipv4 source vtep
+ * Lookup: Ingress
+ * Derive tunnel logical interface
+ */
 table ipv4_src_vtep {
     reads {
         l3_metadata.vrf : exact;
-        l3_metadata.lkp_ipv4_sa : exact;
+        ipv4_metadata.lkp_ipv4_sa : exact;
     }
     actions {
         nop;
@@ -78,10 +93,32 @@ action set_tunnel_termination_flag() {
     modify_field(tunnel_metadata.tunnel_terminate, TRUE);
 }
 
+/*
+ * Table: Ipv6 source vtep
+ * Lookup: Ingress
+ * Derive tunnel logical interface
+ */
+table ipv6_src_vtep {
+    reads {
+        l3_metadata.vrf : exact;
+        ipv6_metadata.lkp_ipv6_sa : exact;
+    }
+    actions {
+        nop;
+        set_tunnel_lif;
+    }
+    size : SRC_TUNNEL_TABLE_SIZE;
+}
+
+/*
+ * Table: Ipv4 destination vtep
+ * Lookup: Ingress
+ * Determines whether tunnel has to be terminated
+ */
 table ipv4_dest_vtep {
     reads {
         l3_metadata.vrf : exact;
-        l3_metadata.lkp_ipv4_da : exact;
+        ipv4_metadata.lkp_ipv4_da : exact;
         l3_metadata.lkp_ip_proto : exact;
         l3_metadata.lkp_l4_dport : exact;
     }
@@ -92,6 +129,56 @@ table ipv4_dest_vtep {
     size : DEST_TUNNEL_TABLE_SIZE;
 }
 
+/*
+ * Table: Ipv6 destination vtep
+ * Lookup: Ingress
+ * Determines whether tunnel has to be terminated
+ */
+table ipv6_dest_vtep {
+    reads {
+        l3_metadata.vrf : exact;
+        ipv6_metadata.lkp_ipv6_da : exact;
+        l3_metadata.lkp_ip_proto : exact;
+        l3_metadata.lkp_l4_dport : exact;
+    }
+    actions {
+        nop;
+        set_tunnel_termination_flag;
+    }
+    size : DEST_TUNNEL_TABLE_SIZE;
+}
+
+control process_tunnel_vtep {
+#ifndef TUNNEL_DISABLE
+    /* outer RMAC lookup for tunnel termination */
+    apply(outer_rmac);
+
+    /* src vtep table lookup */
+    if (valid(ipv4)) {
+        apply(ipv4_src_vtep);
+    } else {
+        if (valid(ipv6)) {
+            apply(ipv6_src_vtep);
+        }
+    }
+
+    if (l2_metadata.lkp_pkt_type == L2_UNICAST) {
+        /* check for ipv4 unicast tunnel termination  */
+        if ((l3_metadata.lkp_ip_type == IPTYPE_IPV4) and
+            (ipv4_metadata.ipv4_unicast_enabled == TRUE)) {
+            apply(ipv4_dest_vtep);
+        } else {
+            /* check for ipv6 unicast tunnel termination  */
+            if ((l3_metadata.lkp_ip_type == IPTYPE_IPV6) and
+                (ipv6_metadata.ipv6_unicast_enabled == TRUE)) {
+                apply(ipv6_dest_vtep);
+            }
+        }
+    }
+#endif /* TUNNEL_DISABLE */
+}
+
+/* TUNNEL_TERMINATION_CONTROL_BLOCK */
 action terminate_tunnel_inner_ipv4(bd, vrf,
         rmac_group, bd_label,
         uuc_mc_index, bcast_mc_index, umc_mc_index,
@@ -109,15 +196,16 @@ action terminate_tunnel_inner_ipv4(bd, vrf,
 
     modify_field(l2_metadata.lkp_mac_sa, inner_ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, inner_ethernet.dstAddr);
+    modify_field(l2_metadata.lkp_mac_type, inner_ethernet.etherType);
     modify_field(l3_metadata.lkp_ip_type, IPTYPE_IPV4);
-    modify_field(l3_metadata.lkp_ipv4_sa, inner_ipv4.srcAddr);
-    modify_field(l3_metadata.lkp_ipv4_da, inner_ipv4.dstAddr);
+    modify_field(ipv4_metadata.lkp_ipv4_sa, inner_ipv4.srcAddr);
+    modify_field(ipv4_metadata.lkp_ipv4_da, inner_ipv4.dstAddr);
     modify_field(l3_metadata.lkp_ip_proto, inner_ipv4.protocol);
     modify_field(l3_metadata.lkp_ip_tc, inner_ipv4.diffserv);
     modify_field(l3_metadata.lkp_l4_sport, l3_metadata.lkp_inner_l4_sport);
     modify_field(l3_metadata.lkp_l4_dport, l3_metadata.lkp_inner_l4_dport);
 
-    modify_field(l3_metadata.ipv4_unicast_enabled, ipv4_unicast_enabled);
+    modify_field(ipv4_metadata.ipv4_unicast_enabled, ipv4_unicast_enabled);
     modify_field(mcast_metadata.igmp_snooping_enabled, igmp_snooping_enabled);
     modify_field(l3_metadata.rmac_group, rmac_group);
     modify_field(mcast_metadata.uuc_mc_index, uuc_mc_index);
@@ -127,6 +215,41 @@ action terminate_tunnel_inner_ipv4(bd, vrf,
     modify_field(l3_metadata.l3_length, inner_ipv4.totalLen);
 }
 
+action terminate_tunnel_inner_ipv6(bd, vrf,
+        rmac_group, bd_label,
+        uuc_mc_index, bcast_mc_index, umc_mc_index,
+        ipv6_unicast_enabled, mld_snooping_enabled)
+        {
+    modify_field(l2_metadata.bd, bd);
+    modify_field(l3_metadata.vrf, vrf);
+    modify_field(l3_metadata.outer_dscp, l3_metadata.lkp_ip_tc);
+    add(l3_metadata.outer_ttl, l3_metadata.lkp_ip_ttl, -1);
+
+    modify_field(l2_metadata.lkp_mac_sa, inner_ethernet.srcAddr);
+    modify_field(l2_metadata.lkp_mac_da, inner_ethernet.dstAddr);
+    modify_field(l2_metadata.lkp_mac_type, inner_ethernet.etherType);
+    modify_field(l3_metadata.lkp_ip_type, IPTYPE_IPV6);
+    modify_field(ipv6_metadata.lkp_ipv6_sa, inner_ipv6.srcAddr);
+    modify_field(ipv6_metadata.lkp_ipv6_da, inner_ipv6.dstAddr);
+    modify_field(l3_metadata.lkp_ip_proto, inner_ipv6.nextHdr);
+    modify_field(l3_metadata.lkp_ip_tc, inner_ipv6.trafficClass);
+    modify_field(l3_metadata.lkp_l4_sport, l3_metadata.lkp_inner_l4_sport);
+    modify_field(l3_metadata.lkp_l4_dport, l3_metadata.lkp_inner_l4_dport);
+
+    modify_field(ipv6_metadata.ipv6_unicast_enabled, ipv6_unicast_enabled);
+    modify_field(mcast_metadata.mld_snooping_enabled, mld_snooping_enabled);
+    modify_field(l3_metadata.rmac_group, rmac_group);
+    modify_field(mcast_metadata.uuc_mc_index, uuc_mc_index);
+    modify_field(mcast_metadata.umc_mc_index, umc_mc_index);
+    modify_field(mcast_metadata.bcast_mc_index, bcast_mc_index);
+    modify_field(l2_metadata.bd_label, bd_label);
+}
+
+/*
+ * Table: Tunnel termination
+ * Lookup: Ingress
+ * Derive tunnel properties
+ */
 table tunnel {
     reads {
         tunnel_metadata.tunnel_vni : exact;
@@ -135,34 +258,18 @@ table tunnel {
     }
     actions {
         terminate_tunnel_inner_ipv4;
+        terminate_tunnel_inner_ipv6;
     }
     size : VNID_MAPPING_TABLE_SIZE;
 }
 
-control tunnel_vtep_lookup {
+control process_tunnel_terminate {
 #ifndef TUNNEL_DISABLE
-    /* outer RMAC lookup for tunnel termination */
-    apply(outer_rmac);
-
-    /* src vtep table lookup */
-    if (valid(ipv4)) {
-        apply(ipv4_src_vtep);
-    }
-
-    if (l2_metadata.lkp_pkt_type == L2_UNICAST) {
-        /* check for ipv4 unicast tunnel termination  */
-        if ((l3_metadata.lkp_ip_type == IPTYPE_IPV4) and
-            (l3_metadata.ipv4_unicast_enabled == TRUE)) {
-            apply(ipv4_dest_vtep);
-        }
-    }
+    apply(tunnel);
 #endif /* TUNNEL_DISABLE */
 }
 
-control tunnel_terminate_lookup {
-    apply(tunnel);
-}
-
+/* TUNNEL_DECAPSULATE_CONTROL_BLOCK */
 action decapsulate_vxlan_packet_inner_ipv4_udp() {
     copy_header(ethernet, inner_ethernet);
     add_header(ipv4);
@@ -242,6 +349,11 @@ action decapsulate_nvgre_packet_inner_ipv4_tcp() {
     modify_field(l3_metadata.ttl, l3_metadata.outer_ttl);
 }
 
+/*
+ * Table: Tunnel Decapsulate
+ * Lookup: Egress
+ * Decapsulate the tunnel header
+ */
 table tunnel_decap {
     reads {
         tunnel_metadata.ingress_tunnel_type : exact;
@@ -264,6 +376,11 @@ action set_egress_bd_properties(vnid ) {
     modify_field(tunnel_metadata.vnid, vnid);
 }
 
+/*
+ * Table: Egress Bridge Domain
+ * Lookup: Egress
+ * Derive egress bd properties
+ */
 table egress_bd_map {
     reads {
         l2_metadata.egress_bd : exact;
@@ -275,7 +392,7 @@ table egress_bd_map {
     size : EGRESS_VNID_MAPPING_TABLE_SIZE;
 }
 
-control tunnel_decap_lookup {
+control process_tunnel_decap {
 #ifndef TUNNEL_DISABLE
     /* perform tunnel decap */
     if (tunnel_metadata.tunnel_terminate == TRUE) {
@@ -289,6 +406,7 @@ control tunnel_decap_lookup {
 #endif /* TUNNEL_DISABLE */
 }
 
+/* TUNNEL_ENCAPSULATE_CONTROL_BLOCK */
 action f_copy_ipv4_to_inner() {
     add_header(inner_ethernet);
     copy_header(inner_ethernet, ethernet);
@@ -451,7 +569,11 @@ action ipv4_erspan_v2_inner_ipv4_tcp_rewrite() {
     add_to_field(ipv4.totalLen, 46);
 }
 
-
+/*
+ * Table: Tunnel encapsulate
+ * Lookup: Egress
+ * Insert tunnel headers
+ */
 table tunnel_rewrite {
     reads {
         tunnel_metadata.egress_tunnel_type : exact;
@@ -488,6 +610,11 @@ action rewrite_tunnel_ipv4_src(ip) {
     modify_field(ipv4.srcAddr, ip);
 }
 
+/*
+ * Table: Tunnel source IP rewrite
+ * Lookup: Egress
+ * Rewrite souce ip address of tunnel
+ */
 table tunnel_src_rewrite {
     reads {
         tunnel_metadata.tunnel_src_index : exact;
@@ -502,6 +629,11 @@ action rewrite_tunnel_ipv4_dst(ip) {
     modify_field(ipv4.dstAddr, ip);
 }
 
+/*
+ * Table: Tunnel destination IP rewrite
+ * Lookup: Egress
+ * Rewrite destination ip address of tunnel
+ */
 table tunnel_dst_rewrite {
     reads {
         tunnel_metadata.tunnel_dst_index : exact;
@@ -512,7 +644,7 @@ table tunnel_dst_rewrite {
     size : SRC_TUNNEL_TABLE_SIZE;
 }
 
-control tunnel_rewrite_lookup {
+control process_tunnel_rewrite {
 #ifndef TUNNEL_DISABLE
     if (tunnel_metadata.egress_tunnel_type != EGRESS_TUNNEL_TYPE_NONE) {
         /* tunnel rewrites */

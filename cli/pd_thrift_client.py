@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from thrift.protocol import TBinaryProtocol
+from thrift.protocol import TMultiplexedProtocol
 import thrift.Thrift
 from thrift.transport import TSocket
 from thrift.transport import TTransport
@@ -40,25 +41,38 @@ class ThriftClient(object):
   THRIFT_SPEC = "thrift_spec"
 
   def __init__(self, module, hostname, port, p4_name):
-    self._module = module
+  
+    self.p4_client_module = importlib.import_module(".".join(["p4_pd_rpc", p4_name]))
+    self.mc_client_module = importlib.import_module(".".join(["mc_pd_rpc", "mc"]))
+    self.conn_mgr_client_module = importlib.import_module(".".join(["conn_mgr_pd_rpc",
+"conn_mgr"]))
+
     self._p4_name = p4_name
 
     self._utils = importlib.import_module("utils")
 
     self.setup(hostname, port)
-    self._session_handle = self._client.client_init(16)
-    self._dev_target = self._module.DevTarget_t(0, self._utils.hex_to_i16(0xFFFF))
+    self._session_handle = self._conn_mgr.client_init(16)
+    from res_pd_rpc.ttypes import DevTarget_t
+    self._dev_target = DevTarget_t(0, self._utils.hex_to_i16(0xFFFF))
 
   def get_spec_prefix(self):
     return self._p4_name + '_'
 
   def setup(self, hostname, port):
+
     # Set up thrift client and contact server
     self._transport = TSocket.TSocket(hostname, port)
     self._transport = TTransport.TBufferedTransport(self._transport)
-    self._protocol = TBinaryProtocol.TBinaryProtocol(self._transport)
+    bprotocol = TBinaryProtocol.TBinaryProtocol(self._transport)
 
-    self._client = self._module.Client(self._protocol)
+    self._mc_protocol = TMultiplexedProtocol.TMultiplexedProtocol(bprotocol, "mc")
+    self._conn_mgr_protocol = TMultiplexedProtocol.TMultiplexedProtocol(bprotocol, "conn_mgr")
+    self._p4_protocol = TMultiplexedProtocol.TMultiplexedProtocol(bprotocol, self._p4_name)
+
+    self._client = self.p4_client_module.Client(self._p4_protocol)
+    self._mc = self.mc_client_module.Client(self._mc_protocol)
+    self._conn_mgr = self.conn_mgr_client_module.Client(self._conn_mgr_protocol)
     self._transport.open()
 
   def get_match_field_names(self, table_name):
@@ -69,7 +83,7 @@ class ThriftClient(object):
 
   def get_spec_class(self, name, spec_suffix):
     spec_name = self.get_spec_prefix() + name + spec_suffix
-    return getattr(self._module, spec_name)
+    return getattr(self.p4_client_module, spec_name)
 
   def get_parameter_names(self, name, spec_suffix):
     try:
@@ -188,7 +202,7 @@ class ThriftClient(object):
 
   def get_table_names(self):
     table_names = []
-    for function in dir(self._module):
+    for function in dir(self.p4_client_module):
       regex = '^%s(?P<table_name>\S+)%s' % (self.get_spec_prefix(), ThriftClient.MATCH_SPEC_T)
       m = re.search(regex, function)
       if m is not None:

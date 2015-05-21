@@ -14,11 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+ * multicast metadata
+ */
 header_type multicast_metadata_t {
     fields {
         l2_multicast : 1;                      /* packet is l2 multicast */
         src_is_link_local : 1;                 /* source is link local address */
         igmp_snooping_enabled : 1;             /* is IGMP snooping enabled on BD */
+        mld_snooping_enabled : 1;              /* is MLD snooping enabled on BD */
         uuc_mc_index : 16;                     /* unknown unicast multicast index */
         umc_mc_index : 16;                     /* unknown multicast multicast index */
         bcast_mc_index : 16;                   /* broadcast multicast index */
@@ -29,11 +33,18 @@ header_type multicast_metadata_t {
 
 metadata multicast_metadata_t mcast_metadata;
 
+/* MULTICAST_CONTROL_BLOCK */
 action replica_from_rid(bd) {
     modify_field(l2_metadata.egress_bd, bd);
     modify_field(mcast_metadata.replica, TRUE);
 }
 
+/*
+ * Table: Replication ID
+ * Lookup: Egress
+ * Replication Id is unique id derived for every multicast packet
+ * Rid derives egress bd
+ */
 table rid {
     reads {
         intrinsic_metadata.replication_id : exact;
@@ -45,7 +56,7 @@ table rid {
     size : RID_TABLE_SIZE;
 }
 
-control replication_id_lookup {
+control process_replication_id {
 #ifndef MULTICAST_DISABLE
     if(intrinsic_metadata.replication_id != 0) {
         /* set info from rid */

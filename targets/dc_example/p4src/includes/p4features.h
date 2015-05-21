@@ -16,9 +16,10 @@ limitations under the License.
 
 // Profiles control
 
-// #define MULTICAST_DISABLE
-// #define TUNNEL_DISABLE
-// #define ACL_DISABLE
+//#define MULTICAST_DISABLE
+//#define TUNNEL_DISABLE
+//#define ACL_DISABLE
+//#define IPV6_DISABLE
 
 #ifdef MULTICAST_DISABLE
 #define P4_MULTICAST_DISABLE
@@ -30,4 +31,8 @@ limitations under the License.
 
 #ifdef ACL_DISABLE
 #define P4_ACL_DISABLE
+#endif
+
+#ifdef IPV6_DISABLE
+#define P4_IPV6_DISABLE
 #endif

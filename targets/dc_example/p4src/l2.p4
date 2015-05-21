@@ -14,19 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+ * l2 metadata
+ */
 header_type l2_metadata_t {
     fields {
         /* Ingress Metadata */
         ifindex : IFINDEX_BIT_WIDTH;           /* input interface index - MSB bit lag*/
         lif : 16;                              /* logical interface */
-        lkp_pkt_type : 3;
-        lkp_mac_sa : 48;
-        lkp_mac_da : 48;
-        lkp_mac_type : 16;
-
+        lkp_pkt_type : 3;                      /* packet type */
+        lkp_mac_sa : 48;                       /* l2 source mac address */
+        lkp_mac_da : 48;                       /* l2 destination mac address */
+        lkp_mac_type : 16;                     /* ether type */
         if_label : 16;                         /* if label for acls */
         bd_label : 16;                         /* bd label for acls */
-
         l2_src_miss : 1;                       /* l2 source miss */
         l2_src_move : IFINDEX_BIT_WIDTH;       /* l2 source interface mis-match */
         l2_redirect : 1;                       /* l2 redirect action */
@@ -43,11 +44,17 @@ header_type l2_metadata_t {
         /* Egress Metadata */
         egress_smac_idx : 9;                   /* index into source mac table */
         egress_mac_da : 48;                    /* final mac da */
+        prune: 10;                             /* egress pruning */
     }
 }
 
 metadata l2_metadata_t l2_metadata;
 
+/* VALIDATE_OUTER_ETHERNET_CONTROL_BLOCK */
+/*
+ * Tables and actions to parse and validate outer
+ * ethernet header
+ */
 action set_valid_outer_unicast_packet() {
     modify_field(l2_metadata.lkp_pkt_type, L2_UNICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
@@ -86,11 +93,19 @@ control validate_outer_ethernet_header {
     apply(validate_outer_ethernet);
 }
 
+/* LIF_AND_BRIDGE_DOMAIN_CONTROL_BLOCK */
+/*
+ * Derive logical interface(lif) and bridge domain(bd)
+ */
 action set_ifindex(ifindex, if_label) {
     modify_field(l2_metadata.ifindex, ifindex);
     modify_field(l2_metadata.if_label, if_label);
 }
 
+/*
+ * Table: Port Mapping
+ * Logical interface lookup
+ */
 table port_mapping {
     reads {
         standard_metadata.ingress_port : exact;
@@ -101,6 +116,10 @@ table port_mapping {
     size : PORTMAP_TABLE_SIZE;
 }
 
+/*
+ * Table: Port-Vlan Membership
+ * Bridge domain lookup
+ */
 table port_vlan_mapping {
     reads {
         l2_metadata.ifindex : exact;
@@ -114,7 +133,7 @@ table port_vlan_mapping {
     size : PORT_VLAN_TABLE_SIZE;
 }
 
-control port_vlan_mapping_lookup {
+control process_port_vlan_mapping {
     /* input mapping - derive an ifindex */
     apply(port_mapping);
 
@@ -122,10 +141,15 @@ control port_vlan_mapping_lookup {
     apply(port_vlan_mapping);
 }
 
+/* SPANNING_TREE_CONTROL_BLOCK */
 action set_stp_state(stp_state) {
     modify_field(l2_metadata.stp_state, stp_state);
 }
 
+/*
+ * Table: Spanning Tree
+ * Derive spanning tree state for a port
+ */
 table spanning_tree {
     reads {
         l2_metadata.ifindex : exact;
@@ -137,26 +161,27 @@ table spanning_tree {
     size : SPANNING_TREE_TABLE_SIZE;
 }
 
-control spanning_tree_lookup {
+control process_spanning_tree {
     if (l2_metadata.stp_group != STP_GROUP_NONE) {
         apply(spanning_tree);
     }
 }
 
+/* OUTER_BD_CONTROL_BLOCK */
+/*
+ * Extract core bridge domain(bd) properties for tunnelled packets
+ */
 action set_bd(outer_vlan_bd, vrf, rmac_group, 
-        ipv4_unicast_enabled, 
+        ipv4_unicast_enabled, ipv6_unicast_enabled,
         stp_group) {
     modify_field(l3_metadata.vrf, vrf);
-    modify_field(l3_metadata.ipv4_unicast_enabled, ipv4_unicast_enabled);
+    modify_field(ipv4_metadata.ipv4_unicast_enabled, ipv4_unicast_enabled);
+    modify_field(ipv6_metadata.ipv6_unicast_enabled, ipv6_unicast_enabled);
     modify_field(tunnel_metadata.outer_rmac_group, rmac_group);
     modify_field(l2_metadata.bd, outer_vlan_bd);
     modify_field(l2_metadata.stp_group, stp_group);
 }
 
-/*
-* outer_bd is used to extract the tunnel termination 
-*   actions
-*/
 action_profile outer_bd_action_profile {
     actions {
         set_bd;
@@ -164,13 +189,16 @@ action_profile outer_bd_action_profile {
     size : OUTER_BD_TABLE_SIZE;
 }
 
+/* BD_CONTROL_BLOCK */
 action set_bd_info(vrf, rmac_group, 
         bd_label, uuc_mc_index, bcast_mc_index, umc_mc_index,
-        ipv4_unicast_enabled, 
-        igmp_snooping_enabled, stp_group) {
+        ipv4_unicast_enabled, ipv6_unicast_enabled,
+        igmp_snooping_enabled, mld_snooping_enabled, stp_group) {
     modify_field(l3_metadata.vrf, vrf);
-    modify_field(l3_metadata.ipv4_unicast_enabled, ipv4_unicast_enabled);
+    modify_field(ipv4_metadata.ipv4_unicast_enabled, ipv4_unicast_enabled);
+    modify_field(ipv6_metadata.ipv6_unicast_enabled, ipv6_unicast_enabled);
     modify_field(mcast_metadata.igmp_snooping_enabled, igmp_snooping_enabled);
+    modify_field(mcast_metadata.mld_snooping_enabled, mld_snooping_enabled);
     modify_field(l3_metadata.rmac_group, rmac_group);
     modify_field(mcast_metadata.uuc_mc_index, uuc_mc_index);
     modify_field(mcast_metadata.umc_mc_index, umc_mc_index);
@@ -180,9 +208,10 @@ action set_bd_info(vrf, rmac_group,
 }
 
 /*
-* extract all the bridge domain parameters for non-tunneled
-*   packets
-*/
+ * Table: Tenant bridge domain
+ * Lookup: Ingress
+ * Extract bridge domain properties for tenant or non-tunnelled packets
+ */
 table bd {
     reads {
         l2_metadata.bd : exact;
@@ -193,11 +222,12 @@ table bd {
     size : BD_TABLE_SIZE;
 }
 
-control bd_lookup {
+control process_bd {
     /* extract BD related parameters */
     apply(bd);
 }
 
+/* SOURCE_MAC_CONTROL_BLOCK */
 action set_l2_multicast() {
     modify_field(mcast_metadata.l2_multicast, TRUE);
 }
@@ -209,10 +239,15 @@ action set_src_is_link_local() {
 action set_malformed_packet() {
 }
 
+/*
+ * Table: Validate packet
+ * Lookup: Ingress
+ * Validate packet based on destination mac and ip addresses
+ */
 table validate_packet {
     reads {
         l2_metadata.lkp_mac_da : ternary;
-        l3_metadata.lkp_ipv4_da : ternary;
+        ipv4_metadata.lkp_ipv4_da : ternary;
     }
     actions {
         nop;
@@ -232,6 +267,12 @@ action smac_hit(ifindex) {
     add_to_field(l2_metadata.egress_bd, 0);
 }
 
+/*
+ * Table: Source mac
+ * Lookup: Ingress
+ * Mac learning will be done when the smac table is a miss or
+ * when the mac moves
+ */
 table smac {
     reads {
         l2_metadata.bd : exact;
@@ -245,7 +286,36 @@ table smac {
     size : SMAC_TABLE_SIZE;
 }
 
-control smac_lookup_and_learn {
+field_list mac_learn_digest {
+    l2_metadata.bd;
+    l2_metadata.lkp_mac_sa;
+    l2_metadata.ifindex;
+}
+
+action generate_learn_notify() {
+    generate_digest(MAC_LEARN_RECIEVER, mac_learn_digest);
+}
+
+/*
+ * Table: Learn Notification
+ * Lookup: Ingress
+ * Generate learn notification when source mac is a miss or moves
+ */
+table learn_notify {
+    reads {
+        l2_metadata.l2_src_miss : ternary;
+        l2_metadata.l2_src_move : ternary;
+        l2_metadata.stp_state : ternary;
+    }
+    actions {
+        nop;
+        generate_learn_notify;
+    }
+    size : LEARN_NOTIFY_TABLE_SIZE;
+}
+
+
+control process_smac_and_learn {
     /* validate packet */
     apply(validate_packet);
 
@@ -256,6 +326,7 @@ control smac_lookup_and_learn {
     apply(learn_notify);
 }
 
+/* DESTINATION_MAC_LOOKUP */
 action dmac_hit(ifindex) {
     modify_field(l2_metadata.egress_ifindex, ifindex);
     modify_field(l2_metadata.egress_bd, l2_metadata.bd);
@@ -280,6 +351,11 @@ action dmac_redirect_ecmp(ecmp_index) {
     modify_field(l2_metadata.l2_ecmp, ecmp_index);
 }
 
+/*
+ * Table: Destination Mac lookup
+ * Lookup: Ingress
+ * Destination mac lookup to derive forwarding entry
+ */
 table dmac {
     reads {
         l2_metadata.bd : exact;
@@ -297,20 +373,22 @@ table dmac {
     support_timeout: true;
 }
 
-control dmac_lookup {
+control process_dmac {
     apply(dmac);
 }
 
-action set_rmac_hit_flag() {
-    modify_field(l3_metadata.rmac_hit, TRUE);
-}
+/* LINK_AGGREGATION_CONTROL_BLOCK */
 
+/*
+ * Field List: Lag field list
+ * List of fields to compute hash
+ */
 field_list lag_hash_fields {
     l2_metadata.lkp_mac_sa;
     l2_metadata.lkp_mac_da;
     l2_metadata.lkp_mac_type;
-    l3_metadata.lkp_ipv4_sa;
-    l3_metadata.lkp_ipv4_da;
+    ipv4_metadata.lkp_ipv4_sa;
+    ipv4_metadata.lkp_ipv4_da;
     l3_metadata.lkp_ip_proto;
     l3_metadata.lkp_l4_sport;
     l3_metadata.lkp_l4_dport;
@@ -338,9 +416,14 @@ action_profile lag_action_profile {
         set_lag_port;
     }
     size : LAG_GROUP_TABLE_SIZE;
-    selector : lag_selector;
+    dynamic_action_selection : lag_selector;
 }
 
+/*
+ * Table: Link Aggregation
+ * Lookup: Ingress
+ * Derive egress port from egress lif
+ */
 table lag_group {
     reads {
         l2_metadata.egress_ifindex : exact;
@@ -349,32 +432,9 @@ table lag_group {
     size : LAG_SELECT_TABLE_SIZE;
 }
 
-control lag_lookup {
+control process_lag {
     /* resolve final egress port for unicast traffic */
     apply(lag_group);
-}
-
-field_list mac_learn_digest {
-    l2_metadata.bd;
-    l2_metadata.lkp_mac_sa;
-    l2_metadata.ifindex;
-}
-
-action generate_learn_notify() {
-    generate_digest(MAC_LEARN_RECIEVER, mac_learn_digest);
-}
-
-table learn_notify {
-    reads {
-        l2_metadata.l2_src_miss : ternary;
-        l2_metadata.l2_src_move : ternary;
-        l2_metadata.stp_state : ternary;
-    }
-    actions {
-        nop;
-        generate_learn_notify;
-    }
-    size : LEARN_NOTIFY_TABLE_SIZE;
 }
 
 action rewrite_unicast_mac(smac) {
@@ -389,6 +449,11 @@ action rewrite_multicast_mac(smac) {
     add_to_field(ipv4.ttl, -1);
 }
 
+/*
+ * Table: Mac Rewrite
+ * Lookup: Egress
+ * Rewrite source mac and destination mac
+ */
 table mac_rewrite {
     reads {
         l2_metadata.egress_smac_idx : exact;
@@ -402,13 +467,14 @@ table mac_rewrite {
     size : SOURCE_MAC_TABLE_SIZE;
 }
 
-control mac_rewrite_lookup {
+control process_mac_rewrite {
     /* rewrite source/destination mac if needed */
     if (l3_metadata.egress_routed == TRUE) {
         apply(mac_rewrite);
     }
 }
 
+/* VLAN_PRUNING_AND_TRANSLATION_CONTROL_BLOCK */
 action set_egress_packet_vlan_tagged(vlan_id) {
     add_header(vlan_tag_[0]);
     modify_field(vlan_tag_[0].vid, vlan_id);
@@ -418,6 +484,11 @@ action set_egress_packet_vlan_untagged() {
     remove_header(vlan_tag_[0]);
 }
 
+/*
+ * Table: Vlan Translation
+ * Lookup: Egress
+ * Tag/Untag the frame
+ */
 table egress_vlan_xlate {
     reads {
         standard_metadata.egress_port : exact;
@@ -431,27 +502,28 @@ table egress_vlan_xlate {
     size : EGRESS_VLAN_XLATE_TABLE_SIZE;
 }
 
-action egress_drop () {
-    drop();
+action set_egress_drop () {
+    bit_xor(l2_metadata.prune, standard_metadata.ingress_port, standard_metadata.egress_port);
 }
 
+/*
+ * Table: Egress Pruning
+ * Lookup: Egress
+ * Prune the packet when sent back on same interface
+ */
 table egress_block {
-    reads {
-        standard_metadata.egress_port : exact;
-        intrinsic_metadata.replication_id : exact;
-    }
     actions {
-        on_miss;
-        egress_drop;
+        set_egress_drop;
     }
     size : EGRESS_BLOCK_TABLE_SIZE;
 }
 
-control prune_and_xlate_lookup {
-    apply(egress_block) {
-	    on_miss {
-        /* egress vlan translation */
-            apply(egress_vlan_xlate);
-        }
-    }
+control process_prune {
+    /* process pruning */
+    apply(egress_block);
+}
+
+control process_vlan_xlate {
+    /* egress vlan translation */
+    apply(egress_vlan_xlate);
 }

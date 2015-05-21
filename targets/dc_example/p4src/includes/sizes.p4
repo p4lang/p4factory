@@ -29,10 +29,14 @@ limitations under the License.
 #define DMAC_TABLE_SIZE                        512
 #define SMAC_TABLE_SIZE                        512
 #define INGRESS_MAC_ACL_TABLE_SIZE             512
-#define INGRESS_IP_ACL_TABLE_SIZE              512
-#define INGRESS_IP_RACL_TABLE_SIZE             512
+#define INGRESS_IPV4_ACL_TABLE_SIZE            512
+#define INGRESS_IPV6_ACL_TABLE_SIZE            512
+#define INGRESS_IPV4_RACL_TABLE_SIZE           512
+#define INGRESS_IPV6_RACL_TABLE_SIZE           512
 #define IPV4_LPM_TABLE_SIZE                    512
 #define IPV4_HOST_TABLE_SIZE                   512
+#define IPV6_LPM_TABLE_SIZE                    512
+#define IPV6_HOST_TABLE_SIZE                   512
 #define FWD_RESULT_TABLE_SIZE                  512
 #define ECMP_GROUP_TABLE_SIZE                  512
 #define ECMP_SELECT_TABLE_SIZE                 512
