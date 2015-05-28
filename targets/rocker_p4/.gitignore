@@ -1,0 +1,8 @@
+/build
+/.*_ts
+/dependmodules.x
+/rocker_p4.mk
+/*.pcap
+/rocker_p4
+/main.c
+/of-tests/pd_thrift
