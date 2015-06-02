@@ -39,6 +39,9 @@ class ThriftClient(object):
   GET_NEXT_ENTRY_HANDLES = "_get_next_entry_handles"
   GET_ENTRY = "_get_entry"
   THRIFT_SPEC = "thrift_spec"
+# ---------------------LAKI ---------------------------------------
+  SET_DEFAULT_ACTION = "_set_default_action_"
+# ---------------------LAKI ---------------------------------------
 
   def __init__(self, module, hostname, port, p4_name):
   
@@ -92,6 +95,15 @@ class ThriftClient(object):
     except AttributeError:
       raise AttributeError("Spec not found for %s" % name)
     return parameter_names
+
+# ---------------------LAKI ---------------------------------------
+  def set_default_action(self, table_name, action_name, action_spec_tuple):
+    add_entry_parameters = [self._session_handle, self._dev_target]
+
+    if action_spec_tuple != ():
+      add_entry_parameters.append(self.get_action_spec(action_name, action_spec_tuple))
+    return self.get_set_default_action_function(table_name, action_name)(*add_entry_parameters)
+# ---------------------LAKI ---------------------------------------
 
   def add_entry(self, table_name, match_spec_tuple, action_name, action_spec_tuple, priority):
     match_spec = self.get_match_spec(table_name, match_spec_tuple)
@@ -235,6 +247,12 @@ class ThriftClient(object):
     add_entry_function_name = "%s%s%s" % (table_name, ThriftClient.TABLE_ADD_WITH, action_name)
     return getattr(self._client, add_entry_function_name)
 
+# ---------------------LAKI ---------------------------------------
+  def get_set_default_action_function(self, table_name, action_name):
+    add_entry_function_name = "%s%s%s" % (table_name, ThriftClient.SET_DEFAULT_ACTION, action_name)
+    return getattr(self._client, add_entry_function_name)
+# ---------------------LAKI ---------------------------------------
+
   def get_modify_entry_function(self, table_name, action_name):
     modify_entry_function_name = "%s%s%s" % (table_name, ThriftClient.TABLE_MODIFY_WITH, action_name)
     return getattr(self._client, modify_entry_function_name)
@@ -270,3 +288,33 @@ class ThriftClient(object):
   def get_delete_group_function(self, action_profile_name):
     delete_group_function_name = "%s%s" % (action_profile_name, ThriftClient.DEL_GROUP)
     return getattr(self._client, delete_group_function_name)
+
+# ------------- LAKI ----------------
+# Multicast api
+
+  def mc_mgrp_create(self, mgid):
+    return self._mc.mc_mgrp_create(self._session_handle, self._dev_target, mgid)
+
+  def mc_l1_node_create(self, rid):
+    return self._mc.mc_l1_node_create(self._session_handle, self._dev_target, rid)
+
+  def mc_l1_associate_node(self, mgrp_hdl, l1_hdl):
+    return self._mc.mc_l1_associate_node(self._session_handle, self._dev_target, mgrp_hdl, l1_hdl)
+
+  def mc_l2_node_create(self, l1_hdl, port_map, lag_map):
+    return self._mc.mc_l2_node_create(self._session_handle, self._dev_target, l1_hdl, port_map, lag_map)
+
+  def mc_mgrp_destroy(self, mgrp_hdl):
+    return self._mc.mc_mgrp_destroy(self._session_handle, self._dev_target, mgrp_hdl)
+
+  def mc_l1_node_destroy(self, l1_hdl):
+    return self._mc.mc_l1_node_destroy(self._session_handle, self._dev_target, l1_hdl)
+
+  def mc_l2_node_destroy(self, l2_hdl):
+    return self._mc.mc_l2_node_destroy(self._session_handle, self._dev_target, l2_hdl)
+
+  def mc_l2_node_update(self, l2_hdl, port_map, lag_map):
+    return self._mc.mc_l2_node_update(self._session_handle, self._dev_target, l2_hdl, port_map, lag_map)
+
+#  TODO: Add def mc_lag_update()
+
