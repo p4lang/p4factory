@@ -21,7 +21,7 @@ the following:
 
     cd p4factory/targets/basic_routing/  
     make bm  
-    sudo ./behavioral_model  
+    sudo ./behavioral-model  
 
 To run a simple test, run this in a different terminal:  
 
