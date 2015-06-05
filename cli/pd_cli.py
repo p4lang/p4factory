@@ -92,7 +92,6 @@ class PdCli(cmd.Cmd):
     except Exception as e:
       self.usage(e, "add_entry")
 
-# ---------------------LAKI ---------------------------------------
   def do_set_default_action(self, line):
     """
     set_default_action TABLE_NAME ACTION_NAME ACTION_PARAMETERS
@@ -113,7 +112,6 @@ class PdCli(cmd.Cmd):
       print >> sys.stderr, e
     except Exception as e:
       self.usage(e, "set_default_action")
-# -------------------LAKI -----------------------------------------   
 
   def complete_add_entry(self, text, line, begidx, endidx):
     incomplete_word_idx = self.get_incomplete_word_idx(line, begidx)
@@ -462,7 +460,6 @@ class PdCli(cmd.Cmd):
     print >> sys.stderr, exception
     print >> sys.stderr, "Try 'help %s' for more information" % command
 
-#-------------- LAKI -------------
 # Multicast API
   def do_mc_mgrp_create(self, line):
     """
@@ -524,7 +521,7 @@ class PdCli(cmd.Cmd):
   def do_mc_l2_node_create(self, line): #l1_hdl, port_map, lag_map):
     """
     mc_l2_node_create L1_HANDLE PORT_MAP LAG_MAP
-    This function creates a Level 2 multicast node with list of ports defined by PORT_MAP (as a bit vector)
+    This function creates a Level 2 multicast node with list of ports defined by PORT_MAP (as a bit vector). Currently port 0 can only be defined with this method.
     For exmaple: mc_l2_node_create 1234567 30 -1
     If PORT_MAP or LAG_MAP is -1, their value is not specified.
     """
@@ -605,7 +602,7 @@ class PdCli(cmd.Cmd):
   def do_mc_l2_node_update(self, line):
     """
     mc_l2_node_update L2_HDL PORT_MAP LAG_MAP
-    This function updates a Level-2 node
+    This function updates a Level-2 node. Currently, port 0 can only be updated with this function.
     For example: mc_l2_node_update 1234321 14 -1
     """
     words = collections.deque(line.split())
