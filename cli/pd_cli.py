@@ -521,7 +521,8 @@ class PdCli(cmd.Cmd):
   def do_mc_l2_node_create(self, line): #l1_hdl, port_map, lag_map):
     """
     mc_l2_node_create L1_HANDLE PORT_MAP LAG_MAP
-    This function creates a Level 2 multicast node with list of ports defined by PORT_MAP (as a bit vector). Currently port 0 can only be defined with this method.
+    This function creates a Level 2 multicast node with list of ports defined by PORT_MAP (as a bit vector).
+    Currently only port 0-7 can be configured with this function.
     For exmaple: mc_l2_node_create 1234567 30 -1
     If PORT_MAP or LAG_MAP is -1, their value is not specified.
     """
@@ -602,7 +603,8 @@ class PdCli(cmd.Cmd):
   def do_mc_l2_node_update(self, line):
     """
     mc_l2_node_update L2_HDL PORT_MAP LAG_MAP
-    This function updates a Level-2 node. Currently, port 0 can only be updated with this function.
+    This function updates a Level-2 node.
+    Currently only port 0-7 can be configured with this function.
     For example: mc_l2_node_update 1234321 14 -1
     """
     words = collections.deque(line.split())
