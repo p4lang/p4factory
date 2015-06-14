@@ -107,6 +107,10 @@ action dmac_redirect_ecmp(ecmp_index) {
     modify_field(l2_metadata.l2_nexthop_type, NEXTHOP_TYPE_ECMP);
 }
 
+action dmac_drop() {
+    drop();
+}
+
 table dmac {
     reads {
         ingress_metadata.bd : exact;
@@ -119,6 +123,7 @@ table dmac {
         dmac_miss;
         dmac_redirect_nexthop;
         dmac_redirect_ecmp;
+        dmac_drop;
     }
     size : DMAC_TABLE_SIZE;
     support_timeout: true;

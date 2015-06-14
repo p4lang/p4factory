@@ -10,3 +10,6 @@
 [submodule "submodules/switchapi"]
 	path = submodules/switchapi
 	url = https://github.com/p4lang/switchapi.git
+[submodule "submodules/switchsai"]
+	path = submodules/switchsai
+	url = https://github.com/p4lang/switchsai.git
