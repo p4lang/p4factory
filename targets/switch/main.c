@@ -107,6 +107,11 @@ extern int switch_api_init(int);
 extern int start_switch_api_rpc_server(void);
 #endif /* SWITCHAPI_ENABLE */
 
+#ifdef SWITCHSAI_ENABLE
+#define SWITCH_SAI_THRIFT_RPC_SERVER_PORT 9092
+extern int start_p4_sai_thrift_rpc_server(int port);
+#endif /* SWITCHSAI_ENABLE */
+
 static int add_port(char *iface, uint16_t port_num) {
   fprintf(stderr, "switch is adding port %s as %u\n", iface, port_num);
   if (dump_pcap != 0) {
@@ -431,6 +436,10 @@ main(int argc, char* argv[])
     CHECK(switch_api_init(0));
     CHECK(start_switch_api_rpc_server());
 #endif /* SWITCHAPI_DISABLE */
+
+#ifdef SWITCHSAI_ENABLE
+    CHECK(start_p4_sai_thrift_rpc_server(SWITCH_SAI_THRIFT_RPC_SERVER_PORT));
+#endif /*SWITCHSAI_ENABLE */
 
     if (!listener_str && !no_veth) {  /* standalone mode */
         for (n_veth = 0; n_veth < NUM_VETH_INTERFACES; n_veth++) {

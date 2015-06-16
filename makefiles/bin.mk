@@ -27,6 +27,6 @@ endif
 ${BINARY}_BINARY := ${BIN_DIR}/${BINARY}
 $($(BINARY)_BINARY) : $($(BINARY)_LINK_LIBS)
 	@echo "    Linking$(LINFO): $(notdir $@)"
-	$(VERBOSE)g++ $(DEBUG_FLAGS) $(COVERAGE_FLAGS) -o $@ $(EXTRA_LINK_LIBS) $+ $(EXTRA_LINK_LIBS) $(LDFLAGS)
+	$(VERBOSE)g++ $(DEBUG_FLAGS) $(COVERAGE_FLAGS) -o $@ -Wl,--start-group $+ -Wl,--end-group $(EXTRA_LINK_LIBS) $(LDFLAGS)
 
 CLEAN_DIRECTORIES := $(CLEAN_DIRECTORIES) $(BINARY)

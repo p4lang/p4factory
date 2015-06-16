@@ -39,15 +39,15 @@ include ${MAKEFILES_DIR}/common.mk
 
 SWITCHAPI_LIB := $(LIB_DIR)/libswitchapi.a
 SWITCHAPI_THRIFT_LIB := $(LIB_DIR)/switchapi_thrift.a
-SWITCHAPI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/api_thrift
+SWITCHAPI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/switch_api_thrift
 include ${SUBMODULE_SWITCHAPI}/libswitchapi.mk
 
-MAKE_DIR := ${THRIFT_TEMP_DIR}/api_thrift
-include ${MAKEFILES_DIR}/makedir.mk
-
+###################################
+#BUILD SWITCH API
+###################################
 BINARY := bm-switchapi
-${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} ${SWITCHAPI_THRIFT_LIB} ${bm_LINK_LIBS} ${SWITCHAPI_LIB} ${SWITCHAPI_THRIFT_LIB}
-bm-switchapi : EXTRA_LINK_LIBS := ${BM_LIB} ${p4utils_LIB} ${BM_LIB} -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
+${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} ${bm_LINK_LIBS} ${SWITCHAPI_THRIFT_LIB} ${BM_LIB} ${p4utils_LIB}
+bm-switchapi : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
 include ${MAKEFILES_DIR}/bin.mk
 ifndef bm-switchapi_BINARY
   $(error Output binary not defined in bm-switchapi_BINARY)
@@ -64,7 +64,38 @@ switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
 bm-switchapi : ${bm-switchapi_BINARY}
 	cp ${bm-switchapi_BINARY} behavioral-model
 
+###################################
+#BUILD SWITCH SAI
+###################################
+SWITCHSAI_LIB := $(LIB_DIR)/libswitchsai.a
+SWITCHSAI_THRIFT_LIB := $(LIB_DIR)/switchsai_thrift.a
+SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/switch_sai_thrift
+include ${SUBMODULE_SWITCHSAI}/libswitchsai.mk
+
+BINARY := bm-switchsai
+${BINARY}_LINK_LIBS := ${bm-switchapi_LINK_LIBS} ${SWITCHSAI_LIB} ${SWITCHSAI_THRIFT_LIB}
+bm-switchsai : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
+include ${MAKEFILES_DIR}/bin.mk
+ifndef bm-switchsai_BINARY
+  $(error Output binary not defined in bm-switchapi_BINARY)
+endif
+
+bm-switchsai : export LIB_SWITCHSAI_ENABLE=1
+bm-switchsai : export LIB_SWITCHAPI_ENABLE=1
+bm-switchsai : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
+bm-switchsai : GLOBAL_CFLAGS += -DSWITCHSAI_ENABLE=1
+bm-switchsai : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB) $(SWITCHSAI_THRIFT_LIB) switchsai_THRIFT
+switchsai_THRIFT : ${GEN_THRIFT_PY_MODULE}
+	mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
+	mkdir -p ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}
+	cp -r ${THRIFT_TEMP_DIR}/switch_api/* ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/
+	rm -r ${THRIFT_TEMP_DIR}/switch_api/
+	cp -r ${THRIFT_TEMP_DIR}/switch_sai/* ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/
+	rm -r ${THRIFT_TEMP_DIR}/switch_sai/
+	cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
+bm-switchsai : ${bm-switchsai_BINARY}
+	cp ${bm-switchsai_BINARY} behavioral-model
+
 all: bm
 
 .PHONY: bm-switchapi
-

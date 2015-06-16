@@ -117,6 +117,10 @@ def switchapi_test():
     one_test("switch", "api-tests",
              do_make_clean = False, make_tgt = "bm-switchapi")
 
+def switchsai_test():
+    one_test("switch", "sai-tests",
+             do_make_clean = False, make_tgt = "bm-switchsai")
+
 def check_ifaces():
     ifconfig_out = subprocess.check_output(['ifconfig'])
     iface_list = re.findall(
@@ -148,6 +152,7 @@ def main():
 
     pd_tests()
     switchapi_test()
+    switchsai_test()
 
     print "**************************************"
 

@@ -63,6 +63,15 @@ ifndef SUBMODULE_SWITCHAPI
   endif
 endif
 
+ifndef SUBMODULE_SWITCHSAI
+  ifdef SUBMODULES
+    SUBMODULE_SWITCHSAI := $(SUBMODULES)/switchsai
+  else
+    SUBMODULE_SWITCHSAI := $(ROOT)/submodules/switchsai
+    SUBMODULES_LOCAL += switchsai
+  endif
+endif
+
 ifdef SUBMODULES_LOCAL
   SUBMODULES_LOCAL_UPDATE := $(shell python $(ROOT)/submodules/init.py --update $(SUBMODULES_LOCAL))
   ifneq ($(lastword $(SUBMODULES_LOCAL_UPDATE)),submodules:ok.)
@@ -77,6 +86,7 @@ export SUBMODULE_OFT_INFRA
 export SUBMODULE_P4C_BEHAVIORAL
 export SUBMODULE_P4C_GRAPHS
 export SUBMODULE_SWITCHAPI
+export SUBMODULE_SWITCHSAI
 
 MODULE_DIRS := $(ROOT)/modules
 
@@ -85,4 +95,5 @@ MODULE_DIRS := $(ROOT)/modules
 	@echo p4c_behavioral @ $(SUBMODULE_P4C_BEHAVIORAL)
 	@echo p4c_graphs @ $(SUBMODULE_P4C_GRAPHS)
 	@echo switchapi @ $(SUBMODULE_SWITCHAPI)
+	@echo switchsai @ $(SUBMODULE_SWITCHSAI)
 

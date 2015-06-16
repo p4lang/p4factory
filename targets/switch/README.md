@@ -32,16 +32,24 @@ To build the softswitch with only the auto-generated API in a thrift server,
 
     make bm
 
-To build the softswitch with the switchapi library
+To build the softswitch with the switchapi library,
 
     make bm-switchapi
 
-When built with this option, there are two thrift servers (ports 9090 and 9091)
-one for the auto-generated table APIs and the other for the switchapi library APIs
+When built with this option, there are thrift servers on ports 9090 and 9091
+for the auto-generated table APIs and the switchapi library APIs respectively.
 
-By default, the softswitch is built with only the auto-generated API.
+To build the softswitch with the SAI API library,
 
-For details on the switchapi library features please refer to the README.md file in the switchapi repository.
+    make bm-switchsai
+
+When built with this option, there are thrift servers on ports 9090, 9091 and 9092 
+for the auto-generated table APIs, the switchapi library APIs and the SAI library APIs respectively.
+
+Invoking make without an explicit target builds the softswitch with only the auto-generated API.
+
+For details on the features supported by switchapi and switchsai libraries,
+please refer to the README.md file in the switchapi and switchsai repositories respectively.
 
 Running Tests
 -------------
@@ -53,3 +61,7 @@ To run the pd thrift testcases,
 To run the api thrift testcases,
 
     sudo ./run_tests.py --test-dir of-tests/tests/api-tests switch
+
+To run the SAI thrift testcases,
+
+    sudo ./run_tests.py --test-dir of-tests/tests/sai-tests switch
