@@ -4,6 +4,13 @@ P4 Model Repository
 This repository maintains a sample set of the P4 programs and allows building P4 for the P4
 Behavioral Model.
 
+Important: git submodules
+========
+We often update the submodules for this repo. This is why we recommend that you
+run the following command whenever pulling the latest version of master: 
+
+    git submodule update --init --recursive
+
 Quickstart
 ========
 To install all the Ubuntu 14.04 dependencies, run 
