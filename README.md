@@ -16,7 +16,7 @@ simulator can connect to. To create them, you need to run:
     sudo p4factory/tools/veth_setup.sh
 
 
-To validate you installation and test the simulator on a simple P4 target, do
+To validate your installation and test the simulator on a simple P4 target, do
 the following:  
 
     cd p4factory/targets/basic_routing/  
@@ -39,7 +39,7 @@ To run it, do the following:
     make bm  
     ./run_demo.bash  
     
-To install some table entries, run in a different terminal:  
+To install some table entries, run the following (in a different terminal):  
 
     ./run_add_demo_entries.bash  
 
@@ -50,14 +50,14 @@ You can then type commands in the Mininet CLI:
 Building and Running a Target
 ========
 
-Each targeted P4 program is set up in a directory under targets/. Inside the target directory 
+Each P4 program (called a 'target') is set up in a directory under targets/. Inside the target directory 
 is a Makefile with the instructions on how to build the behavioral model for that P4 program.
 
 To build the target "project_name":
 
     cd targets/project_name
     make bm
-This should result in an executable in the same directory called "behavioral_mode"
+This should result in an executable in the same directory called "behavioral_model"
 
 Creating a New Target
 ========
