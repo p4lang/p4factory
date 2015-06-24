@@ -106,10 +106,10 @@ class ThriftClient(object):
 
     add_entry_parameters = [self._session_handle, self._dev_target, match_spec]
 
-    if action_spec_tuple != ():
-      add_entry_parameters.append(self.get_action_spec(action_name, action_spec_tuple))
     if priority != None:
       add_entry_parameters.append(priority)
+    if action_spec_tuple != ():
+      add_entry_parameters.append(self.get_action_spec(action_name, action_spec_tuple))
     return self.get_add_entry_function(table_name, action_name)(*add_entry_parameters)
 
   def add_entry_with_selector(self, table_name, match_spec_tuple, group_handle):
