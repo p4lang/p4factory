@@ -1,34 +1,26 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * IPv6 processing
+ */
 
 /*
- * Ipv6 Metadata
+ * IPv6 Metadata
  */
 header_type ipv6_metadata_t {
     fields {
         lkp_ipv6_sa : 128;                     /* ipv6 source address */
         lkp_ipv6_da : 128;                     /* ipv6 destination address*/
+
         ipv6_unicast_enabled : 1;              /* is ipv6 unicast routing enabled on BD */
+        ipv6_src_is_link_local : 1;            /* source is link local address */
         ipv6_urpf_mode : 2;                    /* 0: none, 1: strict, 3: loose */
     }
 }
 metadata ipv6_metadata_t ipv6_metadata;
 
 #if !defined(L3_DISABLE) && !defined(IPV6_DISABLE)
-/* VALIDATE_OUTER_IPV6_CONTROL_BLOCK */
+/*****************************************************************************/
+/* Validate outer IPv6 header                                                */
+/*****************************************************************************/
 action set_valid_outer_ipv6_packet() {
     modify_field(l3_metadata.lkp_ip_type, IPTYPE_IPV6);
     modify_field(l3_metadata.lkp_ip_proto, ipv6.nextHdr);
@@ -63,7 +55,9 @@ control validate_outer_ipv6_header {
 }
 
 #if !defined(L3_DISABLE) && !defined(IPV6_DISABLE)
-/* IPV6_FIB_CONTROL_BLOCK */
+/*****************************************************************************/
+/* IPv6 FIB lookup                                                           */
+/*****************************************************************************/
 /*
  * Actions are defined in l3.p4 since they are
  * common for both ipv4 and ipv6
@@ -76,7 +70,7 @@ control validate_outer_ipv6_header {
  */
 table ipv6_fib_lpm {
     reads {
-        ingress_metadata.vrf : exact;
+        l3_metadata.vrf : exact;
         ipv6_metadata.lkp_ipv6_da : lpm;
     }
     actions {
@@ -94,7 +88,7 @@ table ipv6_fib_lpm {
  */
 table ipv6_fib {
     reads {
-        ingress_metadata.vrf : exact;
+        l3_metadata.vrf : exact;
         ipv6_metadata.lkp_ipv6_da : exact;
     }
     actions {
@@ -118,7 +112,9 @@ control process_ipv6_fib {
 }
 
 #if !defined(L3_DISABLE) && !defined(IPV6_DISABLE) && !defined(URPF_DISABLE)
-/* IPV6_URPF_CONTROL_BLOCK */
+/*****************************************************************************/
+/* IPv6 uRPF lookup                                                          */
+/*****************************************************************************/
 action ipv6_urpf_hit(urpf_bd_group) {
     modify_field(l3_metadata.urpf_hit, TRUE);
     modify_field(l3_metadata.urpf_bd_group, urpf_bd_group);
@@ -127,7 +123,7 @@ action ipv6_urpf_hit(urpf_bd_group) {
 
 table ipv6_urpf_lpm {
     reads {
-        ingress_metadata.vrf : exact;
+        l3_metadata.vrf : exact;
         ipv6_metadata.lkp_ipv6_sa : lpm;
     }
     actions {
@@ -139,7 +135,7 @@ table ipv6_urpf_lpm {
 
 table ipv6_urpf {
     reads {
-        ingress_metadata.vrf : exact;
+        l3_metadata.vrf : exact;
         ipv6_metadata.lkp_ipv6_sa : exact;
     }
     actions {

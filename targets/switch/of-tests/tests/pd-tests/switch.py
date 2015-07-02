@@ -84,13 +84,17 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
                                      sess_hdl, dev_tgt)
     client.storm_control_set_default_action_nop(
                                      sess_hdl, dev_tgt)
-    client.vlan_decap_set_default_action_vlan_decap_nop(
+    client.vlan_decap_set_default_action_nop(
                                      sess_hdl, dev_tgt)
     client.replica_type_set_default_action_nop(
                                      sess_hdl, dev_tgt)
     client.mtu_set_default_action_nop(
                                      sess_hdl, dev_tgt)
+    action_spec = dc_set_l2_rewrite_action_spec_t(action_tunnel_index=0,
+                                                  action_tunnel_type=0)
     client.rewrite_set_default_action_set_l2_rewrite(
+                                     sess_hdl, dev_tgt, action_spec)
+    client.egress_port_mapping_set_default_action_egress_port_type_normal(
                                      sess_hdl, dev_tgt)
 
     if acl_enabled:
@@ -125,13 +129,25 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
 def populate_init_entries(client, sess_hdl, dev_tgt):
     match_spec = dc_mac_rewrite_match_spec_t(
                             egress_metadata_smac_idx=rewrite_index,
-                            ipv4_dstAddr=0,
-                            ipv4_dstAddr_mask=0)
-    action_spec = dc_rewrite_unicast_mac_action_spec_t(
+                            ipv4_valid=1,
+                            ipv6_valid=0,
+                            mpls_0__valid=0)
+    action_spec = dc_rewrite_ipv4_unicast_mac_action_spec_t(
                             action_smac=macAddr_to_string(rmac))
-    client.mac_rewrite_table_add_with_rewrite_unicast_mac(
+    client.mac_rewrite_table_add_with_rewrite_ipv4_unicast_mac(
                             sess_hdl, dev_tgt,
-                            match_spec, 1000, action_spec)
+                            match_spec, action_spec)
+
+    match_spec = dc_mac_rewrite_match_spec_t(
+                            egress_metadata_smac_idx=rewrite_index,
+                            ipv4_valid=0,
+                            ipv6_valid=1,
+                            mpls_0__valid=0)
+    action_spec = dc_rewrite_ipv6_unicast_mac_action_spec_t(
+                            action_smac=macAddr_to_string(rmac))
+    client.mac_rewrite_table_add_with_rewrite_ipv6_unicast_mac(
+                            sess_hdl, dev_tgt,
+                            match_spec, action_spec)
 
     match_spec = dc_fwd_result_match_spec_t(
                             l2_metadata_l2_redirect=0,
@@ -140,6 +156,8 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
                             acl_metadata_acl_redirect_mask=0,
                             acl_metadata_racl_redirect=0,
                             acl_metadata_racl_redirect_mask=0,
+                            l3_metadata_rmac_hit=0,
+                            l3_metadata_rmac_hit_mask=0,
                             l3_metadata_fib_hit=1,
                             l3_metadata_fib_hit_mask=1)
     client.fwd_result_table_add_with_set_fib_redirect_action(
@@ -153,6 +171,8 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
                             acl_metadata_acl_redirect_mask=0,
                             acl_metadata_racl_redirect=0,
                             acl_metadata_racl_redirect_mask=0,
+                            l3_metadata_rmac_hit=0,
+                            l3_metadata_rmac_hit_mask=0,
                             l3_metadata_fib_hit=0,
                             l3_metadata_fib_hit_mask=0)
     client.fwd_result_table_add_with_set_l2_redirect_action(
@@ -172,7 +192,7 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
         match_spec = dc_outer_rmac_match_spec_t(
                             l3_metadata_rmac_group=outer_rmac_group,
                             l2_metadata_lkp_mac_da=macAddr_to_string(rmac))
-        client.outer_rmac_table_add_with_set_outer_rmac_hit_flag(
+        client.outer_rmac_table_add_with_outer_rmac_hit(
                             sess_hdl, dev_tgt,
                             match_spec)
 
@@ -180,11 +200,12 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
 def program_ports(client, sess_hdl, dev_tgt, port_count):
     count = 1
     while (count <= port_count):
-        match_spec = dc_port_mapping_match_spec_t(standard_metadata_ingress_port=count)
+        match_spec = dc_ingress_port_mapping_match_spec_t(standard_metadata_ingress_port=count)
         action_spec = dc_set_ifindex_action_spec_t(
                             action_ifindex=count,
-                            action_if_label=0)
-        client.port_mapping_table_add_with_set_ifindex(
+                            action_if_label=0,
+                            action_port_type=0)
+        client.ingress_port_mapping_table_add_with_set_ifindex(
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
 
@@ -224,7 +245,8 @@ def program_vlan_mapping(client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_e
                             action_mld_snooping_enabled=0,
                             action_ipv4_urpf_mode=0,
                             action_ipv6_urpf_mode=0,
-                            action_stp_group=0)
+                            action_stp_group=0,
+                            action_stats_idx=0)
     mbr_hdl = client.bd_action_profile_add_member_with_set_bd(
                             sess_hdl, dev_tgt,
                             action_spec)
@@ -255,7 +277,8 @@ def program_tunnel_ethernet_vlan(client, sess_hdl, dev_tgt, vlan, port, vni, tty
                             action_bcast_mc_index=0,
                             action_ipv4_unicast_enabled=v4_enabled,
                             action_igmp_snooping_enabled=0,
-                            action_ipv4_urpf_mode=0)
+                            action_ipv4_urpf_mode=0,
+                            action_stats_idx=0)
     client.tunnel_table_add_with_terminate_tunnel_inner_ethernet_ipv4(
                             sess_hdl, dev_tgt,
                             match_spec, action_spec)
@@ -278,7 +301,7 @@ def program_tunnel_ipv4_vlan(client, sess_hdl, dev_tgt, vlan, port, vni, ttype, 
 def program_mac(client, sess_hdl, dev_tgt, vlan, mac, port):
     match_spec = dc_dmac_match_spec_t(
                             l2_metadata_lkp_mac_da=macAddr_to_string(mac),
-                            ingress_metadata_bd=vlan)
+                            ingress_metadata_ingress_bd=vlan)
     action_spec = dc_dmac_hit_action_spec_t(
                             action_ifindex=port)
     client.dmac_table_add_with_dmac_hit(
@@ -287,7 +310,7 @@ def program_mac(client, sess_hdl, dev_tgt, vlan, mac, port):
 
     match_spec = dc_smac_match_spec_t(
                             l2_metadata_lkp_mac_sa=macAddr_to_string(mac),
-                            ingress_metadata_bd=vlan)
+                            ingress_metadata_ingress_bd=vlan)
     action_spec = dc_smac_hit_action_spec_t(
                             action_ifindex=port)
     client.smac_table_add_with_smac_hit(
@@ -297,7 +320,7 @@ def program_mac(client, sess_hdl, dev_tgt, vlan, mac, port):
 def program_mac_with_nexthop(client, sess_hdl, dev_tgt, vlan, mac, port, nhop):
     match_spec = dc_dmac_match_spec_t(
                             l2_metadata_lkp_mac_da=macAddr_to_string(mac),
-                            ingress_metadata_bd=vlan)
+                            ingress_metadata_ingress_bd=vlan)
     action_spec = dc_dmac_redirect_nexthop_action_spec_t(
                             action_nexthop_index=nhop)
     client.dmac_table_add_with_dmac_redirect_nexthop(
@@ -306,7 +329,7 @@ def program_mac_with_nexthop(client, sess_hdl, dev_tgt, vlan, mac, port, nhop):
 
     match_spec = dc_smac_match_spec_t(
                             l2_metadata_lkp_mac_sa=macAddr_to_string(mac),
-                            ingress_metadata_bd=vlan)
+                            ingress_metadata_ingress_bd=vlan)
     action_spec = dc_smac_hit_action_spec_t(
                             action_ifindex=port)
     client.smac_table_add_with_smac_hit(
@@ -316,7 +339,7 @@ def program_mac_with_nexthop(client, sess_hdl, dev_tgt, vlan, mac, port, nhop):
 def program_ipv4_route(client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
     if prefix == 32:
         match_spec = dc_ipv4_fib_match_spec_t(
-                             ingress_metadata_vrf=vrf,
+                             l3_metadata_vrf=vrf,
                              ipv4_metadata_lkp_ipv4_da=ip)
         action_spec = dc_fib_hit_nexthop_action_spec_t(
                              action_nexthop_index=nhop)
@@ -325,7 +348,7 @@ def program_ipv4_route(client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
                              match_spec, action_spec)
     else:
         match_spec = dc_ipv4_fib_lpm_match_spec_t(
-                             ingress_metadata_vrf=vrf,
+                             l3_metadata_vrf=vrf,
                              ipv4_metadata_lkp_ipv4_da=ip,
                              ipv4_metadata_lkp_ipv4_da_prefix_length=prefix)
         action_spec = dc_fib_hit_nexthop_action_spec_t(
@@ -339,7 +362,7 @@ def program_ipv6_route(client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
         return
     if prefix == 128:
         match_spec = dc_ipv6_fib_match_spec_t(
-                             ingress_metadata_vrf=vrf,
+                             l3_metadata_vrf=vrf,
                              ipv6_metadata_lkp_ipv6_da=ipv6Addr_to_string(ip))
         action_spec = dc_fib_hit_nexthop_action_spec_t(
                              action_nexthop_index=nhop)
@@ -348,7 +371,7 @@ def program_ipv6_route(client, sess_hdl, dev_tgt, vrf, ip, prefix, nhop):
                              match_spec, action_spec)
     else:
         match_spec = dc_ipv6_fib_lpm_match_spec_t(
-                             ingress_metadata_vrf=vrf,
+                             l3_metadata_vrf=vrf,
                              ipv6_metadata_lkp_ipv6_da=ip,
                              ipv6_metadata_lkp_ipv6_da_prefix_length=prefix)
         action_spec = dc_fib_hit_nexthop_action_spec_t(
@@ -367,38 +390,56 @@ def program_nexthop(client, sess_hdl, dev_tgt, nhop, vlan, ifindex):
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
 
-def program_ipv4_unicast_rewrite(client, sess_hdl, dev_tgt, nhop, dmac):
+def program_ipv4_unicast_rewrite(client, sess_hdl, dev_tgt, bd, nhop, dmac):
     match_spec = dc_rewrite_match_spec_t(
                              l3_metadata_nexthop_index=nhop)
-    action_spec = dc_set_ipv4_unicast_rewrite_action_spec_t(
+    action_spec = dc_set_l3_unicast_rewrite_action_spec_t(
                              action_smac_idx=rewrite_index,
-                             action_dmac=macAddr_to_string(dmac))
-    client.rewrite_table_add_with_set_ipv4_unicast_rewrite(
+                             action_dmac=macAddr_to_string(dmac),
+                             action_tunnel_index=0,
+                             action_tunnel_type=0,
+                             action_bd=bd)
+    client.rewrite_table_add_with_set_l3_unicast_rewrite(
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
 
-def program_ipv6_unicast_rewrite(client, sess_hdl, dev_tgt, nhop, dmac):
+def program_ipv6_unicast_rewrite(client, sess_hdl, dev_tgt, bd, nhop, dmac):
     if ipv6_enabled == 0:
         return
     match_spec = dc_rewrite_match_spec_t(
                              l3_metadata_nexthop_index=nhop)
-    action_spec = dc_set_ipv6_unicast_rewrite_action_spec_t(
+    action_spec = dc_set_l3_unicast_rewrite_action_spec_t(
                              action_smac_idx=rewrite_index,
-                             action_dmac=macAddr_to_string(dmac))
-    client.rewrite_table_add_with_set_ipv6_unicast_rewrite(
+                             action_dmac=macAddr_to_string(dmac),
+                             action_tunnel_index=0,
+                             action_tunnel_type=0,
+                             action_bd=bd)
+    client.rewrite_table_add_with_set_l3_unicast_rewrite(
                              sess_hdl, dev_tgt,
                              match_spec, action_spec)
 
-def program_ipv4_vxlan_unicast_rewrite(client, sess_hdl, dev_tgt, tunnel_index, rewrite_index, nhop, core_vlan, dmac):
+def program_tunnel_l2_unicast_rewrite(client, sess_hdl, dev_tgt, tunnel_index, tunnel_type, nhop, core_vlan):
     #Egress Tunnel Encap - Rewrite information
     match_spec = dc_rewrite_match_spec_t(
                                   l3_metadata_nexthop_index=nhop)
-    action_spec = dc_set_ipv4_vxlan_rewrite_action_spec_t(
-                                  action_outer_bd=core_vlan,
+    action_spec = dc_set_l2_rewrite_action_spec_t(
+                                  action_tunnel_index=tunnel_index,
+                                  action_tunnel_type=tunnel_type)
+    client.rewrite_table_add_with_set_l2_rewrite(
+                                  sess_hdl, dev_tgt,
+                                  match_spec, action_spec)
+
+def program_tunnel_l3_unicast_rewrite(client, sess_hdl, dev_tgt, tunnel_index, tunnel_type, rewrite_index, nhop, core_vlan, dmac):
+    #Egress Tunnel Encap - Rewrite information
+    match_spec = dc_rewrite_match_spec_t(
+                                  l3_metadata_nexthop_index=nhop)
+    action_spec = dc_set_l3_unicast_rewrite_action_spec_t(
+                                  action_bd=core_vlan,
                                   action_tunnel_index=tunnel_index,
                                   action_smac_idx=rewrite_index,
-                                  action_dmac=macAddr_to_string(dmac))
-    client.rewrite_table_add_with_set_ipv4_vxlan_rewrite(
+                                  action_dmac=macAddr_to_string(dmac),
+                                  action_tunnel_type=tunnel_type)
+    client.rewrite_table_add_with_set_l3_unicast_rewrite(
                                   sess_hdl, dev_tgt,
                                   match_spec, action_spec)
 
@@ -418,7 +459,7 @@ def enable_learning(client, sess_hdl, dev_tgt):
 def program_tunnel_ipv4_src_vtep(client, sess_hdl, dev_tgt, vrf, src_ip, ifindex):
     #Ingress Tunnel Decap - src vtep entry
     match_spec = dc_ipv4_src_vtep_match_spec_t(
-                                  ingress_metadata_vrf=vrf,
+                                  l3_metadata_vrf=vrf,
                                   ipv4_metadata_lkp_ipv4_sa=src_ip)
     action_spec = dc_src_vtep_hit_action_spec_t(
                                   action_ifindex=ifindex)
@@ -429,10 +470,10 @@ def program_tunnel_ipv4_src_vtep(client, sess_hdl, dev_tgt, vrf, src_ip, ifindex
 def program_tunnel_ipv4_dst_vtep(client, sess_hdl, dev_tgt, vrf, dst_ip, proto, dst_port):
     #Ingress Tunnel Decap - dest vtep entry
     match_spec = dc_ipv4_dest_vtep_match_spec_t(
-                                  ingress_metadata_vrf=vrf,
+                                  l3_metadata_vrf=vrf,
                                   ipv4_metadata_lkp_ipv4_da=dst_ip,
                                   l3_metadata_lkp_ip_proto=proto,
-                                  ingress_metadata_lkp_l4_dport=dst_port)
+                                  l3_metadata_lkp_l4_dport=dst_port)
     client.ipv4_dest_vtep_table_add_with_set_tunnel_termination_flag(
                                   sess_hdl, dev_tgt,
                                   match_spec)
@@ -440,7 +481,8 @@ def program_tunnel_ipv4_dst_vtep(client, sess_hdl, dev_tgt, vrf, dst_ip, proto, 
 def program_tunnel_encap(client, sess_hdl, dev_tgt):
     match_spec = dc_tunnel_encap_process_outer_match_spec_t(
                                   tunnel_metadata_egress_tunnel_type=1,
-                                  tunnel_metadata_egress_header_count=0)
+                                  tunnel_metadata_egress_header_count=0,
+                                  multicast_metadata_replica=0)
     client.tunnel_encap_process_outer_table_add_with_ipv4_vxlan_rewrite(
                                   sess_hdl, dev_tgt,
                                   match_spec)
@@ -456,7 +498,6 @@ def program_tunnel_encap(client, sess_hdl, dev_tgt):
 def program_tunnel_decap(client, sess_hdl, dev_tgt):
     match_spec = dc_tunnel_decap_process_outer_match_spec_t(
                                   tunnel_metadata_ingress_tunnel_type=1,
-                                  tunnel_metadata_ingress_header_count=0,
                                   inner_ipv4_valid=1,
                                   inner_ipv6_valid=0)
     client.tunnel_decap_process_outer_table_add_with_decap_vxlan_inner_ipv4(
@@ -506,14 +547,15 @@ def program_tunnel_dst_mac_rewrite(client, sess_hdl, dev_tgt, dst_index, dmac):
     client.tunnel_dmac_rewrite_table_add_with_rewrite_tunnel_dmac(
                                   sess_hdl, dev_tgt,
                                   match_spec, action_spec)
-def program_tunnel_rewrite(client, sess_hdl, dev_tgt, tunnel_index, sip_index, dip_index, smac_index, dmac_index):
+def program_tunnel_rewrite(client, sess_hdl, dev_tgt, tunnel_index, sip_index, dip_index, smac_index, dmac_index, core_vlan):
     match_spec = dc_tunnel_rewrite_match_spec_t(
                                   tunnel_metadata_tunnel_index=tunnel_index)
     action_spec = dc_set_tunnel_rewrite_details_action_spec_t(
                                   action_smac_idx=smac_index,
                                   action_dmac_idx=dmac_index,
                                   action_sip_index=sip_index,
-                                  action_dip_index=dip_index)
+                                  action_dip_index=dip_index,
+                                  action_outer_bd=core_vlan)
     client.tunnel_rewrite_table_add_with_set_tunnel_rewrite_details(
                                   sess_hdl, dev_tgt,
                                   match_spec, action_spec)
@@ -521,7 +563,7 @@ def program_tunnel_rewrite(client, sess_hdl, dev_tgt, tunnel_index, sip_index, d
 def program_egress_vni(client, sess_hdl, dev_tgt, egress_tunnel_type, tenant_vlan, vnid):
     #Egress Tunnel Encap - Derive vnid from egress bd mapping
     match_spec = dc_egress_vni_match_spec_t(
-                                  ingress_metadata_egress_bd=tenant_vlan,
+                                  egress_metadata_bd=tenant_vlan,
                                   tunnel_metadata_egress_tunnel_type=egress_tunnel_type)
     action_spec = dc_set_egress_tunnel_vni_action_spec_t(
                                   action_vnid=vnid)
@@ -613,14 +655,14 @@ class L3Ipv4Test(pd_base_tests.ThriftInterfaceDataPlane):
         nhop1=1
         program_nexthop(self.client, sess_hdl, dev_tgt, nhop1, vlan1, port1)
         #Add rewrite information (ARP info)
-        program_ipv4_unicast_rewrite(self.client, sess_hdl, dev_tgt, nhop1, '00:11:11:11:11:11')
+        program_ipv4_unicast_rewrite(self.client, sess_hdl, dev_tgt, vlan1, nhop1, '00:11:11:11:11:11')
         #Add route
         program_ipv4_route(self.client, sess_hdl, dev_tgt, vrf, 0x0a0a0a01, 32, nhop1)
         #Create nexthop
         nhop2=2
         program_nexthop(self.client, sess_hdl, dev_tgt, nhop2, vlan2, port2)
         #Add rewrite information (ARP info)
-        program_ipv4_unicast_rewrite(self.client, sess_hdl, dev_tgt, nhop2, '00:22:22:22:22:22')
+        program_ipv4_unicast_rewrite(self.client, sess_hdl, dev_tgt, vlan2, nhop2, '00:22:22:22:22:22')
         #Add route
         program_ipv4_route(self.client, sess_hdl, dev_tgt, vrf, 0x14141401, 32, nhop2)
 
@@ -683,14 +725,14 @@ class L3Ipv6Test(pd_base_tests.ThriftInterfaceDataPlane):
         nhop1=1
         program_nexthop(self.client, sess_hdl, dev_tgt, nhop1, vlan1, port1)
         #Add rewrite information (ARP info)
-        program_ipv6_unicast_rewrite(self.client, sess_hdl, dev_tgt, nhop1, '00:11:11:11:11:11')
+        program_ipv6_unicast_rewrite(self.client, sess_hdl, dev_tgt, vlan1, nhop1, '00:11:11:11:11:11')
         #Add route
         program_ipv6_route(self.client, sess_hdl, dev_tgt, vrf, '2000::1', 128, nhop1)
         #Create nexthop
         nhop2=2
         program_nexthop(self.client, sess_hdl, dev_tgt, nhop2, vlan2, port2)
         #Add rewrite information (ARP info)
-        program_ipv6_unicast_rewrite(self.client, sess_hdl, dev_tgt, nhop2, '00:22:22:22:22:22')
+        program_ipv6_unicast_rewrite(self.client, sess_hdl, dev_tgt, vlan2, nhop2, '00:22:22:22:22:22')
         #Add route
         program_ipv6_route(self.client, sess_hdl, dev_tgt, vrf, '3000::1', 128, nhop2)
 
@@ -746,6 +788,7 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         dip_index = 0
         smac_index = 0
         dmac_index = 0
+        tunnel_type=1 #vxlan
 
         #Indicates vxlan tunnel in Parser
         ingress_tunnel_type=1
@@ -777,8 +820,8 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         program_tunnel_dst_ipv4_rewrite(self.client, sess_hdl, dev_tgt, dip_index, 0x0a0a0a02)
         program_tunnel_src_mac_rewrite(self.client, sess_hdl, dev_tgt, smac_index, '00:33:33:33:33:33')
         program_tunnel_dst_mac_rewrite(self.client, sess_hdl, dev_tgt, dmac_index, '00:55:55:55:55:55')
-        program_ipv4_vxlan_unicast_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, 0, nhop, core_vlan, '00:22:22:22:22:22')
-        program_tunnel_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, sip_index, dip_index, smac_index, dmac_index)
+        program_tunnel_l2_unicast_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, tunnel_type, nhop, core_vlan)
+        program_tunnel_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, sip_index, dip_index, smac_index, dmac_index, core_vlan)
         program_tunnel_ipv4_src_vtep(self.client, sess_hdl, dev_tgt, vrf, 0x0a0a0a02, 0)
         program_tunnel_ipv4_dst_vtep(self.client, sess_hdl, dev_tgt, vrf, 0x0a0a0a01, 17, 4789)
         program_egress_vni(self.client, sess_hdl, dev_tgt, egress_tunnel_type, tenant_vlan, vnid)
@@ -890,7 +933,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
 
         #Add nexthop table
         program_nexthop(self.client, sess_hdl, dev_tgt, nhop1, tenant_vlan1, port1)
-        program_ipv4_unicast_rewrite(self.client, sess_hdl, dev_tgt, nhop1, '00:11:11:11:11:11')
+        program_ipv4_unicast_rewrite(self.client, sess_hdl, dev_tgt, tenant_vlan1, nhop1, '00:11:11:11:11:11')
 
         program_nexthop(self.client, sess_hdl, dev_tgt, nhop2, tenant_vlan2, port2)
         program_tunnel_encap(self.client, sess_hdl, dev_tgt)
@@ -899,8 +942,8 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
         program_tunnel_dst_ipv4_rewrite(self.client, sess_hdl, dev_tgt, dip_index, 0x0a0a0a02)
         program_tunnel_src_mac_rewrite(self.client, sess_hdl, dev_tgt, smac_index, '00:33:33:33:33:33')
         program_tunnel_dst_mac_rewrite(self.client, sess_hdl, dev_tgt, dmac_index, '00:55:55:55:55:55')
-        program_ipv4_vxlan_unicast_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, rewrite_index, nhop2, core_vlan, '00:22:22:22:22:22')
-        program_tunnel_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, sip_index, dip_index, smac_index, dmac_index)
+        program_tunnel_l3_unicast_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, egress_tunnel_type, rewrite_index, nhop2, tenant_vlan2, '00:22:22:22:22:22')
+        program_tunnel_rewrite(self.client, sess_hdl, dev_tgt, tunnel_index, sip_index, dip_index, smac_index, dmac_index, core_vlan)
         program_tunnel_ipv4_src_vtep(self.client, sess_hdl, dev_tgt, vrf, 0x0a0a0a02, 0)
         program_tunnel_ipv4_dst_vtep(self.client, sess_hdl, dev_tgt, vrf, 0x0a0a0a01, 17, 4789)
         program_egress_vni(self.client, sess_hdl, dev_tgt, egress_tunnel_type, tenant_vlan2, vnid)
@@ -921,7 +964,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_dst='10.168.11.1',
                                 ip_src='10.168.10.1',
                                 ip_id=101,
-                                ip_ttl=64)
+                                ip_ttl=63)
 
         vxlan_pkt = simple_vxlan_packet(
                                 eth_dst='00:55:55:55:55:55',

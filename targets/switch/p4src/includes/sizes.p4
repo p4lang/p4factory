@@ -1,26 +1,10 @@
-/*
-Copyright 2013-present Barefoot Networks, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 
 #ifdef MIN_PROFILE
 #define MIN_SRAM_TABLE_SIZE                    1024
 #define MIN_TCAM_TABLE_SIZE                    512
 
 #define VALIDATE_PACKET_TABLE_SIZE             MIN_TCAM_TABLE_SIZE
-#define PORTMAP_TABLE_SIZE                     MIN_SRAM_TABLE_SIZE
+#define PORTMAP_TABLE_SIZE                     288 
 #define STORM_CONTROL_TABLE_SIZE               MIN_TCAM_TABLE_SIZE
 #define STORM_CONTROL_METER_TABLE_SIZE         MIN_SRAM_TABLE_SIZE
 #define PORT_VLAN_TABLE_SIZE                   4096
@@ -77,6 +61,7 @@ limitations under the License.
 #define IP_MTU_TABLE_SIZE                      MIN_SRAM_TABLE_SIZE
 #define EGRESS_VLAN_XLATE_TABLE_SIZE           MIN_SRAM_TABLE_SIZE
 #define SPANNING_TREE_TABLE_SIZE               MIN_SRAM_TABLE_SIZE
+#define FABRIC_REWRITE_TABLE_SIZE              MIN_TCAM_TABLE_SIZE
 #define EGRESS_ACL_TABLE_SIZE                  MIN_TCAM_TABLE_SIZE
 #define VLAN_DECAP_TABLE_SIZE                  MIN_SRAM_TABLE_SIZE
 #define TUNNEL_HEADER_TABLE_SIZE               MIN_SRAM_TABLE_SIZE
@@ -132,7 +117,7 @@ limitations under the License.
 #define URPF_GROUP_TABLE_SIZE                  32768
 #define ECMP_GROUP_TABLE_SIZE                  1024
 #define ECMP_SELECT_TABLE_SIZE                 16384
-#define NEXTHOP_TABLE_SIZE                     49152
+#define NEXTHOP_TABLE_SIZE                     65536
 #define LAG_GROUP_TABLE_SIZE                   1024
 #define LAG_SELECT_TABLE_SIZE                  1024
 #define SYSTEM_ACL_SIZE                        512
@@ -147,6 +132,7 @@ limitations under the License.
 #define IP_MTU_TABLE_SIZE                      512
 #define EGRESS_VLAN_XLATE_TABLE_SIZE           32768
 #define SPANNING_TREE_TABLE_SIZE               4096
+#define FABRIC_REWRITE_TABLE_SIZE              512
 #define EGRESS_ACL_TABLE_SIZE                  1024
 #define VLAN_DECAP_TABLE_SIZE                  256
 #define TUNNEL_HEADER_TABLE_SIZE               256

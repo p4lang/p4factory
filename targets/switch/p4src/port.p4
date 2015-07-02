@@ -1,114 +1,105 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Input processing - port and packet related
+ */
 
 
+/*****************************************************************************/
+/* Validate outer packet header                                              */
+/*****************************************************************************/
 action set_valid_outer_unicast_packet_untagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_UNICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_unicast_packet_single_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_UNICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, vlan_tag_[0].etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_unicast_packet_double_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_UNICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, vlan_tag_[1].etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_unicast_packet_qinq_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_UNICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_multicast_packet_untagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_MULTICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_multicast_packet_single_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_MULTICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, vlan_tag_[0].etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_multicast_packet_double_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_MULTICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, vlan_tag_[1].etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_multicast_packet_qinq_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_MULTICAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_broadcast_packet_untagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_BROADCAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_broadcast_packet_single_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_BROADCAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, vlan_tag_[0].etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_broadcast_packet_double_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_BROADCAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, vlan_tag_[1].etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 action set_valid_outer_broadcast_packet_qinq_tagged() {
     modify_field(l2_metadata.lkp_pkt_type, L2_BROADCAST);
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
-    modify_field(standard_metadata.egress_port, INVALID_PORT_ID);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
+    modify_field(standard_metadata.egress_spec, INVALID_PORT_ID);
 }
 
 table validate_outer_ethernet {
@@ -137,12 +128,36 @@ table validate_outer_ethernet {
 control validate_outer_ethernet_header {
     apply(validate_outer_ethernet);
 }
-action set_ifindex(ifindex, if_label) {
-    modify_field(ingress_metadata.ifindex, ifindex);
-    modify_field(ingress_metadata.if_label, if_label);
+
+control process_validate_outer_header {
+    /* validate the ethernet header */
+    validate_outer_ethernet_header();
+
+    /* validate input packet and perform basic validations */
+    if (valid(ipv4)) {
+        validate_outer_ipv4_header();
+    } else {
+        if (valid(ipv6)) {
+            validate_outer_ipv6_header();
+        } else {
+            if (valid(mpls[0])) {
+                validate_mpls_header();
+            }
+        }
+    }
 }
 
-table port_mapping {
+
+/*****************************************************************************/
+/* Ingress port lookup                                                       */
+/*****************************************************************************/
+action set_ifindex(ifindex, if_label, port_type) {
+    modify_field(ingress_metadata.ifindex, ifindex);
+    modify_field(acl_metadata.if_label, if_label);
+    modify_field(ingress_metadata.port_type, port_type);
+}
+
+table ingress_port_mapping {
     reads {
         standard_metadata.ingress_port : exact;
     }
@@ -152,30 +167,37 @@ table port_mapping {
     size : PORTMAP_TABLE_SIZE;
 }
 
-control process_port_mapping {
-    apply(port_mapping);
+control process_ingress_port_mapping {
+    apply(ingress_port_mapping);
 }
 
-action set_bd(bd, vrf, rmac_group, 
-        bd_label, uuc_mc_index, bcast_mc_index, umc_mc_index,
+/*****************************************************************************/
+/* Ingress port-vlan mapping lookup                                          */
+/*****************************************************************************/
+action set_bd(bd, vrf, rmac_group,
         ipv4_unicast_enabled, ipv6_unicast_enabled,
         igmp_snooping_enabled, mld_snooping_enabled,
-        ipv4_urpf_mode, ipv6_urpf_mode, stp_group) {
-    modify_field(ingress_metadata.vrf, vrf);
+        ipv4_urpf_mode, ipv6_urpf_mode,
+        bd_label, stp_group, stats_idx,
+        uuc_mc_index, bcast_mc_index, umc_mc_index) {
+    modify_field(l3_metadata.vrf, vrf);
     modify_field(ipv4_metadata.ipv4_unicast_enabled, ipv4_unicast_enabled);
     modify_field(ipv6_metadata.ipv6_unicast_enabled, ipv6_unicast_enabled);
-    modify_field(multicast_metadata.igmp_snooping_enabled, igmp_snooping_enabled);
-    modify_field(multicast_metadata.mld_snooping_enabled, mld_snooping_enabled);
     modify_field(ipv4_metadata.ipv4_urpf_mode, ipv4_urpf_mode);
     modify_field(ipv6_metadata.ipv6_urpf_mode, ipv6_urpf_mode);
     modify_field(l3_metadata.rmac_group, rmac_group);
-    modify_field(ingress_metadata.uuc_mc_index, uuc_mc_index);
-    modify_field(ingress_metadata.umc_mc_index, umc_mc_index);
-    modify_field(ingress_metadata.bcast_mc_index, bcast_mc_index);
-    modify_field(ingress_metadata.bd_label, bd_label);
-    modify_field(ingress_metadata.bd, bd);
+    modify_field(acl_metadata.bd_label, bd_label);
+    modify_field(ingress_metadata.ingress_bd, bd);
     modify_field(ingress_metadata.outer_bd, bd);
     modify_field(l2_metadata.stp_group, stp_group);
+    modify_field(ingress_metadata.ingress_ifindex, ingress_metadata.ifindex);
+    modify_field(l2_metadata.bd_stats_idx, stats_idx);
+
+    modify_field(multicast_metadata.igmp_snooping_enabled, igmp_snooping_enabled);
+    modify_field(multicast_metadata.igmp_snooping_enabled, mld_snooping_enabled);
+    modify_field(multicast_metadata.uuc_mc_index, uuc_mc_index);
+    modify_field(multicast_metadata.umc_mc_index, umc_mc_index);
+    modify_field(multicast_metadata.bcast_mc_index, bcast_mc_index);
 }
 
 action_profile bd_action_profile {
@@ -202,6 +224,38 @@ control process_port_vlan_mapping {
     apply(port_vlan_mapping);
 }
 
+
+/*****************************************************************************/
+/* Ingress BD stats based on packet type                                     */
+/*****************************************************************************/
+#ifndef COUNTER_DISABLE
+counter ingress_bd_stats {
+    type : packets_and_bytes;
+    instance_count : BD_TABLE_SIZE;
+}
+
+action update_ingress_bd_stats() {
+    count(ingress_bd_stats, l2_metadata.bd_stats_idx);
+}
+
+table ingress_bd_stats {
+    actions {
+        update_ingress_bd_stats;
+    }
+    size : BD_STATS_TABLE_SIZE;
+}
+#endif /* COUNTER_DISABLE */
+
+control process_ingress_bd_stats {
+#ifndef COUNTER_DISABLE
+    apply(ingress_bd_stats);
+#endif /* COUNTER_DISABLE */
+}
+
+
+/*****************************************************************************/
+/* LAG lookup/resolution                                                     */
+/*****************************************************************************/
 field_list lag_hash_fields {
     l2_metadata.lkp_mac_sa;
     l2_metadata.lkp_mac_da;
@@ -209,8 +263,8 @@ field_list lag_hash_fields {
     ipv4_metadata.lkp_ipv4_sa;
     ipv4_metadata.lkp_ipv4_da;
     l3_metadata.lkp_ip_proto;
-    ingress_metadata.lkp_l4_sport;
-    ingress_metadata.lkp_l4_dport;
+    l3_metadata.lkp_l4_sport;
+    l3_metadata.lkp_l4_dport;
 }
 
 field_list_calculation lag_hash {
@@ -225,18 +279,27 @@ action_selector lag_selector {
     selection_key : lag_hash;
 }
 
+#ifdef FABRIC_ENABLE
+action set_lag_remote_port(device, port) {
+    modify_field(fabric_metadata.dst_device, device);
+    modify_field(fabric_metadata.dst_port, port);
+}
+#endif /* FABRIC_ENABLE */
+
 action set_lag_port(port) {
     modify_field(standard_metadata.egress_spec, port);
 }
 
 action set_lag_miss() {
-    modify_field_with_hash_based_offset(intrinsic_metadata.lag_hash, 0, lag_hash, 8192);
 }
 
 action_profile lag_action_profile {
     actions {
         set_lag_miss;
         set_lag_port;
+#ifdef FABRIC_ENABLE
+        set_lag_remote_port;
+#endif /* FABRIC_ENABLE */
     }
     size : LAG_GROUP_TABLE_SIZE;
     dynamic_action_selection : lag_selector;
@@ -254,6 +317,40 @@ control process_lag {
     apply(lag_group);
 }
 
+
+/*****************************************************************************/
+/* Egress port lookup                                                        */
+/*****************************************************************************/
+action egress_port_type_normal() {
+    modify_field(egress_metadata.port_type, PORT_TYPE_NORMAL);
+}
+
+action egress_port_type_fabric() {
+    modify_field(egress_metadata.port_type, PORT_TYPE_FABRIC);
+    modify_field(tunnel_metadata.egress_tunnel_type, EGRESS_TUNNEL_TYPE_FABRIC);
+}
+
+action egress_port_type_cpu() {
+    modify_field(egress_metadata.port_type, PORT_TYPE_CPU);
+    modify_field(tunnel_metadata.egress_tunnel_type, EGRESS_TUNNEL_TYPE_CPU);
+}
+
+table egress_port_mapping {
+    reads {
+        standard_metadata.egress_port : exact;
+    }
+    actions {
+        egress_port_type_normal;
+        egress_port_type_fabric;
+        egress_port_type_cpu;
+    }
+    size : PORTMAP_TABLE_SIZE;
+}
+
+
+/*****************************************************************************/
+/* Egress VLAN translation                                                   */
+/*****************************************************************************/
 action set_egress_packet_vlan_tagged(vlan_id) {
     add_header(vlan_tag_[0]);
     modify_field(vlan_tag_[0].etherType, ethernet.etherType);

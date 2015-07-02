@@ -1212,7 +1212,6 @@ class L2LagTest(sai_base_test.ThriftInterfaceDataPlane):
             verify_packets(self, exp_pkt, [5])
         finally:
 
-            print hex(lag_id1)
             self.client.sai_thrift_remove_ports_from_lag(lag_id1, [port1, port2, port3, port4])
             sai_thrift_delete_fdb(self.client, vlan_id, mac1, lag_id1)
             sai_thrift_delete_fdb(self.client, vlan_id, mac2, port5)

@@ -1,18 +1,6 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Nexthop related processing
+ */
 
 /*
  * nexthop metadata
@@ -25,31 +13,42 @@ header_type nexthop_metadata_t {
 
 metadata nexthop_metadata_t nexthop_metadata;
 
+/*****************************************************************************/
+/* Forwarding result lookup and decisions                                    */
+/*****************************************************************************/
 action set_l2_redirect_action() {
     modify_field(l3_metadata.nexthop_index, l2_metadata.l2_nexthop);
-    modify_field(nexthop_metadata.nexthop_type,
-                 l2_metadata.l2_nexthop_type);
+    modify_field(nexthop_metadata.nexthop_type, l2_metadata.l2_nexthop_type);
 }
 
 action set_acl_redirect_action() {
     modify_field(l3_metadata.nexthop_index, acl_metadata.acl_nexthop);
-    modify_field(nexthop_metadata.nexthop_type,
-                 acl_metadata.acl_nexthop_type);
+    modify_field(nexthop_metadata.nexthop_type, acl_metadata.acl_nexthop_type);
 }
 
 action set_racl_redirect_action() {
     modify_field(l3_metadata.nexthop_index, acl_metadata.racl_nexthop);
-    modify_field(nexthop_metadata.nexthop_type,
-                 acl_metadata.racl_nexthop_type);
+    modify_field(nexthop_metadata.nexthop_type, acl_metadata.racl_nexthop_type);
     modify_field(l3_metadata.routed, TRUE);
 }
 
 action set_fib_redirect_action() {
     modify_field(l3_metadata.nexthop_index, l3_metadata.fib_nexthop);
-    modify_field(nexthop_metadata.nexthop_type,
-                 l3_metadata.fib_nexthop_type);
+    modify_field(nexthop_metadata.nexthop_type, l3_metadata.fib_nexthop_type);
     modify_field(l3_metadata.routed, TRUE);
-    modify_field(intrinsic_metadata.eg_mcast_group, 0);
+    modify_field(intrinsic_metadata.mcast_grp, 0);
+#ifdef FABRIC_ENABLE
+    modify_field(fabric_metadata.dst_device, 0);
+#endif /* FABRIC_ENABLE */
+}
+
+action set_cpu_redirect_action() {
+    modify_field(l3_metadata.routed, FALSE);
+    modify_field(intrinsic_metadata.mcast_grp, 0);
+    modify_field(ingress_metadata.egress_ifindex, CPU_PORT_ID);
+#ifdef FABRIC_ENABLE
+    modify_field(fabric_metadata.dst_device, 0);
+#endif /* FABRIC_ENABLE */
 }
 
 table fwd_result {
@@ -57,28 +56,36 @@ table fwd_result {
         l2_metadata.l2_redirect : ternary;
         acl_metadata.acl_redirect : ternary;
         acl_metadata.racl_redirect : ternary;
+        l3_metadata.rmac_hit : ternary;
         l3_metadata.fib_hit : ternary;
     }
     actions {
         nop;
         set_l2_redirect_action;
+        set_fib_redirect_action;
+        set_cpu_redirect_action;
+#ifndef ACL_DISABLE
         set_acl_redirect_action;
         set_racl_redirect_action;
-        set_fib_redirect_action;
+#endif /* ACL_DISABLE */
     }
     size : FWD_RESULT_TABLE_SIZE;
 }
 
-control process_merge_results {
+control process_fwd_results {
     apply(fwd_result);
 }
 
+
+/*****************************************************************************/
+/* ECMP lookup                                                               */
+/*****************************************************************************/
 field_list l3_hash_fields {
     ipv4_metadata.lkp_ipv4_sa;
     ipv4_metadata.lkp_ipv4_da;
     l3_metadata.lkp_ip_proto;
-    ingress_metadata.lkp_l4_sport;
-    ingress_metadata.lkp_l4_dport;
+    l3_metadata.lkp_l4_sport;
+    l3_metadata.lkp_l4_dport;
 }
 
 field_list_calculation ecmp_hash {
@@ -113,33 +120,39 @@ table ecmp_group {
 
 action set_nexthop_details(ifindex, bd) {
     modify_field(ingress_metadata.egress_ifindex, ifindex);
-    modify_field(ingress_metadata.egress_bd, bd);
-    bit_xor(ingress_metadata.same_bd_check, ingress_metadata.bd, bd);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
 }
 
 action set_ecmp_nexthop_details(ifindex, bd, nhop_index) {
     modify_field(ingress_metadata.egress_ifindex, ifindex);
-    modify_field(ingress_metadata.egress_bd, bd);
     modify_field(l3_metadata.nexthop_index, nhop_index);
-    bit_xor(ingress_metadata.same_bd_check, ingress_metadata.bd, bd);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
 }
 
+
+/*****************************************************************************/
+/* Nexthop lookup                                                            */
+/*****************************************************************************/
 /*
  * If dest mac is not know, then unicast packet needs to be flooded in
  * egress BD
  */
 action set_nexthop_details_for_post_routed_flood(bd, uuc_mc_index) {
-    modify_field(intrinsic_metadata.eg_mcast_group, uuc_mc_index);
-    modify_field(ingress_metadata.egress_bd, bd);
-    bit_xor(ingress_metadata.same_bd_check, ingress_metadata.bd, bd);
+    modify_field(intrinsic_metadata.mcast_grp, uuc_mc_index);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
+#ifdef FABRIC_ENABLE
+    modify_field(fabric_metadata.dst_device, FABRIC_DEVICE_MULTICAST);
+#endif /* FABRIC_ENABLE */
 }
 
 action set_ecmp_nexthop_details_for_post_routed_flood(bd, uuc_mc_index,
                                                       nhop_index) {
-    modify_field(intrinsic_metadata.eg_mcast_group, uuc_mc_index);
-    modify_field(ingress_metadata.egress_bd, bd);
+    modify_field(intrinsic_metadata.mcast_grp, uuc_mc_index);
     modify_field(l3_metadata.nexthop_index, nhop_index);
-    bit_xor(ingress_metadata.same_bd_check, ingress_metadata.bd, bd);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
+#ifdef FABRIC_ENABLE
+    modify_field(fabric_metadata.dst_device, FABRIC_DEVICE_MULTICAST);
+#endif /* FABRIC_ENABLE */
 }
 
 table nexthop {
