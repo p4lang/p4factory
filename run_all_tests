@@ -29,7 +29,6 @@ except ImportError:
 _PD_TARGETS = [
     "basic_routing",
     "l2_switch",
-    "dc_example",
 ]
 
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
