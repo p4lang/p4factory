@@ -1,19 +1,3 @@
-/*
-Copyright 2013-present Barefoot Networks, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -453,5 +437,88 @@ header_type sflow_record_t {
         frameLength : 32;
         bytesRemoved : 32;
         headerSize : 32;
+    }
+}
+
+#define FABRIC_HEADER_TYPE_NONE        0
+#define FABRIC_HEADER_TYPE_INTERNAL    1
+#define FABRIC_HEADER_TYPE_UNICAST     2
+#define FABRIC_HEADER_TYPE_MULTICAST   3
+#define FABRIC_HEADER_TYPE_MIRROR      4
+#define FABRIC_HEADER_TYPE_CONTROL     5
+#define FABRIC_HEADER_TYPE_CPU         6
+
+header_type fabric_header_t {
+    fields {
+        packetType : 3;
+        headerVersion : 2;
+        packetVersion : 2;
+        pad1 : 1;
+
+        fabricColor : 3;
+        fabricQos : 5;
+
+        dstDevice : 8;
+        dstPortOrGroup : 16;
+
+        ingressIfindex : 16;
+        ingressBd : 16;
+    }
+}
+
+header_type fabric_header_unicast_t {
+    fields {
+        routed : 1;
+        outerRouted : 1;
+        tunnelTerminate : 1;
+        ingressTunnelType : 5;
+
+        nexthopIndex : 16;
+    } 
+}
+
+header_type fabric_header_multicast_t {
+    fields {
+        routed : 1;
+        outerRouted : 1;
+        tunnelTerminate : 1;
+        ingressTunnelType : 5;
+        mcastGrp : 16;
+    }
+}
+
+header_type fabric_header_mirror_t {
+    fields {
+        rewriteIndex : 16;
+        egressPort : 10;
+        egressQueue : 5;
+        pad : 1;
+    }
+}
+
+header_type fabric_header_control_t {
+    fields {
+        egressPort : 10;
+        egressQueue : 5;
+        pad : 1;
+        type_ : 1;
+        dir : 1;
+        redirectToCpu : 1;
+        forwardingBypass : 1;
+        aclBypass : 1;
+        reserved : 3;
+    }
+}
+
+header_type fabric_header_cpu_t {
+    fields {
+        reserved : 11;
+        egressQueue : 5;
+    }
+}
+
+header_type fabric_payload_header_t {
+    fields {
+        etherType : 16;
     }
 }

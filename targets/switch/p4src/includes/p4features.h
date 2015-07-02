@@ -24,6 +24,9 @@ limitations under the License.
 #define MTU_DISABLE
 #endif
 
+#define COUNTER_DISABLE
+//#define FABRIC_ENABLE
+
 // Defines for switchapi library
 #ifdef URPF_DISABLE
 #define P4_URPF_DISABLE
@@ -79,4 +82,12 @@ limitations under the License.
 
 #ifdef IPV4_DISABLE
 #define P4_IPV4_DISABLE
+#endif
+
+#ifdef COUNTER_DISABLE
+#define P4_COUNTER_DISABLE
+#endif
+
+#ifdef EGRESS_FILTER_DISABLE
+#define P4_EGRESS_FILTER_DISABLE
 #endif
