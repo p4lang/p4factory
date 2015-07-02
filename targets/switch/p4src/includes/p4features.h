@@ -25,7 +25,7 @@ limitations under the License.
 #endif
 
 #define COUNTER_DISABLE
-//#define FABRIC_ENABLE
+#define FABRIC_ENABLE
 
 // Defines for switchapi library
 #ifdef URPF_DISABLE
