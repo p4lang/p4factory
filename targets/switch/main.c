@@ -112,10 +112,6 @@ extern int start_switch_api_rpc_server(void);
 extern int start_p4_sai_thrift_rpc_server(int port);
 #endif /* SWITCHSAI_ENABLE */
 
-#ifdef SWITCHLINK_ENABLE
-extern int switchlink_init(void);
-#endif /* SWITCHLINK_ENABLE */
-
 static int add_port(char *iface, uint16_t port_num) {
   fprintf(stderr, "switch is adding port %s as %u\n", iface, port_num);
   if (dump_pcap != 0) {
@@ -231,14 +227,13 @@ packet_handler(int port_num, const char *buffer, int length)
 {
     /* @fixme log vector */
     printf("Packet in on port %d length %d; first bytes:\n", port_num, length);
-    int i = 0;
-    for (i = 0; i < 16; i++) {
-        if (i && ((i % 4) == 0)) {
-            printf(" ");
-        }
-        printf("%02x", (uint8_t) buffer[i]);
-    }
-    printf("\n");
+    printf("%02x%02x%02x%02x %02x%02x%02x%02x "
+           "%02x%02x%02x%02x %02x%02x%02x%02x\n",
+           buffer[0], buffer[1], buffer[2], buffer[3],
+           buffer[4], buffer[5], buffer[6], buffer[7],
+           buffer[8], buffer[9], buffer[10], buffer[11],
+           buffer[12], buffer[13], buffer[14], buffer[15]);
+
     printf("rmt proc returns %d\n", rmt_process_pkt(port_num, (char*)buffer, length));
 }
 
@@ -446,10 +441,6 @@ main(int argc, char* argv[])
     CHECK(start_p4_sai_thrift_rpc_server(SWITCH_SAI_THRIFT_RPC_SERVER_PORT));
 #endif /*SWITCHSAI_ENABLE */
 
-#ifdef SWITCHLINK_ENABLE
-    CHECK(switchlink_init());
-#endif /* SWITCHLINK_ENABLE */
-
     if (!listener_str && !no_veth) {  /* standalone mode */
         for (n_veth = 0; n_veth < NUM_VETH_INTERFACES; n_veth++) {
             sprintf(veth_name, "veth%d", n_veth*2);
@@ -500,7 +491,7 @@ main(int argc, char* argv[])
         p4ns_db_set_listener(c, datapath_name, &listener_addr);
 
         /* TODO: improve this code */
-        uint16_t port_no = 0;
+        uint16_t port_no = 1;
         /* Add interfaces from command line */
         struct entry *np;
         for (np = interfaces.tqh_first; np != NULL; np = np->entries.tqe_next) {
@@ -518,7 +509,7 @@ main(int argc, char* argv[])
         pthread_create(&ctl_listener_thread, NULL,
                        ctl_listen, (void *) &listener_addr);
     } else if (no_veth) {
-        uint16_t port_no = 0;
+        uint16_t port_no = 1;
         struct entry *np;
         for (np = interfaces.tqh_first; np != NULL; np = np->entries.tqe_next) {
             printf("Adding interface %s (port %d)\n", np->str, port_no);

@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os, subprocess, select, time, re, pty
-from mininet.util import isShellBuiltin
-
 from mininet.net import Mininet
 from mininet.node import Switch, Host
 from mininet.log import setLogLevel, info
@@ -45,7 +42,7 @@ class P4Host(Host):
             self.defaultIntf().MAC()
         )
         print "**********"
-
+        
 class P4Switch(Switch):
     """P4 virtual switch"""
     listenerPort = 11111
@@ -117,139 +114,3 @@ class P4Switch(Switch):
     def dpctl( self, *args ):
         "Run dpctl command"
         pass
-
-# Based on code from
-# http://techandtrains.com/2014/08/21/docker-container-as-mininet-host/
-class P4DockerSwitch(Switch):
-    """P4 virtual switch running in a docker conatiner"""
-    thriftPort = 22222
-
-    def __init__( self, name, target_name = 'p4dockerswitch',
-                  thrift_port = None,
-                  pcap_dump = False,
-                  verbose = False,
-                  start_program = "/bin/bash", **kwargs ):
-
-        self.verbose = verbose
-        self.pcap_dump = pcap_dump
-        self.start_program = start_program
-        self.target_name = target_name
-        self.thrift_port = thrift_port
-        Switch.__init__( self, name, **kwargs )
-        self.inNamespace = True
-
-    @classmethod
-    def setup( cls ):
-        pass
-
-    def sendCmd( self, *args, **kwargs ):
-        assert not self.waiting
-        printPid = kwargs.get( 'printPid', True )
-        # Allow sendCmd( [ list ] )
-        if len( args ) == 1 and type( args[ 0 ] ) is list:
-            cmd = args[ 0 ]
-        # Allow sendCmd( cmd, arg1, arg2... )
-        elif len( args ) > 0:
-            cmd = args
-        # Convert to string
-        if not isinstance( cmd, str ):
-            cmd = ' '.join( [ str( c ) for c in cmd ] )
-        if not re.search( r'\w', cmd ):
-            # Replace empty commands with something harmless
-            cmd = 'echo -n'
-        self.lastCmd = cmd
-        printPid = printPid and not isShellBuiltin( cmd )
-        if len( cmd ) > 0 and cmd[ -1 ] == '&':
-            # print ^A{pid}\n{sentinel}
-            cmd += ' printf "\\001%d\\012" $! '
-        else:
-            pass
-        self.write( cmd + '\n' )
-        self.lastPid = None
-        self.waiting = True
-
-    def popen( self, *args, **kwargs ):
-        mncmd = [ 'docker', 'exec', "mininet-"+self.name ]
-        return Switch.popen( self, *args, mncmd=mncmd, **kwargs )
-
-    def stop( self ):
-        dev_null = open(os.devnull, 'w')
-        subprocess.call( ['docker stop mininet-' + self.name],
-                         stdin=dev_null, stdout=dev_null,
-                         stderr=dev_null, shell=True )
-        subprocess.call( ['docker rm mininet-' + self.name],
-                         stdin=dev_null, stdout=dev_null,
-                         stderr=dev_null, shell=True )
-        dev_null.close()
-
-    def terminate( self ):
-        self.stop()
-
-    def start( self, controllers ):
-        print "Starting P4 docker switch", self.name
-        path = '/p4factory/targets/switch/behavioral-model'
-        args = [ 'echo \"' +  path ]
-        args.extend( ['--name', self.name] )
-        args.extend( ['--dpid', self.dpid] )
-        args.extend( ['--pd-server', '127.0.0.1:%d' % self.thrift_port] )
-        if not self.pcap_dump:
-            args.append( '--no-pcap' )
-        for intf in self.intfs.values():
-            if not intf.IP():
-                args.extend( ['-i', intf.name] )
-        args.append( '--no-veth' )
-        args.append( '>& /tmp/model.log &' )
-        args.append( '\" >> /p4factory/tools/bm_start.sh' )
-        self.cmd( args )
-
-        bm_cmd = ['docker', 'exec', 'mininet-' + self.name,
-                  '/p4factory/tools/bm_start.sh' ]
-        bmp = subprocess.Popen( bm_cmd, stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, close_fds=False )
-        bmp.wait()
-
-    def startShell( self ):
-        self.stop()
-        docker_name = self.target_name
-
-        args = ['docker', 'run', '-ti', '--rm', '--privileged=true']
-        args.extend( ['--hostname=' + self.name, '--name=mininet-' + self.name] )
-        args.extend( ['-p', '%d:%d' % (self.thrift_port, self.thrift_port)] )
-        args.extend( ['-e', 'DISPLAY'] )
-        args.extend( ['-v', '/tmp/.X11-unix:/tmp/.X11-unix'] )
-        args.extend( [docker_name, self.start_program] )
-
-        master, slave = pty.openpty()
-        self.shell = subprocess.Popen( args,
-                                       stdin=slave, stdout=slave, stderr=slave,
-                                       close_fds=True,
-                                       preexec_fn=os.setpgrp )
-        os.close( slave )
-        ttyobj = os.fdopen( master, 'rw' )
-        self.stdin = ttyobj
-        self.stdout = ttyobj
-        self.pid = self.shell.pid
-        self.pollOut = select.poll()
-        self.pollOut.register( self.stdout )
-        self.outToNode[ self.stdout.fileno() ] = self
-        self.inToNode[ self.stdin.fileno() ] = self
-        self.execed = False
-        self.lastCmd = None
-        self.lastPid = None
-        self.readbuf = ''
-        self.waiting = False
-
-        #Wait for prompt
-        time.sleep(1)
-
-        pid_cmd = ['docker', 'inspect', '--format=\'{{ .State.Pid }}\'',
-                   'mininet-' + self.name ]
-        pidp = subprocess.Popen( pid_cmd, stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT, close_fds=False )
-        pidp.wait()
-        ps_out = pidp.stdout.readlines()
-        self.pid = int(ps_out[0])
-        self.cmd( 'export PS1=\"\\177\"; printf "\\177"' )
-        self.cmd( 'stty -echo; set +m' )
