@@ -91,7 +91,7 @@ and build the target "docker-image".
 For example:
 
     # In target/switch/Makefile, add the following lines
-    DOCKER_IMAGE := bm-switchlink
+    DOCKER_IMAGE := bm-switchsai
     include ${MAKEFILES_DIR}/docker.mk
 
     # To build the docker image
@@ -105,15 +105,6 @@ Sample output:
     REPOSITORY          TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
     p4dockerswitch      latest              84f6c028ad6c        14 hours ago        1.234 GB
     ubuntu              14.04               6d4946999d4f        3 weeks ago         188.3 MB
-
-We provide two test topologies that showcase Mininet and Docker integration.
-
-    mininet/l2_docker.py : Simple L2 topology with two switches and two hosts
-
-    mininet/l3_docker.py : Simple L3 topology with two switches and two hosts
-
-Please see README.md under target/switch for a specific example on how to build
-the docker image and run the test topologies.
 
 Creating a New Target
 ========

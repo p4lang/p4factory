@@ -36,7 +36,7 @@ export P4_NAME := switch
 export P4_PREFIX := dc
 
 include ${MAKEFILES_DIR}/common.mk
-DOCKER_IMAGE := bm-switchlink
+DOCKER_IMAGE := bm-switchsai
 include ${MAKEFILES_DIR}/docker.mk
 
 SWITCHAPI_LIB := $(LIB_DIR)/libswitchapi.a
@@ -98,30 +98,6 @@ switchsai_THRIFT : ${GEN_THRIFT_PY_MODULE}
 bm-switchsai : ${bm-switchsai_BINARY}
 	cp ${bm-switchsai_BINARY} behavioral-model
 
-###################################
-#BUILD SWITCHLINK
-###################################
-SWITCHLINK_LIB := $(LIB_DIR)/libswitchlink.a
-include ${SUBMODULE_SWITCHLINK}/libswitchlink.mk
-
-BINARY := bm-switchlink
-${BINARY}_LINK_LIBS := ${bm-switchsai_LINK_LIBS} ${SWITCHLINK_LIB}
-bm-switchlink : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis -lJudy -lthrift \
-	$(shell pkg-config --libs libnl-3.0)
-include ${MAKEFILES_DIR}/bin.mk
-ifndef bm-switchlink_BINARY
-  $(error Output binary not defined in bm-switchlink_BINARY)
-endif
-
-bm-switchlink : export LIB_SWITCHSAI_ENABLE=1
-bm-switchlink : export LIB_SWITCHAPI_ENABLE=1
-bm-switchlink : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
-bm-switchlink : GLOBAL_CFLAGS += -DSWITCHSAI_ENABLE=1
-bm-switchlink : GLOBAL_CFLAGS += -DSWITCHLINK_ENABLE=1
-bm-switchlink : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
-bm-switchlink : ${bm-switchlink_BINARY}
-	cp ${bm-switchlink_BINARY} behavioral-model
-
 all: bm
 
-.PHONY: bm-switchapi bm-switchsai bm-switchlink
+.PHONY: bm-switchapi bm-switchsai

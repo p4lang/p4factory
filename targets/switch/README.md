@@ -47,14 +47,9 @@ When built with this option, there are thrift servers on ports 9090, 9091 and
 9092 for the auto-generated table APIs, the switchapi library APIs and the SAI
 library APIs respectively.
 
-To build the softswitch with switchlink library that uses SAI API library
-to program the softswitch,
-
-    make bm-switchlink
-
 To build the docker-image for a target, set the variable DOCKER_IMAGE in the
 file 'Makefile' to the appropriate target name and run the following command.
-By default, DOCKER_IMAGE is set to 'bm-switchlink'.
+By default, DOCKER_IMAGE is set to 'bm-switchsai'.
 
     make docker-image
 
@@ -79,27 +74,3 @@ To run the api thrift testcases,
 To run the SAI thrift testcases,
 
     sudo ./run_tests.py --test-dir of-tests/tests/sai-tests switch
-
-To run switchlink testcases,
-
-    cd ../../mininet
-
-    # L2 topology: Host1 ----- Switch1 ----- Switch2 ----- Host2
-    sudo ./l2_docker.py
-    mininet> h1 ping h2
-    mininet> exit
-
-    # L3 topology: Host1 ----- Switch1 ----- Switch2 ----- Host2
-    sudo ./l3_docker.py
-    mininet> h1 ping h2
-    mininet> exit
-
-    # To access the switches and check the behavioral model logs under
-    # /tmp/model.log
-    sudo ./l3_docker.py
-    mininet> xterm sw1
-    mininet> xterm sw2
-    mininet> h1 ping h2
-
-The switchlink testcases have been verified with docker version 1.7.0 and
-Mininet version 2.2.1 running on Ubuntu 14.04.
