@@ -19,6 +19,7 @@ from subprocess import Popen
 import os
 import re
 import sys
+import time
 
 try:
     import termcolor as T
@@ -89,6 +90,8 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
     logfile = "/tmp/" + test_name + ".log"
     logfd = open(logfile, 'w')
     bm_proc = Popen(cmd, stdout = logfd, stderr = subprocess.STDOUT)
+
+    time.sleep(10)
 
     test_dir = os.path.join("of-tests/tests", test_subdir)
     cmd = ['sudo', './run_tests.py', '--test-dir', test_dir]
