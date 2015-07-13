@@ -1,5 +1,5 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc. 
+Copyright 2013-present Barefoot Networks, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,9 +50,6 @@ limitations under the License.
 
 #include <p4_sim/rmt.h>
 #include <p4_sim/pd_rpc_server.h>
-#if ENABLE_PLUGIN_SAI
-#include <p4_sim/p4_sai_rpc_server.h>
-#endif
 
 #include <pthread.h>
 
@@ -90,7 +87,7 @@ pthread_t ctl_listener_thread;
 struct sigaction old_action_SIGTERM;
 struct sigaction old_action_SIGINT;
 
-#define NUM_VETH_INTERFACES    9
+#define NUM_VETH_INTERFACES   9 
 
 /**
  * Check an operation and return if there's an error.
@@ -104,6 +101,20 @@ struct sigaction old_action_SIGINT;
             return _rv;                                                 \
         }                                                               \
     } while (0)
+
+#ifdef SWITCHAPI_ENABLE
+extern int switch_api_init(int);
+extern int start_switch_api_rpc_server(void);
+#endif /* SWITCHAPI_ENABLE */
+
+#ifdef SWITCHSAI_ENABLE
+#define SWITCH_SAI_THRIFT_RPC_SERVER_PORT 9092
+extern int start_p4_sai_thrift_rpc_server(int port);
+#endif /* SWITCHSAI_ENABLE */
+
+#ifdef SWITCHLINK_ENABLE
+extern int switchlink_init(void);
+#endif /* SWITCHLINK_ENABLE */
 
 static int add_port(char *iface, uint16_t port_num) {
   fprintf(stderr, "switch is adding port %s as %u\n", iface, port_num);
@@ -220,15 +231,20 @@ packet_handler(int port_num, const char *buffer, int length)
 {
     /* @fixme log vector */
     printf("Packet in on port %d length %d; first bytes:\n", port_num, length);
-    printf("%02x%02x%02x%02x %02x%02x%02x%02x "
-           "%02x%02x%02x%02x %02x%02x%02x%02x\n",
-           buffer[0], buffer[1], buffer[2], buffer[3],
-           buffer[4], buffer[5], buffer[6], buffer[7],
-           buffer[8], buffer[9], buffer[10], buffer[11],
-           buffer[12], buffer[13], buffer[14], buffer[15]);
-
+    int i = 0;
+    for (i = 0; i < 16; i++) {
+        if (i && ((i % 4) == 0)) {
+            printf(" ");
+        }
+        printf("%02x", (uint8_t) buffer[i]);
+    }
+    printf("\n");
     printf("rmt proc returns %d\n", rmt_process_pkt(port_num, (char*)buffer, length));
 }
+
+
+extern int lg_pd_ucli_create(char *prompt);
+extern int lg_pd_ucli_thread_spawn(void);
 
 
 static void
@@ -317,7 +333,7 @@ parse_options(int argc, char **argv)
       printf("\n");
       printf(" -v, --verbose Verbose logging\n");
       printf(" -t, --trace Very verbose logging\n");
-      printf(" -l, --listener=IP:PORT Listen for bfnctl connections\n");
+      printf(" -l, --listener=IP:PORT Listen for connections\n");
       printf(" --p4nsdb=IP:PORT Connect to the P4NSDB\n");
       printf(" --pd-server=IP:PORT Listen for PD RPC calls\n");
       printf(" --no-veth No veth interfaces\n");
@@ -417,13 +433,22 @@ main(int argc, char* argv[])
     rmt_log_level_set(P4_LOG_LEVEL_TRACE);
     rmt_transmit_register(transmit_wrapper);
 
-    /* Start up the RPC server */
+    /* Start up the PD RPC server */
     CHECK(start_p4_pd_rpc_server(pd_server_addr.port));
 
-#if ENABLE_PLUGIN_SAI
-    /* Start up the SAI RPC server */
-    CHECK(start_p4_sai_rpc_server(9091));
-#endif
+    /* Start up the API RPC server */
+#ifdef SWITCHAPI_ENABLE
+    CHECK(switch_api_init(0));
+    CHECK(start_switch_api_rpc_server());
+#endif /* SWITCHAPI_DISABLE */
+
+#ifdef SWITCHSAI_ENABLE
+    CHECK(start_p4_sai_thrift_rpc_server(SWITCH_SAI_THRIFT_RPC_SERVER_PORT));
+#endif /*SWITCHSAI_ENABLE */
+
+#ifdef SWITCHLINK_ENABLE
+    CHECK(switchlink_init());
+#endif /* SWITCHLINK_ENABLE */
 
     if (!listener_str && !no_veth) {  /* standalone mode */
         for (n_veth = 0; n_veth < NUM_VETH_INTERFACES; n_veth++) {
@@ -475,7 +500,7 @@ main(int argc, char* argv[])
         p4ns_db_set_listener(c, datapath_name, &listener_addr);
 
         /* TODO: improve this code */
-        uint16_t port_no = 1;
+        uint16_t port_no = 0;
         /* Add interfaces from command line */
         struct entry *np;
         for (np = interfaces.tqh_first; np != NULL; np = np->entries.tqe_next) {
@@ -493,7 +518,7 @@ main(int argc, char* argv[])
         pthread_create(&ctl_listener_thread, NULL,
                        ctl_listen, (void *) &listener_addr);
     } else if (no_veth) {
-        uint16_t port_no = 1;
+        uint16_t port_no = 0;
         struct entry *np;
         for (np = interfaces.tqh_first; np != NULL; np = np->entries.tqe_next) {
             printf("Adding interface %s (port %d)\n", np->str, port_no);

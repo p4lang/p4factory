@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2013-present Barefoot Networks, Inc. 
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-from subprocess import Popen
+import oftest.dataplane as dataplane
+import oftest.pd_base_tests as pd_base_tests
 
-root_dir = os.path.dirname(os.path.realpath(__file__))
-pd_dir = os.path.join(root_dir, 'of-tests/pd_thrift')
+from oftest.testutils import *
 
-oft_path = os.path.join(root_dir, '..', '..', 'submodules', 'oft-infra', 'oft')
+from utils import *
 
-if __name__ == "__main__":
-    args = sys.argv[1:]
-    args += ["--pd-thrift-path", pd_dir]
-    args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve"]
-    child = Popen([oft_path] + args)
-    child.wait()
-    sys.exit(child.returncode)
+from p4_pd_rpc.ttypes import *
+from res_pd_rpc.ttypes import *
+
+class EchoTest(pd_base_tests.ThriftInterfaceDataPlane):
+    def __init__(self):
+        pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "__PROJECT_NAME__")
+
+    def runTest(self):
+        sess_hdl = self.conn_mgr.client_init(16)
+        dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
+        
+        self.conn_mgr.echo("TEST !!!")

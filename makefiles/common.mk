@@ -39,6 +39,10 @@ BUILD_DIR := ${TARGET_ROOT}/build/
 MAKE_DIR := ${BUILD_DIR}
 include ${MAKEFILES_DIR}/makedir.mk
 
+BIN_DIR := ${BUILD_DIR}/bin
+MAKE_DIR := ${BIN_DIR}
+include ${MAKEFILES_DIR}/makedir.mk
+
 include ${MAKEFILES_DIR}/bm.mk
 include ${MAKEFILES_DIR}/graphs.mk
 

@@ -50,9 +50,6 @@ limitations under the License.
 
 #include <p4_sim/rmt.h>
 #include <p4_sim/pd_rpc_server.h>
-#if ENABLE_PLUGIN_SAI
-#include <p4_sim/p4_sai_rpc_server.h>
-#endif
 
 #include <pthread.h>
 
@@ -90,7 +87,7 @@ pthread_t ctl_listener_thread;
 struct sigaction old_action_SIGTERM;
 struct sigaction old_action_SIGINT;
 
-#define NUM_VETH_INTERFACES    9
+#define NUM_VETH_INTERFACES    8
 
 /**
  * Check an operation and return if there's an error.
@@ -229,6 +226,10 @@ packet_handler(int port_num, const char *buffer, int length)
 
     printf("rmt proc returns %d\n", rmt_process_pkt(port_num, (char*)buffer, length));
 }
+
+
+extern int lg_pd_ucli_create(char *prompt);
+extern int lg_pd_ucli_thread_spawn(void);
 
 
 static void
@@ -419,11 +420,6 @@ main(int argc, char* argv[])
 
     /* Start up the RPC server */
     CHECK(start_p4_pd_rpc_server(pd_server_addr.port));
-
-#if ENABLE_PLUGIN_SAI
-    /* Start up the SAI RPC server */
-    CHECK(start_p4_sai_rpc_server(9091));
-#endif
 
     if (!listener_str && !no_veth) {  /* standalone mode */
         for (n_veth = 0; n_veth < NUM_VETH_INTERFACES; n_veth++) {

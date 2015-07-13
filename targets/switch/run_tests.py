@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-
-# Copyright 2013-present Barefoot Networks, Inc. 
-# 
+# Copyright 2013-present Barefoot Networks, Inc.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -26,7 +25,7 @@ oft_path = os.path.join(root_dir, '..', '..', 'submodules', 'oft-infra', 'oft')
 if __name__ == "__main__":
     args = sys.argv[1:]
     args += ["--pd-thrift-path", pd_dir]
-    args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve"]
+    args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve", "--enable-nvgre", "--enable-mpls"]
     child = Popen([oft_path] + args)
     child.wait()
     sys.exit(child.returncode)

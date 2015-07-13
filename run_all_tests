@@ -1,0 +1,192 @@
+#!/usr/bin/python
+
+# Copyright 2013-present Barefoot Networks, Inc. 
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import subprocess
+from subprocess import Popen
+import os
+import re
+import sys
+import time
+
+try:
+    import termcolor as T
+    _termcolor_available = True
+except ImportError:
+    _termcolor_available = False
+
+_PD_TARGETS = [
+    "basic_routing",
+    "l2_switch",
+]
+
+_THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+
+sw_binaries = ["behavioral-model"]
+
+_TEST_RESULTS = []
+
+def cleanup():
+    for binary_path in sw_binaries:
+        binary = os.path.basename(os.path.normpath(binary_path))
+        cmd = ['sudo', 'killall', '-q', binary]
+        print ' '.join(cmd)
+        subprocess.call(cmd)
+
+def my_print(msg, color = None):
+    if _termcolor_available:
+        print T.colored(msg, color)
+    else:
+        print msg
+
+def print_success(test_name):
+    my_print(test_name + " : " + "PASSED", "green")
+
+def print_failure(test_name):
+    my_print(test_name + " : " + "FAILED", "red")
+
+def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
+    cleanup()
+    target_dir = os.path.join(_THIS_DIR, "targets", target)
+    save_cwd = os.getcwd()
+    os.chdir(target_dir)
+
+    test_name = target
+    if test_subdir != "":
+        test_name += "--" + test_subdir
+
+    my_uniteresting_user_uid = int(os.environ['SUDO_UID'])
+
+    os.seteuid(my_uniteresting_user_uid)
+
+    if do_make_clean:
+        cmd = ['make', 'clean']
+        print ' '.join(cmd)
+        subprocess.call(cmd)
+
+    if make_tgt:
+        cmd = ['make', make_tgt]
+    else:
+        cmd = ['make']
+    print ' '.join(cmd)
+    subprocess.call(cmd)
+
+    os.seteuid(0)
+
+    cmd = ['sudo', './behavioral-model']
+    print ' '.join(cmd)
+    logfile = "/tmp/" + test_name + ".log"
+    logfd = open(logfile, 'w')
+    bm_proc = Popen(cmd, stdout = logfd, stderr = subprocess.STDOUT)
+
+    time.sleep(10)
+
+    test_dir = os.path.join("of-tests/tests", test_subdir)
+    cmd = ['sudo', './run_tests.py', '--test-dir', test_dir]
+    print ' '.join(cmd)
+    returncode = subprocess.call(cmd)
+
+    bm_proc.kill()
+
+    os.chdir(save_cwd)
+
+    if(returncode == 0):
+        print_success(test_name)
+    else:
+        print_failure(test_name)
+    _TEST_RESULTS.append( (test_name, returncode) )
+
+def pd_tests():
+    for target in _PD_TARGETS:
+        one_test(target)
+
+    # switch special case
+    one_test("switch", "pd-tests")
+
+def switchapi_test():
+    one_test("switch", "api-tests",
+             do_make_clean = False, make_tgt = "bm-switchapi")
+
+def switchsai_test():
+    one_test("switch", "sai-tests",
+             do_make_clean = False, make_tgt = "bm-switchsai")
+
+def check_ifaces():
+    ifconfig_out = subprocess.check_output(['ifconfig'])
+    iface_list = re.findall(
+        r'^(\S+)', ifconfig_out, re.S | re.M
+    )
+    ifaces = set(iface_list)
+    NUM_VETH_PAIRS = 9
+    for i in xrange(NUM_VETH_PAIRS * 2):
+        iface_name = "veth" + str(i)
+        if iface_name not in ifaces:
+            my_print("missing veth interface: " + iface_name, "red")
+            my_print("Did you remember to run ./tools/veth_setup.sh ?", "red")
+            sys.exit(1)
+
+    my_print("All required veth interfaces are present", "green")
+
+    my_print("If some tests fail because extra packets are received, " +\
+             "you may want to try disabling IPv6 with:\n" +\
+             "sudo sysctl -w net.ipv6.conf.eth0.disable_ipv6=1",
+             "red")
+
+def main():
+    if(os.getuid() != 0):
+        my_print("I cannot run as a mortal, I need to be root rrrOOOOOOTTTTT",
+                 "red")
+        sys.exit(1)
+
+    check_ifaces()
+
+    pd_tests()
+    switchapi_test()
+    switchsai_test()
+
+    print "**************************************"
+
+    passed_count, total_count = 0, 0
+
+    for test_name, returncode in _TEST_RESULTS:
+        total_count += 1
+        if(returncode == 0):
+            print_success(test_name)
+            passed_count += 1
+        else:
+            logfile = "/tmp/" + test_name + ".log"
+            print_failure(test_name)
+            my_print("take a look at the BM log file: " + logfile, "red")
+
+    print
+    print
+    print "**************************************"
+
+    my_print("TESTS PASSED: " + str(passed_count) + "/" + str(total_count))
+
+    if passed_count == total_count:
+        my_print("ALL TESTS PASSED!", "green")
+    else:
+        my_print(str(total_count - passed_count) + " TESTS FAILED!", "red")
+
+        my_print("If some tests fail because extra packets are received, " +\
+                 "you may want to try disabling IPv6 with:\n" +\
+                 "sudo sysctl -w net.ipv6.conf.eth0.disable_ipv6=1",
+                 "red")
+
+    cleanup()
+
+if __name__ == '__main__':
+    main()

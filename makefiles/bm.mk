@@ -36,10 +36,11 @@ GLOBAL_CFLAGS += -DLIBPCAP_USE_FIX
 GLOBAL_CFLAGS += -DDEBUG
 # uCli support for modules
 #GLOBAL_CFLAGS += -DUCLI_CONFIG_INCLUDE_FGETS_LOOP=1
-GLOBAL_CFLAGS += -DUCLI_CONFIG_INCLUDE_ELS_LOOP=1
-GLOBAL_CFLAGS += -DSOCKET_MANAGER_CONFIG_INCLUDE_UCLI=1
-GLOBAL_CFLAGS += -DVPI_CONFIG_INCLUDE_UCLI=1
-GLOBAL_CFLAGS += -DCONFIGURATION_CONFIG_INCLUDE_UCLI=1
+#GLOBAL_CFLAGS += -DUCLI_CONFIG_INCLUDE_ELS_LOOP=1
+#GLOBAL_CFLAGS += -DSOCKET_MANAGER_CONFIG_INCLUDE_UCLI=1
+#GLOBAL_CFLAGS += -DVPI_CONFIG_INCLUDE_UCLI=1
+#GLOBAL_CFLAGS += -DCONFIGURATION_CONFIG_INCLUDE_UCLI=1
+GLOBAL_CFLAGS += -g -Wall -Wno-unused-function -Werror
 
 GLOBAL_INCLUDES += -I $(TARGET_ROOT)/p4src/includes
 
@@ -100,7 +101,6 @@ ifndef PD_PUBLIC_HEADERS_DIR
   $(error p4c-bm does not define PD headers in PD_PUBLIC_HEADERS_DIR
 endif
 
-
 GLOBAL_INCLUDES += -I $(PUBLIC_INC_PATH)
 
 SRC_FILES := $(notdir $(wildcard ${TARGET_ROOT}/*.c))
@@ -113,12 +113,13 @@ ifdef PLUGIN_LIBS
 BM_PLUGIN_LIBS := $(addprefix $(LIB_DIR)/, $(PLUGIN_LIBS))
 endif
 
-BINARY := behavioral-model
-behavioral-model_LINK_LIBS := $(OBJ_FILES) $(BM_LIB) $(p4utils_LIB) $(p4ns_common_LIB) $(BMI_LIB) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS)) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS))  $(BM_PLUGIN_LIBS)
-behavioral-model_EXTRA_LINK_LIBS ?= ${BM_LIB} ${BM_LIBS_OPTIONAL} ${p4utils_LIB} ${BM_LIB} -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
+BINARY := bm
+bm_LINK_LIBS := $(OBJ_FILES) $(BM_LIB) $(p4utils_LIB) $(p4ns_common_LIB) $(BMI_LIB) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS)) $(addprefix $(LIBRARY_DIR)/, $(LIBRARY_TARGETS))  $(BM_PLUGIN_LIBS)
+bm : EXTRA_LINK_LIBS := ${BM_LIB} ${BM_LIBS_OPTIONAL} ${p4utils_LIB} ${BM_LIB} -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
 include ${MAKEFILES_DIR}/bin.mk
 
-bm : ${BM_LIB} behavioral-model ${GEN_THRIFT_PY_MODULE}
+bm : ${BM_LIB} $(bm_BINARY) ${GEN_THRIFT_PY_MODULE}
+	cp ${bm_BINARY} behavioral-model
 	cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
 .PHONY: bm

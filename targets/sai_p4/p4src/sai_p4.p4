@@ -654,7 +654,7 @@ control ingress {
         if(ingress_metadata.routed != 0) {
             apply(neighbor);
         }
-#if 0
+#if NOT_READY_YET 
         apply(ingress_acl);
         apply(qos);
         apply(cos_map);
@@ -692,7 +692,7 @@ table egress_acl {
 
 control egress {
     if(ingress_metadata.oper_status == UP) {
-#if 0
+#if NOT_READY_YET 
         apply(egress_acl);
 #endif
     }
