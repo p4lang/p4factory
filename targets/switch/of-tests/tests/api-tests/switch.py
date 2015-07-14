@@ -6239,7 +6239,7 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
         kvp = []
         kvp.append(switcht_acl_ip_key_value_pair_t(1, int("0a0a0a01", 16), int("ffffffff", 16)))
         action = 1
-        self.client.switcht_api_acl_ip_rule_create(device, acl, 10, 1, kvp, action, 0)
+        ace = self.client.switcht_api_acl_ip_rule_create(device, acl, 10, 1, kvp, action, 0)
         self.client.switcht_api_acl_reference(device, acl, if1)
 
         self.dataplane.send(1, str(pkt))
@@ -6253,7 +6253,7 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
 
 # ip_acl
         self.client.switcht_api_acl_remove(device, acl, if1)
-        self.client.switcht_api_acl_rule_delete(device, acl, 10)
+        self.client.switcht_api_acl_rule_delete(device, acl, ace)
         self.client.switcht_api_acl_list_delete(device, acl)
 
 #cleanup

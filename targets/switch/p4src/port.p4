@@ -190,7 +190,6 @@ action set_bd(bd, vrf, rmac_group,
     modify_field(ingress_metadata.ingress_bd, bd);
     modify_field(ingress_metadata.outer_bd, bd);
     modify_field(l2_metadata.stp_group, stp_group);
-    modify_field(ingress_metadata.ingress_ifindex, ingress_metadata.ifindex);
     modify_field(l2_metadata.bd_stats_idx, stats_idx);
 
     modify_field(multicast_metadata.igmp_snooping_enabled, igmp_snooping_enabled);

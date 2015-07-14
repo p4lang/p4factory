@@ -15,11 +15,11 @@
 # limitations under the License.
 
 ##############################################################################
-# Topology with two switches and two hosts
+# Topology with two switches and two hosts with OSPF
 #
-#                               172.16.10.0/24
+#       172.16.101.0/24         172.16.10.0/24         172.16.102.0./24
 #  h1 ------------------- sw1 ------------------ sw2------- -------------h2
-#     .1                                                                .2
+#     .5               .1     .1               .2   .1                  .5
 ##############################################################################
 
 from mininet.net import Mininet, VERSION
@@ -32,20 +32,18 @@ def main():
     net = Mininet( controller = None )
 
     # add hosts
-    h1 = net.addHost( 'h1', ip = '172.16.10.1/24' )
-    h2 = net.addHost( 'h2', ip = '172.16.10.2/24' )
+    h1 = net.addHost( 'h1', ip = '172.16.101.5/24', mac = '00:04:00:00:00:02' )
+    h2 = net.addHost( 'h2', ip = '172.16.102.5/24', mac = '00:05:00:00:00:02' )
 
     # add switch 1
     sw1 = net.addSwitch( 'sw1', target_name = "p4dockerswitch",
-            cls = P4DockerSwitch,
-            start_program = "/p4factory/tools/startup.sh",
-            thrift_port = 22000, pcap_dump = True )
+            cls = P4DockerSwitch, config_fs = 'configs/sw1/l3_ospf',
+            pcap_dump = True )
 
     # add switch 2
     sw2 = net.addSwitch( 'sw2', target_name = "p4dockerswitch",
-            cls = P4DockerSwitch,
-            start_program = "/p4factory/tools/startup.sh",
-            thrift_port = 22001, pcap_dump = True )
+            cls = P4DockerSwitch, config_fs = 'configs/sw2/l3_ospf',
+            pcap_dump = True )
 
     # add links
     if StrictVersion(VERSION) <= StrictVersion('2.2.0') :
@@ -57,19 +55,14 @@ def main():
         net.addLink( sw1, sw2, port1 = 2, port2 = 2, fast=False )
         net.addLink( sw2, h2, port1 = 1, fast=False )
 
-    # configure switch 1
-    sw1.cmd( 'brctl addbr vlan100' )
-    sw1.cmd( 'brctl addif vlan100 swp1' )
-    sw1.cmd( 'brctl addif vlan100 swp2' )
-    sw1.cmd( 'ip link set vlan100 up' )
-
-    # configure switch 2
-    sw2.cmd( 'brctl addbr vlan100' )
-    sw2.cmd( 'brctl addif vlan100 swp1' )
-    sw2.cmd( 'brctl addif vlan100 swp2' )
-    sw2.cmd( 'ip link set vlan100 up' )
-
     net.start()
+
+    # configure hosts
+    h1.setDefaultRoute( 'via 172.16.101.1' )
+    h2.setDefaultRoute( 'via 172.16.102.1' )
+
+    sw1.cmd( 'service quagga start')
+    sw2.cmd( 'service quagga start')
 
     CLI( net )
 

@@ -657,6 +657,7 @@ parser parse_fabric_header_control {
 }
 
 parser parse_fabric_header_cpu {
+    extract(fabric_header_cpu);
     return parse_fabric_payload_header;
 }
 

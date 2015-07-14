@@ -105,6 +105,7 @@ struct sigaction old_action_SIGINT;
 #ifdef SWITCHAPI_ENABLE
 extern int switch_api_init(int);
 extern int start_switch_api_rpc_server(void);
+extern int start_switch_api_packet_driver(void);
 #endif /* SWITCHAPI_ENABLE */
 
 #ifdef SWITCHSAI_ENABLE
@@ -440,6 +441,7 @@ main(int argc, char* argv[])
 #ifdef SWITCHAPI_ENABLE
     CHECK(switch_api_init(0));
     CHECK(start_switch_api_rpc_server());
+    CHECK(start_switch_api_packet_driver());
 #endif /* SWITCHAPI_DISABLE */
 
 #ifdef SWITCHSAI_ENABLE
@@ -463,6 +465,19 @@ main(int argc, char* argv[])
                   pcap_filename));
         }
     }
+
+#ifdef SWITCHAPI_ENABLE
+    if (!listener_str) {
+        // add CPU port, port 64
+        char pcap_filename[1024];
+        pcap_filename[0] = 0;
+        if (dump_pcap) {
+            snprintf(pcap_filename, 1024,
+                     "p4ns.%s-port%.2d.pcap", datapath_name, 64);
+        }
+        CHECK(bmi_port_interface_add(port_mgr, "veth250", 64, pcap_filename));
+    }
+#endif /* SWITCHAPI_ENABLE */
 
     if (listener_str) {
         parse_connection(listener_str, &listener_addr, 0);

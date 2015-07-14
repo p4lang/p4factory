@@ -30,7 +30,6 @@ header_type qos_metadata_t {
     }
 }
 
-@pragma pa_solitary ingress acl_metadata.if_label
 metadata acl_metadata_t acl_metadata;
 metadata qos_metadata_t qos_metadata;
 
@@ -377,16 +376,23 @@ action negative_mirror(clone_spec, drop_reason) {
     drop();
 }
 
-action redirect_to_cpu() {
+action redirect_to_cpu(sup_code) {
     modify_field(standard_metadata.egress_spec, CPU_PORT_ID);
     modify_field(intrinsic_metadata.mcast_grp, 0);
+    modify_field(fabric_metadata.sup_code, sup_code);
 #ifdef FABRIC_ENABLE
     modify_field(fabric_metadata.dst_device, 0);
 #endif /* FABRIC_ENABLE */
 }
 
-action copy_to_cpu() {
-    clone_ingress_pkt_to_egress(CPU_MIRROR_SESSION_ID);
+field_list cpu_info {
+    ingress_metadata.ifindex;
+    fabric_metadata.sup_code;
+}
+
+action copy_to_cpu(sup_code) {
+    modify_field(fabric_metadata.sup_code, sup_code);
+    clone_ingress_pkt_to_egress(CPU_MIRROR_SESSION_ID, cpu_info);
 }
 
 action drop_packet() {

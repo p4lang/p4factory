@@ -45,7 +45,7 @@ action set_fib_redirect_action() {
 action set_cpu_redirect_action() {
     modify_field(l3_metadata.routed, FALSE);
     modify_field(intrinsic_metadata.mcast_grp, 0);
-    modify_field(ingress_metadata.egress_ifindex, CPU_PORT_ID);
+    modify_field(standard_metadata.egress_spec, CPU_PORT_ID);
 #ifdef FABRIC_ENABLE
     modify_field(fabric_metadata.dst_device, 0);
 #endif /* FABRIC_ENABLE */

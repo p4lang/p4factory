@@ -13,17 +13,16 @@ header_type ingress_metadata_t {
         port_type : 2;                         /* ingress port type */
 
         outer_bd : BD_BIT_WIDTH;               /* outer BD */
-        bd : BD_BIT_WIDTH;                     /* BD */
+        ingress_bd : BD_BIT_WIDTH;             /* BD */
 
         drop_reason : 8;                       /* drop reason */
         control_frame: 1;                      /* control frame */
-        ingress_bd : 16;                       /* ingress_bd */
-        ingress_ifindex : 16;                  /* source interface id */
     }
 }
 
 header_type egress_metadata_t {
     fields {
+        bypass : 1;                            /* bypass egress pipeline */
         port_type : 2;                         /* egress port type */
         payload_length : 16;                   /* payload length for tunnels */
         smac_idx : 9;                          /* index into source mac table */
@@ -154,55 +153,62 @@ control ingress {
         process_ingress_fabric();
     }
 
-    /* resolve fabric port to destination device */
-    process_fabric_lag();
+    if ((ingress_metadata.port_type == PORT_TYPE_NORMAL) or
+        (ingress_metadata.port_type == PORT_TYPE_FABRIC)) {
 
-    /* compute hashes for multicast packets */
-    process_multicast_hashes();
+        /* resolve fabric port to destination device */
+        process_fabric_lag();
 
-    /* system acls */
-    process_system_acl();
+        /* compute hashes for multicast packets */
+        process_multicast_hashes();
+
+        /* system acls */
+        process_system_acl();
+    }
 }
 
 control egress {
 
-    /* multi-destination replication */
-    process_replication();
+    if (egress_metadata.bypass == FALSE) {
 
-    /* determine egress port properties */
-    apply(egress_port_mapping) {
-        egress_port_type_normal {
-            /* strip vlan header */
-            process_vlan_decap();
+        /* multi-destination replication */
+        process_replication();
 
-            /* perform tunnel decap */
-            process_tunnel_decap();
+        /* determine egress port properties */
+        apply(egress_port_mapping) {
+            egress_port_type_normal {
+                /* strip vlan header */
+                process_vlan_decap();
 
-            /* egress bd properties */
-            process_egress_bd();
+                /* perform tunnel decap */
+                process_tunnel_decap();
 
-            /* apply nexthop_index based packet rewrites */
-            process_rewrite();
+                /* egress bd properties */
+                process_egress_bd();
 
-            /* rewrite source/destination mac if needed */
-            process_mac_rewrite();
+                /* apply nexthop_index based packet rewrites */
+                process_rewrite();
+
+                /* rewrite source/destination mac if needed */
+                process_mac_rewrite();
+            }
         }
+
+        /* perform tunnel encap */
+        process_tunnel_encap();
+
+        if (egress_metadata.port_type == PORT_TYPE_NORMAL) {
+            /* egress mtu checks */
+            process_mtu();
+
+            /* egress vlan translation */
+            process_vlan_xlate();
+        }
+
+        /* egress filter */
+        process_egress_filter();
+
+        /* apply egress acl */
+        process_egress_acl();
     }
-
-    /* perform tunnel encap */
-    process_tunnel_encap();
-
-    if (egress_metadata.port_type == PORT_TYPE_NORMAL) {
-        /* egress mtu checks */
-        process_mtu();
-
-        /* egress vlan translation */
-        process_vlan_xlate();
-    }
-
-    /* egress filter */
-    process_egress_filter();
-
-    /* apply egress acl */
-    process_egress_acl();
 }

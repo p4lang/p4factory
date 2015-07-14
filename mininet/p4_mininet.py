@@ -122,19 +122,22 @@ class P4Switch(Switch):
 # http://techandtrains.com/2014/08/21/docker-container-as-mininet-host/
 class P4DockerSwitch(Switch):
     """P4 virtual switch running in a docker conatiner"""
-    thriftPort = 22222
-
     def __init__( self, name, target_name = 'p4dockerswitch',
                   thrift_port = None,
+                  sai_port = None,
                   pcap_dump = False,
                   verbose = False,
-                  start_program = "/bin/bash", **kwargs ):
+                  start_program = '/p4factory/tools/start.sh',
+                  config_fs = None,
+                  **kwargs ):
 
         self.verbose = verbose
         self.pcap_dump = pcap_dump
         self.start_program = start_program
+        self.config_fs = config_fs
         self.target_name = target_name
         self.thrift_port = thrift_port
+        self.sai_port = sai_port
         Switch.__init__( self, name, **kwargs )
         self.inNamespace = True
 
@@ -191,7 +194,7 @@ class P4DockerSwitch(Switch):
         args = [ 'echo \"' +  path ]
         args.extend( ['--name', self.name] )
         args.extend( ['--dpid', self.dpid] )
-        args.extend( ['--pd-server', '127.0.0.1:%d' % self.thrift_port] )
+        args.extend( ['--pd-server', '127.0.0.1:22000'] )
         if not self.pcap_dump:
             args.append( '--no-pcap' )
         for intf in self.intfs.values():
@@ -215,9 +218,15 @@ class P4DockerSwitch(Switch):
 
         args = ['docker', 'run', '-ti', '--rm', '--privileged=true']
         args.extend( ['--hostname=' + self.name, '--name=mininet-' + self.name] )
-        args.extend( ['-p', '%d:%d' % (self.thrift_port, self.thrift_port)] )
+        if self.thrift_port is not None:
+            args.extend( ['-p', '%d:22000' % self.thrift_port] )
+        if self.sai_port is not None:
+            args.extend( ['-p', '%d:9092' % self.sai_port] )
         args.extend( ['-e', 'DISPLAY'] )
         args.extend( ['-v', '/tmp/.X11-unix:/tmp/.X11-unix'] )
+        if self.config_fs is not None:
+            args.extend( ['-v',
+                          os.getcwd() + '/' + self.config_fs + ':/configs'] )
         args.extend( [docker_name, self.start_program] )
 
         master, slave = pty.openpty()
