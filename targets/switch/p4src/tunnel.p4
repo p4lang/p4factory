@@ -397,7 +397,7 @@ action terminate_vpls(bd, tunnel_type,
                 uuc_mc_index, umc_mc_index, bcast_mc_index) {
     modify_field(tunnel_metadata.tunnel_terminate, TRUE);
     modify_field(tunnel_metadata.ingress_tunnel_type, tunnel_type);
-    modify_field(ingress_metadata.bd, bd);
+    modify_field(ingress_metadata.ingress_bd, bd);
     modify_field(l2_metadata.lkp_mac_sa, inner_ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, inner_ethernet.dstAddr);
     modify_field(l2_metadata.lkp_mac_type, inner_ethernet.etherType);
@@ -1256,7 +1256,6 @@ table tunnel_rewrite {
         set_mpls_rewrite_push2;
         set_mpls_rewrite_push3;
 #endif /* MPLS_DISABLE */
-        cpu_tx_rewrite;
         cpu_rx_rewrite;
 #ifdef FABRIC_ENABLE
         fabric_unicast_rewrite;

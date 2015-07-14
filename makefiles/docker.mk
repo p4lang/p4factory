@@ -13,13 +13,13 @@
 # limitations under the License.
 
 docker-image :
-	@echo "    Building docker image"
+	@echo "    Building docker image for target ${DOCKER_IMAGE}"
 	@rm -fr /tmp/docker_tmp
 	@mkdir -p /tmp/docker_tmp/p4factory
-	@cp ${P4FACTORY}/docker/* /tmp/docker_tmp
+	@cp -r ${P4FACTORY}/docker/* /tmp/docker_tmp
 	@cp -rf ${P4FACTORY}/* /tmp/docker_tmp/p4factory
 	@cp /tmp/docker_tmp/init.py /tmp/docker_tmp/p4factory/submodules/init.py
-	@cp /tmp/docker_tmp/startup.sh /tmp/docker_tmp/p4factory/tools/startup.sh
+	@cp /tmp/docker_tmp/start.sh /tmp/docker_tmp/p4factory/tools/start.sh
 	@cp /tmp/docker_tmp/bm_start.sh /tmp/docker_tmp/p4factory/tools/bm_start.sh
 	@echo -n "RUN cd /p4factory/targets/$(notdir ${TARGET_ROOT}) ; " \
 		>> /tmp/docker_tmp/Dockerfile

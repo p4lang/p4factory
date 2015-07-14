@@ -15,7 +15,7 @@
 # limitations under the License.
 
 ##############################################################################
-# Topology with two switches and two hosts
+# Topology with two switches and two hosts with static routes
 #
 #       172.16.101.0/24         172.16.10.0/24         172.16.102.0./24
 #  h1 ------------------- sw1 ------------------ sw2------- -------------h2
@@ -37,15 +37,13 @@ def main():
 
     # add switch 1
     sw1 = net.addSwitch( 'sw1', target_name = "p4dockerswitch",
-            cls = P4DockerSwitch,
-            start_program = "/p4factory/tools/startup.sh",
-            thrift_port = 22000, pcap_dump = True )
+            cls = P4DockerSwitch, config_fs = 'configs/sw1/l3_static',
+            pcap_dump = True )
 
     # add switch 2
     sw2 = net.addSwitch( 'sw2', target_name = "p4dockerswitch",
-            cls = P4DockerSwitch,
-            start_program = "/p4factory/tools/startup.sh",
-            thrift_port = 22001, pcap_dump = True )
+            cls = P4DockerSwitch, config_fs = 'configs/sw2/l3_static',
+            pcap_dump = True )
 
     # add links
     if StrictVersion(VERSION) <= StrictVersion('2.2.0') :
@@ -56,24 +54,6 @@ def main():
         net.addLink( sw1, h1, port1 = 1, fast=False )
         net.addLink( sw1, sw2, port1 = 2, port2 = 2, fast=False )
         net.addLink( sw2, h2, port1 = 1, fast=False )
-
-    # configure switch 1
-    sw1.cmd( 'ip link set dev swp1 address 00:01:00:00:00:01' )
-    sw1.cmd( 'ip link set dev swp2 address 00:01:00:00:00:02' )
-    sw1.cmd( 'ip address add 172.16.101.1/24 broadcast + dev swp1' )
-    sw1.cmd( 'ip address add 172.16.10.1/24 broadcast + dev swp2' )
-    sw1.cmd( 'ip neigh add 172.16.101.5 lladdr 00:04:00:00:00:02 dev swp1' )
-    sw1.cmd( 'ip neigh add 172.16.10.2 lladdr 00:02:00:00:00:02 dev swp2' )
-    sw1.cmd( 'ip route add 172.16.102/24 nexthop via 172.16.10.2' )
-
-    # configure switch 2
-    sw2.cmd( 'ip link set dev swp1 address 00:02:00:00:00:01' )
-    sw2.cmd( 'ip link set dev swp2 address 00:02:00:00:00:02' )
-    sw2.cmd( 'ip address add 172.16.102.1/24 broadcast + dev swp1' )
-    sw2.cmd( 'ip address add 172.16.10.2/24 broadcast + dev swp2' )
-    sw2.cmd( 'ip neigh add 172.16.102.5 lladdr 00:05:00:00:00:02 dev swp1' )
-    sw2.cmd( 'ip neigh add 172.16.10.1 lladdr 00:01:00:00:00:02 dev swp2' )
-    sw2.cmd( 'ip route add 172.16.101/24 nexthop via 172.16.10.1' )
 
     net.start()
 

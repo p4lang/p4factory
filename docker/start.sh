@@ -15,4 +15,9 @@ ip link set swp2 up
 ip link set swp3 up
 ip link set swp4 up
 
+if [ -x /configs/startup_config.sh ]
+then
+    /configs/startup_config.sh
+fi
+
 exec /bin/bash

@@ -1,0 +1,35 @@
+Index: bridge_track.c
+===================================================================
+--- bridge_track.c  (revision 61)
++++ bridge_track.c  (working copy)
+@@ -28,6 +28,7 @@
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <linux/param.h>
++#include <linux/in6.h>
+ #include <linux/if_bridge.h>
+ #include <asm/byteorder.h>
+ 
+Index: ctl_functions.h
+===================================================================
+--- ctl_functions.h (revision 61)
++++ ctl_functions.h (working copy)
+@@ -27,6 +27,7 @@
+ #ifndef CTL_SOCKET_H
+ #define CTL_SOCKET_H
+ 
++#include <linux/in6.h>
+ #include <linux/if_bridge.h>
+ #include <asm/byteorder.h>
+ 
+Index: mstp.c
+===================================================================
+--- mstp.c  (revision 61)
++++ mstp.c  (working copy)
+@@ -37,6 +37,7 @@
+ 
+ #include <string.h>
+ #include <sys/time.h>
++#include <linux/in6.h>
+ #include <linux/if_bridge.h>
+ #include <asm/byteorder.h>
