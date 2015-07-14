@@ -108,6 +108,14 @@ Sample output:
 
 We provide a few topologies that showcase Mininet and Docker integration.
 
+SAI:
+
+    mininet/sai_l2.py : Simple L2 topology with two switches and two hosts.
+
+    mininet/sai_l3.py : Simple L3 topology with two switches and two hosts.
+
+Switchlink with SAI:
+
     mininet/swl_l2.py : Simple L2 topology with two switches and two hosts.
                         The topology is loop free (no spanning tree protocol).
 
