@@ -86,7 +86,7 @@ class P4Switch(Switch):
             self.thriftPort += 1
         args.extend( ['--pd-server', '127.0.0.1:%d' % thrift_port] )
         if not self.pcap_dump:
-            args.append( '--no-cli' )
+            args.append( '--no-pcap' )
         args.append( self.opts )
 
         logfile = '/tmp/p4ns.%s.log' % self.name

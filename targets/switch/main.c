@@ -122,7 +122,7 @@ static int add_port(char *iface, uint16_t port_num) {
   if (dump_pcap != 0) {
     char pcap_filename[1024];
     snprintf(pcap_filename, 1024,
-      "/p4ns.%s-port%.2d.pcap", datapath_name, port_num);
+      "p4ns.%s-port%.2d.pcap", datapath_name, port_num);
     return bmi_port_interface_add(port_mgr, iface, port_num, pcap_filename);
   }
   else {
