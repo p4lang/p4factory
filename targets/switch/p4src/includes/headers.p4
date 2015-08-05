@@ -185,26 +185,15 @@ header_type nvgre_t {
     }
 }
 
-/* 8 bytes */
-header_type erspan_header_v1_t {
+/* erspan III header - 12 bytes */
+header_type erspan_header_t3_t {
     fields {
         version : 4;
         vlan : 12;
         priority : 6;
         span_id : 10;
-        direction : 8;
-        truncated: 8;
-    }
-}
-
-/* 8 bytes */
-header_type erspan_header_v2_t {
-    fields {
-        version : 4;
-        vlan : 12;
-        priority : 6;
-        span_id : 10;
-        unknown7 : 32;
+        timestamp : 32;
+        sgt_other : 32;
     }
 }
 
@@ -441,7 +430,7 @@ header_type sflow_record_t {
 }
 
 #define FABRIC_HEADER_TYPE_NONE        0
-#define FABRIC_HEADER_TYPE_UNICAST     1 
+#define FABRIC_HEADER_TYPE_UNICAST     1
 #define FABRIC_HEADER_TYPE_MULTICAST   2
 #define FABRIC_HEADER_TYPE_MIRROR      3
 #define FABRIC_HEADER_TYPE_CONTROL     4
@@ -495,27 +484,14 @@ header_type fabric_header_mirror_t {
     }
 }
 
-header_type fabric_header_control_t {
-    fields {
-        egressPort : 10;
-        egressQueue : 5;
-        pad : 1;
-        type_ : 1;
-        dir : 1;
-        redirectToCpu : 1;
-        forwardingBypass : 1;
-        aclBypass : 1;
-        reserved : 3;
-    }
-}
-
 header_type fabric_header_cpu_t {
     fields {
         egressQueue : 5;
         txBypass : 1;
         reserved : 2;
 
-        supCode : 32;
+        ingressPort: 16;
+        reasonCode : 16;
     }
 }
 

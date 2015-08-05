@@ -53,3 +53,4 @@ clean :
 	@rm -rf ${CLEAN_TARGETS}
 	@echo Cleaning Directories
 	@rm -rf ${CLEAN_DIRECTORIES}
+	@$(foreach d,${SUBMODULES_CLEAN},${MAKE} -C ${d} $@ && ) true

@@ -36,14 +36,15 @@ def setup_default_table_configurations(client, sess_hdl, dev_tgt):
     assert result == 0
 
 def setup_pre(mc, sess_hdl, dev_tgt):
-    mgrp_hdl = mc.mc_mgrp_create(sess_hdl, dev_tgt, 1)
-    l1_hdl = mc.mc_l1_node_create(sess_hdl, dev_tgt, 0)
-    mc.mc_l1_associate_node(sess_hdl, dev_tgt, mgrp_hdl, l1_hdl)
+    mgrp_hdl = mc.mc_mgrp_create(sess_hdl, dev_tgt.dev_id, 1)
     port_map = [0] * 32
     lag_map = [0] * 32
     # port 1, port 2, port 3
-    port_map[0] = (1 << 1) + (1 << 2) + (1 << 3)
-    l2_hdl = mc.mc_l2_node_create(sess_hdl, dev_tgt, l1_hdl, port_map, lag_map)
+    port_map[0] = (1 << 1) | (1 << 2) | (1 << 3)
+    node_hdl = mc.mc_node_create(sess_hdl, dev_tgt.dev_id, 0,
+                                 bytes_to_string(port_map),
+                                 bytes_to_string(lag_map))
+    mc.mc_associate_node(sess_hdl, mgrp_hdl, node_hdl)
 
 
 class SimpleReplicationTest(pd_base_tests.ThriftInterfaceDataPlane):

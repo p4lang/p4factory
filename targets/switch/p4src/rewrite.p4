@@ -8,8 +8,8 @@
 /*****************************************************************************/
 action set_l2_rewrite(tunnel_index, tunnel_type) {
     modify_field(egress_metadata.routed, FALSE);
-    modify_field(egress_metadata.bd, ingress_metadata.ingress_bd);
-    modify_field(egress_metadata.outer_bd, ingress_metadata.ingress_bd);
+    modify_field(egress_metadata.bd, ingress_metadata.bd);
+    modify_field(egress_metadata.outer_bd, ingress_metadata.bd);
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
     modify_field(tunnel_metadata.egress_tunnel_type, tunnel_type);
 }
@@ -27,7 +27,7 @@ action set_l3_unicast_rewrite(bd, smac_idx, dmac, tunnel_index, tunnel_type) {
 #ifndef MPLS_DISABLE
 action set_mpls_swap_push_rewrite_l2(label, tunnel_index, header_count) {
     modify_field(egress_metadata.routed, l3_metadata.routed);
-    modify_field(egress_metadata.bd, ingress_metadata.ingress_bd);
+    modify_field(egress_metadata.bd, ingress_metadata.bd);
     modify_field(mpls[0].label, label);
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
     modify_field(tunnel_metadata.egress_header_count, header_count);
@@ -37,7 +37,7 @@ action set_mpls_swap_push_rewrite_l2(label, tunnel_index, header_count) {
 
 action set_mpls_push_rewrite_l2(tunnel_index, header_count) {
     modify_field(egress_metadata.routed, l3_metadata.routed);
-    modify_field(egress_metadata.bd, ingress_metadata.ingress_bd);
+    modify_field(egress_metadata.bd, ingress_metadata.bd);
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
     modify_field(tunnel_metadata.egress_header_count, header_count);
     modify_field(tunnel_metadata.egress_tunnel_type,

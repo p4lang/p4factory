@@ -22,6 +22,12 @@ simulator can connect to. To create them, you need to run:
 
     sudo p4factory/tools/veth_setup.sh
 
+We use autoconf tools to generate makefiles. Run the following commands
+to prepare your workspace.
+
+    cd p4factory
+    ./autogen.sh
+    ./configure
 
 To validate your installation and test the simulator on a simple P4 target, do
 the following:

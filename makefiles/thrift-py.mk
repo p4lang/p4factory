@@ -71,4 +71,5 @@ GEN_THRIFT_PY_MODULE += ${THRIFT_PY_MODULES}
 ${THRIFT_PY_MODULES}: ${THRIFT_PY_PREREQS}
 
 ${THRIFT_PY_PREREQS}: ${THRIFT_DEP_FILES_ALL}
-	$(foreach t,${THRIFT_INPUT_FILES_ALL},thrift -r --gen py --out ${THRIFT_TEMP_DIR}/${${THRIFT_TEMP_DIR}_THRIFT_DIR} ${t} && ) true
+	@echo "Generating python thrift files"
+	@$(foreach t,${THRIFT_INPUT_FILES_ALL},thrift -r --gen py --out ${THRIFT_TEMP_DIR}/${${THRIFT_TEMP_DIR}_THRIFT_DIR} ${t} && ) true

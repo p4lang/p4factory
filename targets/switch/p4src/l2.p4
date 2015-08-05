@@ -64,7 +64,7 @@ action smac_hit(ifindex) {
 
 table smac {
     reads {
-        ingress_metadata.ingress_bd : exact;
+        ingress_metadata.bd : exact;
         l2_metadata.lkp_mac_sa : exact;
     }
     actions {
@@ -90,10 +90,10 @@ action dmac_multicast_hit(mc_index) {
 }
 
 action dmac_miss() {
+    modify_field(ingress_metadata.egress_ifindex, IFINDEX_FLOOD);
 #ifdef FABRIC_ENABLE
     modify_field(fabric_metadata.dst_device, FABRIC_DEVICE_MULTICAST);
 #endif /* FABRIC_ENABLE */
-    modify_field(intrinsic_metadata.mcast_grp, multicast_metadata.uuc_mc_index);
 }
 
 action dmac_redirect_nexthop(nexthop_index) {
@@ -114,7 +114,7 @@ action dmac_drop() {
 
 table dmac {
     reads {
-        ingress_metadata.ingress_bd : exact;
+        ingress_metadata.bd : exact;
         l2_metadata.lkp_mac_da : exact;
     }
     actions {
@@ -143,7 +143,7 @@ control process_mac {
 /* MAC learn notification                                                    */
 /*****************************************************************************/
 field_list mac_learn_digest {
-    ingress_metadata.ingress_bd;
+    ingress_metadata.bd;
     l2_metadata.lkp_mac_sa;
     ingress_metadata.ifindex;
 }
@@ -177,28 +177,34 @@ control process_mac_learning {
 /* Validate packet                                                           */
 /*****************************************************************************/
 action set_unicast() {
+    modify_field(l2_metadata.lkp_pkt_type, L2_UNICAST);
 }
 
 action set_unicast_and_ipv6_src_is_link_local() {
+    modify_field(l2_metadata.lkp_pkt_type, L2_UNICAST);
     modify_field(ipv6_metadata.ipv6_src_is_link_local, TRUE);
 }
 
 action set_multicast() {
+    modify_field(l2_metadata.lkp_pkt_type, L2_MULTICAST);
     add_to_field(l2_metadata.bd_stats_idx, 1);
 }
 
 action set_ip_multicast() {
+    modify_field(l2_metadata.lkp_pkt_type, L2_MULTICAST);
     add_to_field(l2_metadata.bd_stats_idx, 1);
     modify_field(multicast_metadata.ip_multicast, TRUE);
 }
 
 action set_ip_multicast_and_ipv6_src_is_link_local() {
+    modify_field(l2_metadata.lkp_pkt_type, L2_MULTICAST);
     modify_field(ipv6_metadata.ipv6_src_is_link_local, TRUE);
     add_to_field(l2_metadata.bd_stats_idx, 1);
     modify_field(multicast_metadata.ip_multicast, TRUE);
 }
 
 action set_broadcast() {
+    modify_field(l2_metadata.lkp_pkt_type, L2_BROADCAST);
     add_to_field(l2_metadata.bd_stats_idx, 2);
 }
 
@@ -229,7 +235,7 @@ control process_validate_packet {
 /*****************************************************************************/
 /* Egress BD lookup                                                          */
 /*****************************************************************************/
-action set_egress_bd_properties(nat_mode) {
+action set_egress_bd_properties() {
 }
 
 table egress_bd_map {
@@ -246,6 +252,7 @@ table egress_bd_map {
 control process_egress_bd {
     apply(egress_bd_map);
 }
+
 
 /*****************************************************************************/
 /* Egress VLAN decap                                                         */

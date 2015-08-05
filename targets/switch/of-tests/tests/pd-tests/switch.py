@@ -49,7 +49,15 @@ rmac = '00:33:33:33:33:33'
 tunnel_enabled =1
 ipv6_enabled = 1
 acl_enabled = 1
+multicast_enabled = 1
+stats_enabled = 1
 learn_timeout = 6
+
+def set_port_or_lag_bitmap(bit_map_size, indicies):
+    bit_map = [0] * ((bit_map_size+7)/8)
+    for index in indicies:
+        bit_map[index/8] = (bit_map[index/8] | (1 << (index%8))) & 0xFF
+    return bytes_to_string(bit_map)
 
 def populate_default_entries(client, sess_hdl, dev_tgt):
     client.validate_outer_ethernet_set_default_action_set_valid_outer_unicast_packet_untagged(
@@ -71,6 +79,8 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
     client.fwd_result_set_default_action_nop(
                                      sess_hdl, dev_tgt)
     client.nexthop_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+    client.ingress_bd_stats_set_default_action_update_ingress_bd_stats(
                                      sess_hdl, dev_tgt)
     client.rid_set_default_action_nop(
                                      sess_hdl, dev_tgt)
@@ -156,10 +166,10 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
                             acl_metadata_acl_redirect_mask=0,
                             acl_metadata_racl_redirect=0,
                             acl_metadata_racl_redirect_mask=0,
-                            l3_metadata_rmac_hit=0,
-                            l3_metadata_rmac_hit_mask=0,
                             l3_metadata_fib_hit=1,
-                            l3_metadata_fib_hit_mask=1)
+                            l3_metadata_fib_hit_mask=1,
+                            l3_metadata_rmac_hit=0,
+                            l3_metadata_rmac_hit_mask=0)
     client.fwd_result_table_add_with_set_fib_redirect_action(
                             sess_hdl, dev_tgt,
                             match_spec, 1000)
@@ -171,10 +181,10 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
                             acl_metadata_acl_redirect_mask=0,
                             acl_metadata_racl_redirect=0,
                             acl_metadata_racl_redirect_mask=0,
-                            l3_metadata_rmac_hit=0,
-                            l3_metadata_rmac_hit_mask=0,
                             l3_metadata_fib_hit=0,
-                            l3_metadata_fib_hit_mask=0)
+                            l3_metadata_fib_hit_mask=0,
+                            l3_metadata_rmac_hit=0,
+                            l3_metadata_rmac_hit_mask=0)
     client.fwd_result_table_add_with_set_l2_redirect_action(
                             sess_hdl, dev_tgt,
                             match_spec, 1000)
@@ -238,9 +248,6 @@ def program_vlan_mapping(client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_e
                             action_ipv4_unicast_enabled=v4_enabled,
                             action_ipv6_unicast_enabled=v6_enabled,
                             action_bd_label=0,
-                            action_uuc_mc_index=mc_index,
-                            action_bcast_mc_index=0,
-                            action_umc_mc_index=0,
                             action_igmp_snooping_enabled=0,
                             action_mld_snooping_enabled=0,
                             action_ipv4_urpf_mode=0,
@@ -250,6 +257,15 @@ def program_vlan_mapping(client, sess_hdl, dev_tgt, vlan, port, v4_enabled, v6_e
     mbr_hdl = client.bd_action_profile_add_member_with_set_bd(
                             sess_hdl, dev_tgt,
                             action_spec)
+
+    match_spec = dc_bd_flood_match_spec_t(
+                            ingress_metadata_bd=vlan,
+                            l2_metadata_lkp_pkt_type=0x1)
+    action_spec = dc_set_bd_flood_mc_index_action_spec_t(
+                            action_mc_index=mc_index)
+    client.bd_flood_table_add_with_set_bd_flood_mc_index(
+                            sess_hdl, dev_tgt,
+                            match_spec, action_spec)
 
     match_spec = dc_port_vlan_mapping_match_spec_t(
                             ingress_metadata_ifindex=port,
@@ -272,9 +288,6 @@ def program_tunnel_ethernet_vlan(client, sess_hdl, dev_tgt, vlan, port, vni, tty
                             action_vrf=vrf,
                             action_rmac_group=inner_rmac,
                             action_bd_label=0,
-                            action_uuc_mc_index=0,
-                            action_umc_mc_index=0,
-                            action_bcast_mc_index=0,
                             action_ipv4_unicast_enabled=v4_enabled,
                             action_igmp_snooping_enabled=0,
                             action_ipv4_urpf_mode=0,
@@ -301,7 +314,7 @@ def program_tunnel_ipv4_vlan(client, sess_hdl, dev_tgt, vlan, port, vni, ttype, 
 def program_mac(client, sess_hdl, dev_tgt, vlan, mac, port):
     match_spec = dc_dmac_match_spec_t(
                             l2_metadata_lkp_mac_da=macAddr_to_string(mac),
-                            ingress_metadata_ingress_bd=vlan)
+                            ingress_metadata_bd=vlan)
     action_spec = dc_dmac_hit_action_spec_t(
                             action_ifindex=port)
     client.dmac_table_add_with_dmac_hit(
@@ -310,7 +323,7 @@ def program_mac(client, sess_hdl, dev_tgt, vlan, mac, port):
 
     match_spec = dc_smac_match_spec_t(
                             l2_metadata_lkp_mac_sa=macAddr_to_string(mac),
-                            ingress_metadata_ingress_bd=vlan)
+                            ingress_metadata_bd=vlan)
     action_spec = dc_smac_hit_action_spec_t(
                             action_ifindex=port)
     client.smac_table_add_with_smac_hit(
@@ -320,7 +333,7 @@ def program_mac(client, sess_hdl, dev_tgt, vlan, mac, port):
 def program_mac_with_nexthop(client, sess_hdl, dev_tgt, vlan, mac, port, nhop):
     match_spec = dc_dmac_match_spec_t(
                             l2_metadata_lkp_mac_da=macAddr_to_string(mac),
-                            ingress_metadata_ingress_bd=vlan)
+                            ingress_metadata_bd=vlan)
     action_spec = dc_dmac_redirect_nexthop_action_spec_t(
                             action_nexthop_index=nhop)
     client.dmac_table_add_with_dmac_redirect_nexthop(
@@ -329,7 +342,7 @@ def program_mac_with_nexthop(client, sess_hdl, dev_tgt, vlan, mac, port, nhop):
 
     match_spec = dc_smac_match_spec_t(
                             l2_metadata_lkp_mac_sa=macAddr_to_string(mac),
-                            ingress_metadata_ingress_bd=vlan)
+                            ingress_metadata_bd=vlan)
     action_spec = dc_smac_hit_action_spec_t(
                             action_ifindex=port)
     client.smac_table_add_with_smac_hit(
@@ -547,6 +560,7 @@ def program_tunnel_dst_mac_rewrite(client, sess_hdl, dev_tgt, dst_index, dmac):
     client.tunnel_dmac_rewrite_table_add_with_rewrite_tunnel_dmac(
                                   sess_hdl, dev_tgt,
                                   match_spec, action_spec)
+
 def program_tunnel_rewrite(client, sess_hdl, dev_tgt, tunnel_index, sip_index, dip_index, smac_index, dmac_index, core_vlan):
     match_spec = dc_tunnel_rewrite_match_spec_t(
                                   tunnel_metadata_tunnel_index=tunnel_index)
@@ -1057,9 +1071,8 @@ class L2LearningTest(pd_base_tests.ThriftInterfaceDataPlane):
         time.sleep(learn_timeout + 1)
         digests = self.client.mac_learn_digest_get_digest(sess_hdl)
         assert len(digests.msg) == 1
-        print "new mac learnt ",
-        for b in string_to_bytes(digests.msg[0].l2_metadata_lkp_mac_sa):
-            print("%02x:" % (b)),
+        mac_str = digests.msg[0].l2_metadata_lkp_mac_sa
+        print "new mac learnt ", mac_str,
         print "on port ", digests.msg[0].ingress_metadata_ifindex
         self.client.mac_learn_digest_digest_notify_ack(sess_hdl, digests.msg_ptr)
         self.client.mac_learn_digest_deregister(sess_hdl, 0)
@@ -1070,6 +1083,7 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
 
     def runTest(self):
         sess_hdl = self.conn_mgr.client_init(16)
+        mc_sess_hdl = self.mc.mc_create_session()
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
         print "Cleaning state"
@@ -1098,13 +1112,11 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan, port3, v4_enabled, v6_enabled, 0, mgid)
         program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan, port4, v4_enabled, v6_enabled, 0, mgid)
 
-        port_map = [0] * 32
-        lag_map = [0] * 32
-        port_map[0] = (1 << port1) + (1 << port2) + (1 << port3) + (1 << port4)
-        mgrp_hdl = self.mc.mc_mgrp_create(sess_hdl, dev_tgt, mgid)
-        l1_hdl = self.mc.mc_l1_node_create(sess_hdl, dev_tgt, rid)
-        self.mc.mc_l1_associate_node(sess_hdl, dev_tgt, mgrp_hdl, l1_hdl)
-        l2_hdl = self.mc.mc_l2_node_create(sess_hdl, dev_tgt, l1_hdl, port_map, lag_map)
+        port_map = set_port_or_lag_bitmap(256, [port1, port2, port3, port4])
+        lag_map = set_port_or_lag_bitmap(256, [])
+        mgrp_hdl = self.mc.mc_mgrp_create(mc_sess_hdl, 0, mgid)
+        node_hdl = self.mc.mc_node_create(mc_sess_hdl, 0, rid, port_map, lag_map)
+        self.mc.mc_associate_node(mc_sess_hdl, mgrp_hdl, node_hdl)
 
         pkt = simple_tcp_packet(eth_dst='00:44:44:44:44:44',
                                 eth_src='00:22:22:22:22:22',
@@ -1116,6 +1128,6 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         self.dataplane.send(1, str(pkt))
         verify_packets(self, pkt, [port2, port3, port4])
         time.sleep(1)
-        self.mc.mc_l2_node_destroy(sess_hdl, dev_tgt, l2_hdl)
-        self.mc.mc_l1_node_destroy(sess_hdl, dev_tgt, l1_hdl)
-        self.mc.mc_mgrp_destroy(sess_hdl, dev_tgt, mgrp_hdl)
+        self.mc.mc_dissociate_node(mc_sess_hdl, mgrp_hdl, node_hdl)
+        self.mc.mc_node_destroy(mc_sess_hdl, node_hdl)
+        self.mc.mc_mgrp_destroy(mc_sess_hdl, mgrp_hdl)
