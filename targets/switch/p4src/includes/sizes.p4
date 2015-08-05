@@ -4,7 +4,7 @@
 #define MIN_TCAM_TABLE_SIZE                    512
 
 #define VALIDATE_PACKET_TABLE_SIZE             MIN_TCAM_TABLE_SIZE
-#define PORTMAP_TABLE_SIZE                     288 
+#define PORTMAP_TABLE_SIZE                     288
 #define STORM_CONTROL_TABLE_SIZE               MIN_TCAM_TABLE_SIZE
 #define STORM_CONTROL_METER_TABLE_SIZE         MIN_SRAM_TABLE_SIZE
 #define PORT_VLAN_TABLE_SIZE                   4096
@@ -15,10 +15,11 @@
 #define OUTER_MULTICAST_S_G_TABLE_SIZE         MIN_SRAM_TABLE_SIZE
 #define VNID_MAPPING_TABLE_SIZE                MIN_SRAM_TABLE_SIZE
 #define BD_TABLE_SIZE                          MIN_SRAM_TABLE_SIZE
+#define BD_FLOOD_TABLE_SIZE                    MIN_SRAM_TABLE_SIZE
 #define BD_STATS_TABLE_SIZE                    MIN_SRAM_TABLE_SIZE
 #define OUTER_MCAST_RPF_TABLE_SIZE             MIN_SRAM_TABLE_SIZE
 #define MPLS_TABLE_SIZE                        MIN_SRAM_TABLE_SIZE
-#define VALIDATE_MPLS_TABLE_SIZE               MIN_TCAM_TABLE_SIZE 
+#define VALIDATE_MPLS_TABLE_SIZE               MIN_TCAM_TABLE_SIZE
 
 #define ROUTER_MAC_TABLE_SIZE                  MIN_SRAM_TABLE_SIZE
 #define DMAC_TABLE_SIZE                        MIN_SRAM_TABLE_SIZE
@@ -68,6 +69,8 @@
 #define TUNNEL_REWRITE_TABLE_SIZE              MIN_SRAM_TABLE_SIZE
 #define TUNNEL_SMAC_REWRITE_TABLE_SIZE         MIN_SRAM_TABLE_SIZE
 #define TUNNEL_DMAC_REWRITE_TABLE_SIZE         MIN_SRAM_TABLE_SIZE
+#define MIRROR_SESSIONS_TABLE_SIZE             MIN_SRAM_TABLE_SIZE
+#define MIRROR_COALESCING_SESSIONS_TABLE_SIZE  MIN_SRAM_TABLE_SIZE
 
 #else
 
@@ -83,7 +86,8 @@
 #define OUTER_MULTICAST_S_G_TABLE_SIZE         1024
 #define VNID_MAPPING_TABLE_SIZE                16384
 #define BD_TABLE_SIZE                          16384
-#define BD_STATS_TABLE_SIZE                    64
+#define BD_FLOOD_TABLE_SIZE                    49152
+#define BD_STATS_TABLE_SIZE                    49152
 #define OUTER_MCAST_RPF_TABLE_SIZE             512
 #define MPLS_TABLE_SIZE                        4096
 #define VALIDATE_MPLS_TABLE_SIZE               512
@@ -139,5 +143,8 @@
 #define TUNNEL_REWRITE_TABLE_SIZE              16384
 #define TUNNEL_SMAC_REWRITE_TABLE_SIZE         512
 #define TUNNEL_DMAC_REWRITE_TABLE_SIZE         16384
+
+#define MIRROR_SESSIONS_TABLE_SIZE             1024
+#define MIRROR_COALESCING_SESSIONS_TABLE_SIZE  8
 
 #endif

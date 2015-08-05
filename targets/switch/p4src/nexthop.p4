@@ -46,6 +46,7 @@ action set_cpu_redirect_action() {
     modify_field(l3_metadata.routed, FALSE);
     modify_field(intrinsic_metadata.mcast_grp, 0);
     modify_field(standard_metadata.egress_spec, CPU_PORT_ID);
+    modify_field(ingress_metadata.egress_ifindex, 0);
 #ifdef FABRIC_ENABLE
     modify_field(fabric_metadata.dst_device, 0);
 #endif /* FABRIC_ENABLE */
@@ -120,13 +121,13 @@ table ecmp_group {
 
 action set_nexthop_details(ifindex, bd) {
     modify_field(ingress_metadata.egress_ifindex, ifindex);
-    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
 }
 
 action set_ecmp_nexthop_details(ifindex, bd, nhop_index) {
     modify_field(ingress_metadata.egress_ifindex, ifindex);
     modify_field(l3_metadata.nexthop_index, nhop_index);
-    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
 }
 
 
@@ -139,7 +140,7 @@ action set_ecmp_nexthop_details(ifindex, bd, nhop_index) {
  */
 action set_nexthop_details_for_post_routed_flood(bd, uuc_mc_index) {
     modify_field(intrinsic_metadata.mcast_grp, uuc_mc_index);
-    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
 #ifdef FABRIC_ENABLE
     modify_field(fabric_metadata.dst_device, FABRIC_DEVICE_MULTICAST);
 #endif /* FABRIC_ENABLE */
@@ -149,7 +150,7 @@ action set_ecmp_nexthop_details_for_post_routed_flood(bd, uuc_mc_index,
                                                       nhop_index) {
     modify_field(intrinsic_metadata.mcast_grp, uuc_mc_index);
     modify_field(l3_metadata.nexthop_index, nhop_index);
-    bit_xor(l3_metadata.same_bd_check, ingress_metadata.ingress_bd, bd);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
 #ifdef FABRIC_ENABLE
     modify_field(fabric_metadata.dst_device, FABRIC_DEVICE_MULTICAST);
 #endif /* FABRIC_ENABLE */

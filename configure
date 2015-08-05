@@ -1,0 +1,3 @@
+cd submodules/switchapi/ && ./configure "$@" && cd -
+cd submodules/switchsai/ && ./configure "$@" && cd -
+cd submodules/switchlink/ && ./configure "$@" && cd -

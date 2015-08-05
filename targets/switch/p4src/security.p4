@@ -72,7 +72,7 @@ table ipsg_permit_special {
 table ipsg {
     reads {
         ingress_metadata.ifindex : exact;
-        ingress_metadata.ingress_bd : exact;
+        ingress_metadata.bd : exact;
         l2_metadata.lkp_mac_sa : exact;
         ipv4_metadata.lkp_ipv4_sa : exact;
     }

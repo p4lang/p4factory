@@ -5,7 +5,7 @@ The switch.p4 program describes a data plane of an L2/L3 switch.
 
 Supported Features
 ------------------
-1. Basic L2 switching: VLAN flooding and STP
+1. Basic L2 switching: Flooding, learning and STP
 2. Basic L3 Routing: IPv4 and IPv6 and VRF
 3. LAG
 4. ECMP
@@ -13,20 +13,22 @@ Supported Features
 6. Basic ACL: MAC and IP ACLs
 7. Unicast RPF check
 8. MPLS: LER, LSR, IPVPN, VPLS, L2VPN
+9. Host interface
+10. Mirroring: Ingress and egress mirroring with ERSPAN
+11. Counters/Statistics
 
 Upcoming Features
 -----------------
-1. Mirroring
-2. Multicast: IP, PIM-SM
-3. NAT
-4. Counters/Statistics
-5. Ingress Policers
-6. QoS
+1. Multicast: IP, PIM-SM
+2. NAT
+3. Ingress Policers
+4. QoS
 
 Building Soft Switch
 --------------------
 
 The soft switch can be built with the auto-generated API or switchapi.
+Please refer to README under p4factory for instructions to build P4 programs.
 
 To build the softswitch with only the auto-generated API in a thrift server,
 

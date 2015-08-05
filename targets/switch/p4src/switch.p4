@@ -8,15 +8,16 @@
 /* METADATA */
 header_type ingress_metadata_t {
     fields {
-        ifindex : IFINDEX_BIT_WIDTH;           /* input interface index - MSB bit lag*/
+        ifindex : IFINDEX_BIT_WIDTH;           /* input interface index */
         egress_ifindex : IFINDEX_BIT_WIDTH;    /* egress interface index */
         port_type : 2;                         /* ingress port type */
 
         outer_bd : BD_BIT_WIDTH;               /* outer BD */
-        ingress_bd : BD_BIT_WIDTH;             /* BD */
+        bd : BD_BIT_WIDTH;                     /* BD */
 
         drop_reason : 8;                       /* drop reason */
         control_frame: 1;                      /* control frame */
+        enable_dod : 1;                        /* enable deflect on drop */
     }
 }
 
@@ -31,7 +32,6 @@ header_type egress_metadata_t {
         mac_da : 48;                           /* final mac da */
         routed : 1;                            /* is this replica routed */
         same_bd_check : BD_BIT_WIDTH;          /* ingress bd xor egress bd */
-
         drop_reason : 8;                       /* drop reason */
     }
 }
@@ -52,6 +52,7 @@ metadata egress_metadata_t egress_metadata;
 #include "security.p4"
 #include "fabric.p4"
 #include "egress_filter.p4"
+#include "mirror.p4"
 
 action nop() {
 }
@@ -85,10 +86,8 @@ control ingress {
         process_tunnel();
 
 #ifndef TUNNEL_DISABLE
-        if ((security_metadata.storm_control_color != STORM_CONTROL_COLOR_RED)
-            and
-            ((not valid(mpls[0])) or
-             (valid(mpls[0]) and (tunnel_metadata.tunnel_terminate == TRUE)))) {
+        if ((not valid(mpls[0])) or
+             (valid(mpls[0]) and (tunnel_metadata.tunnel_terminate == TRUE))) {
 #endif /* TUNNEL_DISABLE */
 
             /* validate packet */
@@ -129,7 +128,6 @@ control ingress {
                     process_urpf_bd();
                 }
             }
-            /* merge the results and decide whice one to use */
 #ifndef TUNNEL_DISABLE
         }
 #endif /* TUNNEL_DISABLE */
@@ -143,12 +141,18 @@ control ingress {
         /* update statistics */
         process_ingress_bd_stats();
 
-        /* resolve final egress port for unicast traffic */
-        process_lag();
+        if (ingress_metadata.egress_ifindex == IFINDEX_FLOOD) {
+            /* resolve multicast index for flooding */
+            process_multicast_flooding();
+        } else {
+            /* resolve final egress port for unicast traffic */
+            process_lag();
+        }
 
         /* generate learn notify digest if permitted */
         process_mac_learning();
     } else {
+
         /* ingress fabric processing */
         process_ingress_fabric();
     }
@@ -169,10 +173,20 @@ control ingress {
 
 control egress {
 
-    if (egress_metadata.bypass == FALSE) {
+    /* check for -ve mirrored pkt */
+    if ((intrinsic_metadata.deflection_flag == FALSE) and
+        (egress_metadata.bypass == FALSE)) {
 
-        /* multi-destination replication */
-        process_replication();
+        /* check if pkt is mirrored */
+        if (pkt_is_mirrored) {
+
+            /* set the nexthop for the mirror id */
+            apply(mirror_nhop);
+        } else {
+
+            /* multi-destination replication */
+            process_replication();
+        }
 
         /* determine egress port properties */
         apply(egress_port_mapping) {
@@ -207,8 +221,8 @@ control egress {
 
         /* egress filter */
         process_egress_filter();
-
-        /* apply egress acl */
-        process_egress_acl();
     }
+
+    /* apply egress acl */
+    process_egress_acl();
 }

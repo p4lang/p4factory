@@ -41,8 +41,8 @@
 #define EGRESS_TUNNEL_TYPE_IPV6_GENEVE         4
 #define EGRESS_TUNNEL_TYPE_IPV4_NVGRE          5
 #define EGRESS_TUNNEL_TYPE_IPV6_NVGRE          6
-#define EGRESS_TUNNEL_TYPE_IPV4_ERSPANV2       7
-#define EGRESS_TUNNEL_TYPE_IPV6_ERSPANV2       8
+#define EGRESS_TUNNEL_TYPE_IPV4_ERSPAN_T3      7
+#define EGRESS_TUNNEL_TYPE_IPV6_ERSPAN_T3      8
 #define EGRESS_TUNNEL_TYPE_IPV4_GRE            9
 #define EGRESS_TUNNEL_TYPE_IPV6_GRE            10
 #define EGRESS_TUNNEL_TYPE_IPV4_IP             11
@@ -71,6 +71,9 @@
 #define NEXTHOP_TYPE_ECMP                      1
 
 #define INVALID_PORT_ID                        511
+
+/* ifindex to indicate flood */
+#define IFINDEX_FLOOD                          65535
 
 /* fabric device to indicate mutlicast */
 #define FABRIC_DEVICE_MULTICAST                127
