@@ -87,7 +87,7 @@ struct sigaction old_action_SIGINT;
     } while (0)
 
 #ifdef SWITCHAPI_ENABLE
-extern int switch_api_init(int);
+int switch_api_init(int device, unsigned int num_ports);
 extern int start_switch_api_rpc_server(void);
 extern int start_switch_api_packet_driver(void);
 #endif /* SWITCHAPI_ENABLE */
@@ -423,7 +423,7 @@ main(int argc, char* argv[])
 
     /* Start up the API RPC server */
 #ifdef SWITCHAPI_ENABLE
-    CHECK(switch_api_init(0));
+    CHECK(switch_api_init(0, 256));
     CHECK(start_switch_api_rpc_server());
     CHECK(start_switch_api_packet_driver());
 #endif /* SWITCHAPI_DISABLE */
