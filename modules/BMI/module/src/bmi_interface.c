@@ -27,6 +27,7 @@ typedef struct bmi_interface_s {
 } bmi_interface_t;
 
 int bmi_interface_create(bmi_interface_t **bmi, const char *device) {
+  int ret = 0;
   bmi_interface_t *bmi_ = malloc(sizeof(bmi_interface_t));
 
   if(!bmi_) return -1;
@@ -59,7 +60,10 @@ int bmi_interface_create(bmi_interface_t **bmi, const char *device) {
     return -1;
   }
 
-  if (pcap_activate(bmi_->pcap) != 0) {
+  if ((ret = pcap_activate(bmi_->pcap)) != 0) {
+    if(ret == PCAP_ERROR_IFACE_NOT_UP) {
+        printf("Port Not up - Failing data port creation for %s\n", device);
+    }
     pcap_close(bmi_->pcap);
     free(bmi_);
     return -1;
@@ -91,6 +95,8 @@ int bmi_interface_add_dumper(bmi_interface_t *bmi, const char *filename) {
 }
 
 int bmi_interface_send(bmi_interface_t *bmi, const char *data, int len) {
+  int ret;
+
   if(bmi->pcap_dumper) {
     struct pcap_pkthdr pkt_header;
     memset(&pkt_header, 0, sizeof(pkt_header));
@@ -101,7 +107,12 @@ int bmi_interface_send(bmi_interface_t *bmi, const char *data, int len) {
 	      (unsigned char *) data);
     pcap_dump_flush(bmi->pcap_dumper);
   }
-  return pcap_sendpacket(bmi->pcap, (unsigned char *) data, len);
+
+  ret = pcap_sendpacket(bmi->pcap, (unsigned char *) data, len);
+  if (ret != 0) {
+      pcap_perror(bmi->pcap, "bmi_interface_send");
+  }
+  return ret;
 }
 
 /* Does not make a copy! */
