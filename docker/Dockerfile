@@ -35,7 +35,8 @@ RUN apt-get install -y \
     quagga \
     redis-server \
     redis-tools \
-    wireshark \
+    subversion \
+    tshark \
     xterm
 
 # install thrift
@@ -64,4 +65,13 @@ RUN mkdir -p /tmp/p4-hlir ; \
     python setup.py install ; \
     rm -fr /tmp/p4-hlir
 
+# install mstpd
+RUN mkdir -p /third-party/diffs
+COPY diffs/mstpd.diff /third-party/diffs/mstpd.diff
+RUN cd /third-party; \
+    svn checkout svn://svn.code.sf.net/p/mstpd/code/trunk mstpd; \
+    cd mstpd; patch -p0 -i /third-party/diffs/mstpd.diff; make install
+
 ADD p4factory /p4factory
+
+ENV VTYSH_PAGER more

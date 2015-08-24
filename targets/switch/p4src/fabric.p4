@@ -6,8 +6,8 @@ header_type fabric_metadata_t {
     fields {
         packetType : 3;
         fabric_header_present : 1;
-        pad1 : 4;
         ingress_tunnel_type : 5;       /* ingress tunnel type */
+        reason_code : 16;              /* cpu reason code */
 
 #ifdef FABRIC_ENABLE
         dst_device : 8;                /* destination device id */
@@ -22,6 +22,17 @@ metadata fabric_metadata_t fabric_metadata;
 /* Fabric header - destination lookup                                        */
 /*****************************************************************************/
 #ifdef FABRIC_ENABLE
+action terminate_cpu_packet() {
+    modify_field(standard_metadata.egress_spec,
+                 fabric_header.dstPortOrGroup);
+    modify_field(egress_metadata.bypass, fabric_header_cpu.txBypass);
+
+    modify_field(ethernet.etherType, fabric_payload_header.etherType);
+    remove_header(fabric_header);
+    remove_header(fabric_header_cpu);
+    remove_header(fabric_payload_header);
+}
+
 action terminate_fabric_unicast_packet() {
     modify_field(standard_metadata.egress_spec,
                  fabric_header.dstPortOrGroup);
@@ -58,6 +69,7 @@ action terminate_fabric_multicast_packet() {
     modify_field(l3_metadata.routed, fabric_header_multicast.routed);
     modify_field(l3_metadata.outer_routed,
                  fabric_header_multicast.outerRouted);
+
     modify_field(intrinsic_metadata.mcast_grp,
                  fabric_header_multicast.mcastGrp);
 
@@ -79,6 +91,7 @@ table fabric_ingress_dst_lkp {
     }
     actions {
         nop;
+        terminate_cpu_packet;
         switch_fabric_unicast_packet;
         terminate_fabric_unicast_packet;
 #ifndef MULTICAST_DISABLE
@@ -190,19 +203,17 @@ control process_fabric_lag {
 /*****************************************************************************/
 /* Fabric rewrite actions                                                    */
 /*****************************************************************************/
-action cpu_tx_rewrite() {
-    modify_field(ethernet.etherType, fabric_payload_header.etherType);
-    remove_header(fabric_header);
-    remove_header(fabric_payload_header);
-}
-
 action cpu_rx_rewrite() {
     add_header(fabric_header);
     modify_field(fabric_header.headerVersion, 0);
     modify_field(fabric_header.packetVersion, 0);
     modify_field(fabric_header.pad1, 0);
     modify_field(fabric_header.packetType, FABRIC_HEADER_TYPE_CPU);
-    modify_field(fabric_header.ingressIfindex, ingress_metadata.ingress_ifindex);
+    modify_field(fabric_header.ingressIfindex, ingress_metadata.ifindex);
+    modify_field(fabric_header.ingressBd, ingress_metadata.bd);
+    add_header(fabric_header_cpu);
+    modify_field(fabric_header_cpu.reasonCode, fabric_metadata.reason_code);
+    modify_field(fabric_header_cpu.ingressPort, standard_metadata.ingress_port);
     add_header(fabric_payload_header);
     modify_field(fabric_payload_header.etherType, ethernet.etherType);
     modify_field(ethernet.etherType, ETHERTYPE_BF_FABRIC);
@@ -221,8 +232,8 @@ action fabric_unicast_rewrite() {
     modify_field(fabric_header.packetType, FABRIC_HEADER_TYPE_UNICAST);
     modify_field(fabric_header.dstDevice, fabric_metadata.dst_device);
     modify_field(fabric_header.dstPortOrGroup, fabric_metadata.dst_port);
-    modify_field(fabric_header.ingressIfindex, ingress_metadata.ingress_ifindex);
-    modify_field(fabric_header.ingressBd, ingress_metadata.ingress_bd);
+    modify_field(fabric_header.ingressIfindex, ingress_metadata.ifindex);
+    modify_field(fabric_header.ingressBd, ingress_metadata.bd);
 
     add_header(fabric_header_unicast);
     modify_field(fabric_header_unicast.tunnelTerminate,
@@ -248,8 +259,8 @@ action fabric_multicast_rewrite(fabric_mgid) {
     modify_field(fabric_header.packetType, FABRIC_HEADER_TYPE_MULTICAST);
     modify_field(fabric_header.dstDevice, FABRIC_DEVICE_MULTICAST);
     modify_field(fabric_header.dstPortOrGroup, fabric_mgid);
-    modify_field(fabric_header.ingressIfindex, ingress_metadata.ingress_ifindex);
-    modify_field(fabric_header.ingressBd, ingress_metadata.ingress_bd);
+    modify_field(fabric_header.ingressIfindex, ingress_metadata.ifindex);
+    modify_field(fabric_header.ingressBd, ingress_metadata.bd);
 
     add_header(fabric_header_multicast);
     modify_field(fabric_header_multicast.tunnelTerminate,
@@ -259,8 +270,10 @@ action fabric_multicast_rewrite(fabric_mgid) {
                  l3_metadata.outer_routed);
     modify_field(fabric_header_multicast.ingressTunnelType,
                  tunnel_metadata.ingress_tunnel_type);
+
     modify_field(fabric_header_multicast.mcastGrp,
                  multicast_metadata.mcast_grp);
+
     add_header(fabric_payload_header);
     modify_field(fabric_payload_header.etherType, ethernet.etherType);
     modify_field(ethernet.etherType, ETHERTYPE_BF_FABRIC);

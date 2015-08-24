@@ -7,9 +7,6 @@ header_type multicast_metadata_t {
         ip_multicast : 1;                      /* packet is ip multicast */
         igmp_snooping_enabled : 1;             /* is IGMP snooping enabled on BD */
         mld_snooping_enabled : 1;              /* is MLD snooping enabled on BD */
-        uuc_mc_index : 16;                     /* unknown unicast multicast index */
-        umc_mc_index : 16;                     /* unknown multicast multicast index */
-        bcast_mc_index : 16;                   /* broadcast multicast index */
         inner_replica : 1;                     /* is copy is due to inner replication */
         replica : 1;                           /* is this a replica */
 #ifdef FABRIC_ENABLE
@@ -173,17 +170,44 @@ control process_multicast_hashes {
 #endif /* MULTICAST_DISABLE */
 }
 
+
+/*****************************************************************************/
+/* Multicast flooding                                                        */
+/*****************************************************************************/
+action set_bd_flood_mc_index(mc_index) {
+    modify_field(intrinsic_metadata.mcast_grp, mc_index);
+}
+
+table bd_flood {
+    reads {
+        ingress_metadata.bd : exact;
+        l2_metadata.lkp_pkt_type : exact;
+    }
+    actions {
+        nop;
+        set_bd_flood_mc_index;
+    }
+    size : BD_FLOOD_TABLE_SIZE;
+}
+
+control process_multicast_flooding {
 #ifndef MULTICAST_DISABLE
+    apply(bd_flood);
+#endif /* MULTICAST_DISABLE */
+}
+
+
 /*****************************************************************************/
 /* Multicast replication processing                                          */
 /*****************************************************************************/
+#ifndef MULTICAST_DISABLE
 action outer_replica_from_rid(bd, nexthop_index) {
     modify_field(egress_metadata.bd, bd);
     modify_field(multicast_metadata.replica, TRUE);
     modify_field(multicast_metadata.inner_replica, FALSE);
     modify_field(egress_metadata.routed, l3_metadata.outer_routed);
     modify_field(l3_metadata.nexthop_index, nexthop_index);
-    bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.ingress_bd);
+    bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.bd);
 }
 
 action inner_replica_from_rid(bd, nexthop_index) {
@@ -192,7 +216,7 @@ action inner_replica_from_rid(bd, nexthop_index) {
     modify_field(multicast_metadata.inner_replica, TRUE);
     modify_field(egress_metadata.routed, l3_metadata.routed);
     modify_field(l3_metadata.nexthop_index, nexthop_index);
-    bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.ingress_bd);
+    bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.bd);
 }
 
 table rid {

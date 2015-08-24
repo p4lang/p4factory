@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /* Egress filtering logic                                                    */
 /*****************************************************************************/
-#ifndef EGRESS_FILTER_DISABLE
+#ifdef EGRESS_FILTER
 header_type egress_filter_metadata_t {
     fields {
         ifindex : IFINDEX_BIT_WIDTH;           /* src port filter */
@@ -16,7 +16,7 @@ action set_egress_ifindex(egress_ifindex) {
             egress_ifindex);
     bit_xor(egress_filter_metadata.bd, ingress_metadata.outer_bd,
             egress_metadata.outer_bd);
-    bit_xor(egress_filter_metadata.inner_bd, ingress_metadata.ingress_bd,
+    bit_xor(egress_filter_metadata.inner_bd, ingress_metadata.bd,
             egress_metadata.bd);
 }
 
@@ -38,10 +38,10 @@ table egress_filter {
         set_egress_filter_drop;
     }
 }
-#endif /* EGRESS_FILTER_DISABLE */
+#endif /* EGRESS_FILTER */
 
 control process_egress_filter {
-#ifndef EGRESS_FILTER_DISABLE
+#ifdef EGRESS_FILTER
     apply(egress_lag);
     if (((tunnel_metadata.egress_tunnel_type != EGRESS_TUNNEL_TYPE_NONE) and
          (multicast_metadata.inner_replica == TRUE) and
@@ -50,5 +50,5 @@ control process_egress_filter {
          (egress_filter_metadata.bd == 0))) {
         apply(egress_filter);
     }
-#endif /* EGRESS_FILTER_DISABLE */
+#endif /* EGRESS_FILTER */
 }

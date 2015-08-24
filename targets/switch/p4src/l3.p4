@@ -96,7 +96,7 @@ action urpf_miss() {
 table urpf_bd {
     reads {
         l3_metadata.urpf_bd_group : exact;
-        ingress_metadata.ingress_bd : exact;
+        ingress_metadata.bd : exact;
     }
     actions {
         nop;

@@ -18,6 +18,9 @@
 #
 ################################################################
 
+empty :=
+space := $(empty) $(empty)
+
 export TARGET_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # force main.c to be recompiled, in case switchapi was enabled / disabled
@@ -35,69 +38,134 @@ export P4_INPUT := p4src/switch.p4
 export P4_NAME := switch
 export P4_PREFIX := dc
 
-include ${MAKEFILES_DIR}/common.mk
-DOCKER_IMAGE := bm-switchsai
-include ${MAKEFILES_DIR}/docker.mk
+SUBMODULES_CLEAN := $(SUBMODULE_SWITCHAPI)
+SUBMODULES_CLEAN += $(SUBMODULE_SWITCHSAI)
+SUBMODULES_CLEAN += $(SUBMODULE_SWITCHLINK)
 
-SWITCHAPI_LIB := $(LIB_DIR)/libswitchapi.a
-SWITCHAPI_THRIFT_LIB := $(LIB_DIR)/switchapi_thrift.a
-SWITCHAPI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/switch_api_thrift
-include ${SUBMODULE_SWITCHAPI}/libswitchapi.mk
+include ${MAKEFILES_DIR}/common.mk
+DOCKER_IMAGE := bm-switchlink
+include ${MAKEFILES_DIR}/docker.mk
 
 ###################################
 #BUILD SWITCH API
 ###################################
+SWITCHAPI_INC := ${TARGET_ROOT}/p4src/includes
+SWITCHAPI_INC += ${TARGET_ROOT}/build/inc
+SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
+SWITCHAPI_INC += ${C_INCLUDE_PATH}
+SWITCHAPI_INC := $(subst $(space),:,$(SWITCHAPI_INC))
+
+SWITCHAPI_LIB := $(SUBMODULE_SWITCHAPI)/libswitchapi.a
+SWITCHAPI_SRC_DIR := $(SUBMODULE_SWITCHAPI)/src
+${SWITCHAPI_LIB} : FORCE $(BM_LIB)
+	@${MAKE} -C $(SUBMODULE_SWITCHAPI) C_INCLUDE_PATH=$(SWITCHAPI_INC) \
+		CPLUS_INCLUDE_PATH=$(SWITCHAPI_INC)
+
 BINARY := bm-switchapi
-${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} ${bm_LINK_LIBS} ${SWITCHAPI_THRIFT_LIB} ${BM_LIB} ${p4utils_LIB}
-bm-switchapi : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
+${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} ${bm_LINK_LIBS} ${BM_LIB} ${p4utils_LIB}
+bm-switchapi : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
+	-lJudy -lthrift -ledit
 include ${MAKEFILES_DIR}/bin.mk
 ifndef bm-switchapi_BINARY
-  $(error Output binary not defined in bm-switchapi_BINARY)
+	$(error Output binary not defined in bm-switchapi_BINARY)
 endif
+
+SWITCHAPI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/switch_api_thrift
+THRIFT_INPUT_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
+THRIFT_DEP_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
+THRIFT_SERVICE_NAMES := switch_api_rpc
+include ${MAKEFILES_DIR}/thrift-py.mk
+
+switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
+	@echo "Copying python thrift files"
+	@mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
+	@cp -r ${THRIFT_TEMP_DIR}/switch_api/* ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/
+	@rm -r ${THRIFT_TEMP_DIR}/switch_api/
+	@cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
 bm-switchapi : export LIB_SWITCHAPI_ENABLE=1
 bm-switchapi : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
-bm-switchapi : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHAPI_THRIFT_LIB) switchapi_THRIFT
-switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
-	mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
-	cp -r ${THRIFT_TEMP_DIR}/switch_api/* ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/
-	rm -r ${THRIFT_TEMP_DIR}/switch_api/
-	cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
-bm-switchapi : ${bm-switchapi_BINARY}
+bm-switchapi : $(BM_LIB) $(SWITCHAPI_LIB)
+bm-switchapi : ${bm-switchapi_BINARY} switchapi_THRIFT
 	cp ${bm-switchapi_BINARY} behavioral-model
 
 ###################################
 #BUILD SWITCH SAI
 ###################################
-SWITCHSAI_LIB := $(LIB_DIR)/libswitchsai.a
-SWITCHSAI_THRIFT_LIB := $(LIB_DIR)/switchsai_thrift.a
-SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/switch_sai_thrift
-include ${SUBMODULE_SWITCHSAI}/libswitchsai.mk
+SWITCHSAI_INC := ${TARGET_ROOT}/p4src/includes
+SWITCHSAI_INC += ${TARGET_ROOT}/build/inc
+SWITCHSAI_INC += $(SUBMODULE_SWITCHAPI)/inc
+SWITCHSAI_INC += $(P4FACTORY)/modules/p4utils/module/inc
+SWITCHSAI_INC += ${C_INCLUDE_PATH}
+SWITCHSAI_INC := $(subst $(space),:,$(SWITCHSAI_INC))
+
+SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/libswitchsai.a
+SWITCHSAI_SRC_DIR := $(SUBMODULE_SWITCHSAI)/src
+${SWITCHSAI_LIB} : FORCE $(BM_LIB)
+	@${MAKE} -C $(SUBMODULE_SWITCHSAI) C_INCLUDE_PATH=$(SWITCHSAI_INC)
 
 BINARY := bm-switchsai
-${BINARY}_LINK_LIBS := ${bm-switchapi_LINK_LIBS} ${SWITCHSAI_LIB} ${SWITCHSAI_THRIFT_LIB}
-bm-switchsai : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis -lJudy -lthrift -ledit
+${BINARY}_LINK_LIBS := ${bm-switchapi_LINK_LIBS} ${SWITCHSAI_LIB}
+bm-switchsai : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
+	-lJudy -lthrift -ledit
 include ${MAKEFILES_DIR}/bin.mk
 ifndef bm-switchsai_BINARY
-  $(error Output binary not defined in bm-switchsai_BINARY)
+	$(error Output binary not defined in bm-switchsai_BINARY)
 endif
+
+SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/switch_sai_thrift
+THRIFT_INPUT_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
+THRIFT_DEP_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
+THRIFT_SERVICE_NAMES := switch_sai_rpc
+include ${MAKEFILES_DIR}/thrift-py.mk
+
+switchsai_THRIFT : ${GEN_THRIFT_PY_MODULE}
+	@echo "Copying python thrift files"
+	@mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
+	@mkdir -p ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}
+	@cp -r ${THRIFT_TEMP_DIR}/switch_api/* ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/
+	@rm -r ${THRIFT_TEMP_DIR}/switch_api/
+	@cp -r ${THRIFT_TEMP_DIR}/switch_sai/* ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/
+	@rm -r ${THRIFT_TEMP_DIR}/switch_sai/
+	@cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
 bm-switchsai : export LIB_SWITCHSAI_ENABLE=1
 bm-switchsai : export LIB_SWITCHAPI_ENABLE=1
 bm-switchsai : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
 bm-switchsai : GLOBAL_CFLAGS += -DSWITCHSAI_ENABLE=1
-bm-switchsai : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB) $(SWITCHSAI_THRIFT_LIB) switchsai_THRIFT
-switchsai_THRIFT : ${GEN_THRIFT_PY_MODULE}
-	mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
-	mkdir -p ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}
-	cp -r ${THRIFT_TEMP_DIR}/switch_api/* ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/
-	rm -r ${THRIFT_TEMP_DIR}/switch_api/
-	cp -r ${THRIFT_TEMP_DIR}/switch_sai/* ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/
-	rm -r ${THRIFT_TEMP_DIR}/switch_sai/
-	cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
-bm-switchsai : ${bm-switchsai_BINARY}
+bm-switchsai : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
+bm-switchsai : ${bm-switchsai_BINARY} switchsai_THRIFT
 	cp ${bm-switchsai_BINARY} behavioral-model
+	ar -M <libp4.mri
+
+###################################
+#BUILD SWITCHLINK
+###################################
+SWITCHLINK_LIB := $(SUBMODULE_SWITCHLINK)/libswitchlink.a
+SWITCHLINK_INC += $(P4FACTORY)/modules/p4utils/module/inc
+SWITCHLINK_INC += ${C_INCLUDE_PATH}
+SWITCHLINK_INC := $(subst $(space),:,$(SWITCHLINK_INC))
+${SWITCHLINK_LIB} : FORCE
+	@${MAKE} -C $(SUBMODULE_SWITCHLINK) C_INCLUDE_PATH=$(SWITCHLINK_INC)
+
+BINARY := bm-switchlink
+${BINARY}_LINK_LIBS := ${bm-switchsai_LINK_LIBS} ${SWITCHLINK_LIB}
+bm-switchlink : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis -lJudy -lthrift \
+	$(shell pkg-config --libs libnl-3.0)
+include ${MAKEFILES_DIR}/bin.mk
+ifndef bm-switchlink_BINARY
+	$(error Output binary not defined in bm-switchlink_BINARY)
+endif
+
+bm-switchlink : export LIB_SWITCHSAI_ENABLE=1
+bm-switchlink : export LIB_SWITCHAPI_ENABLE=1
+bm-switchlink : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
+bm-switchlink : GLOBAL_CFLAGS += -DSWITCHSAI_ENABLE=1
+bm-switchlink : GLOBAL_CFLAGS += -DSWITCHLINK_ENABLE=1
+bm-switchlink : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
+bm-switchlink : ${bm-switchlink_BINARY}
+	cp ${bm-switchlink_BINARY} behavioral-model
 
 all: bm
 
-.PHONY: bm-switchapi bm-switchsai
+.PHONY: bm-switchapi bm-switchsai bm-switchlink FORCE

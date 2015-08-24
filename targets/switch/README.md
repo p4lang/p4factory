@@ -5,7 +5,7 @@ The switch.p4 program describes a data plane of an L2/L3 switch.
 
 Supported Features
 ------------------
-1. Basic L2 switching: VLAN flooding and STP
+1. Basic L2 switching: Flooding, learning and STP
 2. Basic L3 Routing: IPv4 and IPv6 and VRF
 3. LAG
 4. ECMP
@@ -13,20 +13,22 @@ Supported Features
 6. Basic ACL: MAC and IP ACLs
 7. Unicast RPF check
 8. MPLS: LER, LSR, IPVPN, VPLS, L2VPN
+9. Host interface
+10. Mirroring: Ingress and egress mirroring with ERSPAN
+11. Counters/Statistics
 
 Upcoming Features
 -----------------
-1. Mirroring
-2. Multicast: IP, PIM-SM
-3. NAT
-4. Counters/Statistics
-5. Ingress Policers
-6. QoS
+1. Multicast: IP, PIM-SM
+2. NAT
+3. Ingress Policers
+4. QoS
 
 Building Soft Switch
 --------------------
 
 The soft switch can be built with the auto-generated API or switchapi.
+Please refer to README under p4factory for instructions to build P4 programs.
 
 To build the softswitch with only the auto-generated API in a thrift server,
 
@@ -47,9 +49,14 @@ When built with this option, there are thrift servers on ports 9090, 9091 and
 9092 for the auto-generated table APIs, the switchapi library APIs and the SAI
 library APIs respectively.
 
+To build the softswitch with switchlink library that uses SAI API library
+to program the softswitch,
+
+    make bm-switchlink
+
 To build the docker-image for a target, set the variable DOCKER_IMAGE in the
 file 'Makefile' to the appropriate target name and run the following command.
-By default, DOCKER_IMAGE is set to 'bm-switchsai'.
+By default, DOCKER_IMAGE is set to 'bm-switchlink'.
 
     make docker-image
 
@@ -74,3 +81,43 @@ To run the api thrift testcases,
 To run the SAI thrift testcases,
 
     sudo ./run_tests.py --test-dir of-tests/tests/sai-tests switch
+
+To run switchlink testcases,
+
+    cd ../../mininet
+
+    # L2 topology: Loop free topology
+    sudo ./swl_l2.py
+    mininet> h1 ping h2
+    mininet> exit
+
+    # L2 topology: with MSTPD
+    sudo ./swl_stp.py
+    mininet> h1 ping h2
+    mininet> exit
+
+    # L3 topology: Static configuration
+    sudo ./swl_l3_static.py
+    mininet> h1 ping h2
+    mininet> exit
+
+    # L3 topology: OSPF (Quagga)
+    sudo ./swl_ospf.py
+    mininet> h1 ping h2
+    mininet> exit
+
+    # L3 topology: EBGP (Quagga)
+    sudo ./swl_bgp.py
+    mininet> h1 ping h2
+    mininet> exit
+
+    # To access the switches and check the behavioral model logs under
+    # /tmp/model.log
+    sudo ./swl_bgp.py
+    mininet> xterm sw1
+    mininet> xterm sw2
+    mininet> h1 ping h2
+
+The switchlink testcases have been verified with docker version 1.7.0 and
+Mininet version 2.2.1 running on Ubuntu 14.04.
+

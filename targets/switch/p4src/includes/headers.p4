@@ -185,26 +185,15 @@ header_type nvgre_t {
     }
 }
 
-/* 8 bytes */
-header_type erspan_header_v1_t {
+/* erspan III header - 12 bytes */
+header_type erspan_header_t3_t {
     fields {
         version : 4;
         vlan : 12;
         priority : 6;
         span_id : 10;
-        direction : 8;
-        truncated: 8;
-    }
-}
-
-/* 8 bytes */
-header_type erspan_header_v2_t {
-    fields {
-        version : 4;
-        vlan : 12;
-        priority : 6;
-        span_id : 10;
-        unknown7 : 32;
+        timestamp : 32;
+        sgt_other : 32;
     }
 }
 
@@ -282,61 +271,61 @@ header_type nsh_context_t {
     }
 }
 
-/* GENEVE HEADERS 
-   3 possible options with known type, known length */ 
- 
-header_type genv_t { 
-    fields { 
-        ver : 2; 
-        optLen : 6; 
-        oam : 1; 
-        critical : 1; 
-        reserved : 6; 
-        protoType : 16; 
-        vni : 24; 
-        reserved2 : 8; 
-    } 
-} 
- 
-#define GENV_OPTION_A_TYPE 0x000001 
-/* TODO: Would it be convenient to have some kind of sizeof macro ? */ 
-#define GENV_OPTION_A_LENGTH 2 /* in bytes */ 
- 
-header_type genv_opt_A_t { 
-    fields { 
-        optClass : 16; 
-        optType : 8; 
-        reserved : 3; 
-        optLen : 5; 
-        data : 32; 
-    } 
-} 
- 
-#define GENV_OPTION_B_TYPE 0x000002 
-#define GENV_OPTION_B_LENGTH 3 /* in bytes */ 
- 
-header_type genv_opt_B_t { 
-    fields { 
-        optClass : 16; 
-        optType : 8; 
-        reserved : 3; 
-        optLen : 5; 
-        data : 64; 
-    } 
-} 
- 
-#define GENV_OPTION_C_TYPE 0x000003 
-#define GENV_OPTION_C_LENGTH 2 /* in bytes */ 
- 
-header_type genv_opt_C_t { 
-    fields { 
-        optClass : 16; 
-        optType : 8; 
-        reserved : 3; 
-        optLen : 5; 
-        data : 32; 
-    } 
-} 
+/* GENEVE HEADERS
+   3 possible options with known type, known length */
+
+header_type genv_t {
+    fields {
+        ver : 2;
+        optLen : 6;
+        oam : 1;
+        critical : 1;
+        reserved : 6;
+        protoType : 16;
+        vni : 24;
+        reserved2 : 8;
+    }
+}
+
+#define GENV_OPTION_A_TYPE 0x000001
+/* TODO: Would it be convenient to have some kind of sizeof macro ? */
+#define GENV_OPTION_A_LENGTH 2 /* in bytes */
+
+header_type genv_opt_A_t {
+    fields {
+        optClass : 16;
+        optType : 8;
+        reserved : 3;
+        optLen : 5;
+        data : 32;
+    }
+}
+
+#define GENV_OPTION_B_TYPE 0x000002
+#define GENV_OPTION_B_LENGTH 3 /* in bytes */
+
+header_type genv_opt_B_t {
+    fields {
+        optClass : 16;
+        optType : 8;
+        reserved : 3;
+        optLen : 5;
+        data : 64;
+    }
+}
+
+#define GENV_OPTION_C_TYPE 0x000003
+#define GENV_OPTION_C_LENGTH 2 /* in bytes */
+
+header_type genv_opt_C_t {
+    fields {
+        optClass : 16;
+        optType : 8;
+        reserved : 3;
+        optLen : 5;
+        data : 32;
+    }
+}
 
 header_type trill_t {
     fields {
@@ -441,12 +430,11 @@ header_type sflow_record_t {
 }
 
 #define FABRIC_HEADER_TYPE_NONE        0
-#define FABRIC_HEADER_TYPE_INTERNAL    1
-#define FABRIC_HEADER_TYPE_UNICAST     2
-#define FABRIC_HEADER_TYPE_MULTICAST   3
-#define FABRIC_HEADER_TYPE_MIRROR      4
-#define FABRIC_HEADER_TYPE_CONTROL     5
-#define FABRIC_HEADER_TYPE_CPU         6
+#define FABRIC_HEADER_TYPE_UNICAST     1
+#define FABRIC_HEADER_TYPE_MULTICAST   2
+#define FABRIC_HEADER_TYPE_MIRROR      3
+#define FABRIC_HEADER_TYPE_CONTROL     4
+#define FABRIC_HEADER_TYPE_CPU         5
 
 header_type fabric_header_t {
     fields {
@@ -474,7 +462,7 @@ header_type fabric_header_unicast_t {
         ingressTunnelType : 5;
 
         nexthopIndex : 16;
-    } 
+    }
 }
 
 header_type fabric_header_multicast_t {
@@ -496,24 +484,14 @@ header_type fabric_header_mirror_t {
     }
 }
 
-header_type fabric_header_control_t {
-    fields {
-        egressPort : 10;
-        egressQueue : 5;
-        pad : 1;
-        type_ : 1;
-        dir : 1;
-        redirectToCpu : 1;
-        forwardingBypass : 1;
-        aclBypass : 1;
-        reserved : 3;
-    }
-}
-
 header_type fabric_header_cpu_t {
     fields {
-        reserved : 11;
         egressQueue : 5;
+        txBypass : 1;
+        reserved : 2;
+
+        ingressPort: 16;
+        reasonCode : 16;
     }
 }
 

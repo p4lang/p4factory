@@ -123,6 +123,9 @@ def switchsai_test():
     one_test("switch", "sai-tests",
              do_make_clean = False, make_tgt = "bm-switchsai")
 
+def saip4_test():
+    one_test("sai_p4", "sai_thrift")
+
 def check_ifaces():
     ifconfig_out = subprocess.check_output(['ifconfig'])
     iface_list = re.findall(
@@ -155,6 +158,7 @@ def main():
     pd_tests()
     switchapi_test()
     switchsai_test()
+    saip4_test()
 
     print "**************************************"
 

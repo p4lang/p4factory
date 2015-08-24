@@ -29,10 +29,10 @@ parser start {
 #define INGRESS_TUNNEL_TYPE_NONE               0
 #define INGRESS_TUNNEL_TYPE_VXLAN              1
 #define INGRESS_TUNNEL_TYPE_GRE                2
-#define INGRESS_TUNNEL_TYPE_GENEVE             3 
+#define INGRESS_TUNNEL_TYPE_GENEVE             3
 #define INGRESS_TUNNEL_TYPE_NVGRE              4
 #define INGRESS_TUNNEL_TYPE_MPLS_L2VPN         5
-#define INGRESS_TUNNEL_TYPE_MPLS_L3VPN         8 
+#define INGRESS_TUNNEL_TYPE_MPLS_L3VPN         8
 
 #ifndef ADV_FEATURES
 #define PARSE_ETHERTYPE                                    \
@@ -349,8 +349,7 @@ parser parse_sctp {
 }
 
 #define GRE_PROTOCOLS_NVGRE            0x20006558
-#define GRE_PROTOCOLS_ERSPAN_V1        0x88BE
-#define GRE_PROTOCOLS_ERSPAN_V2        0x22EB
+#define GRE_PROTOCOLS_ERSPAN_T3        0x22EB   /* Type III version 2 */
 
 header gre_t gre;
 
@@ -361,8 +360,7 @@ parser parse_gre {
         GRE_PROTOCOLS_NVGRE : parse_nvgre;
         ETHERTYPE_IPV4 : parse_gre_ipv4;
         ETHERTYPE_IPV6 : parse_gre_ipv6;
-        GRE_PROTOCOLS_ERSPAN_V1 : parse_erspan_v1;
-        GRE_PROTOCOLS_ERSPAN_V2 : parse_erspan_v2;
+        GRE_PROTOCOLS_ERSPAN_T3 : parse_erspan_t3;
 #ifdef ADV_FEATURES
         ETHERTYPE_NSH : parse_nsh;
 #endif
@@ -423,18 +421,11 @@ parser parse_nvgre {
     return parse_inner_ethernet;
 }
 
-header erspan_header_v1_t erspan_v1_header;
+header erspan_header_t3_t erspan_t3_header;
 
-parser parse_erspan_v1 {
-    extract(erspan_v1_header);
-    return ingress;
-}
-
-header erspan_header_v2_t erspan_v2_header;
-
-parser parse_erspan_v2 {
-    extract(erspan_v2_header);
-    return ingress;
+parser parse_erspan_t3 {
+    extract(erspan_t3_header);
+    return parse_inner_ethernet;
 }
 
 #define ARP_PROTOTYPES_ARP_RARP_IPV4 0x0800
@@ -620,7 +611,6 @@ header fabric_header_t                 fabric_header;
 header fabric_header_unicast_t         fabric_header_unicast;
 header fabric_header_multicast_t       fabric_header_multicast;
 header fabric_header_mirror_t          fabric_header_mirror;
-header fabric_header_control_t         fabric_header_control;
 header fabric_header_cpu_t             fabric_header_cpu;
 header fabric_payload_header_t         fabric_payload_header;
 
@@ -630,7 +620,6 @@ parser parse_fabric_header {
         FABRIC_HEADER_TYPE_UNICAST : parse_fabric_header_unicast;
         FABRIC_HEADER_TYPE_MULTICAST : parse_fabric_header_multicast;
         FABRIC_HEADER_TYPE_MIRROR : parse_fabric_header_mirror;
-        FABRIC_HEADER_TYPE_CONTROL : parse_fabric_header_control;
         FABRIC_HEADER_TYPE_CPU : parse_fabric_header_cpu;
         default : ingress;
     }
@@ -651,12 +640,8 @@ parser parse_fabric_header_mirror {
     return parse_fabric_payload_header;
 }
 
-parser parse_fabric_header_control {
-    extract(fabric_header_control);
-    return parse_fabric_payload_header;
-}
-
 parser parse_fabric_header_cpu {
+    extract(fabric_header_cpu);
     return parse_fabric_payload_header;
 }
 
