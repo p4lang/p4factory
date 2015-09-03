@@ -5,3 +5,4 @@ parsetab.py
 oft.log
 *.dot
 *.png
+*.pcap
