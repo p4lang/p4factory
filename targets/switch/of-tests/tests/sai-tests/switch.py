@@ -335,7 +335,8 @@ class L2TrunkToTrunkVlanTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_dst='10.0.0.1',
                                 ip_id=102,
                                 ip_ttl=64,
-                                pktlen=96)
+                                dl_vlan_enable=True,
+                                vlan_vid=10)
 
         try:
             self.dataplane.send(2, str(pkt))
@@ -375,9 +376,11 @@ class L2AccessToTrunkVlanTest(sai_base_test.ThriftInterfaceDataPlane):
         exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
                                 eth_src='00:22:22:22:22:22',
                                 ip_dst='10.0.0.1',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
                                 ip_id=102,
                                 ip_ttl=64,
-                                pktlen=100)
+                                pktlen=104)
         try:
             self.dataplane.send(2, str(pkt))
             verify_packets(self, exp_pkt, [1])

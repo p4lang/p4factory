@@ -161,9 +161,10 @@ class L2TrunkToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
         exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
                                 eth_src='00:22:22:22:22:22',
                                 ip_dst='10.0.0.1',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
                                 ip_id=102,
-                                ip_ttl=64,
-                                pktlen=96)
+                                ip_ttl=64)
 
         try:
             self.dataplane.send(1, str(pkt))
@@ -2677,7 +2678,9 @@ class L2AccessToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_dst='10.0.0.1',
                                 ip_id=102,
                                 ip_ttl=64,
-                                pktlen=100)
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                pktlen=104)
         try:
             self.dataplane.send(1, str(pkt))
             verify_packets(self, exp_pkt, [2])
@@ -3194,9 +3197,10 @@ class L2LNSubIntfEncapTest(api_base_tests.ThriftInterfaceDataPlane):
             exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
                                     eth_src='00:22:22:22:22:22',
                                     ip_dst='10.0.0.1',
+                                    dl_vlan_enable=True,
+                                    vlan_vid=20,
                                     ip_id=102,
-                                    ip_ttl=64,
-                                    pktlen=96)
+                                    ip_ttl=64)
             self.dataplane.send(1, str(pkt))
             verify_packets(self, exp_pkt, [2])
 
@@ -3209,11 +3213,12 @@ class L2LNSubIntfEncapTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=102,
                                     ip_ttl=64)
             exp_pkt = simple_tcp_packet(eth_dst='00:22:22:22:22:22',
+                                    dl_vlan_enable=True,
+                                    vlan_vid=10,
                                     eth_src='00:11:11:11:11:11',
                                     ip_dst='10.0.0.1',
                                     ip_id=102,
-                                    ip_ttl=64,
-                                    pktlen=96)
+                                    ip_ttl=64)
             self.dataplane.send(2, str(pkt))
             verify_packets(self, exp_pkt, [1])
 
@@ -6555,17 +6560,28 @@ class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     nvgre_tni=0x4545,
                                     inner_frame=pkt)
 
-            encap_pkt = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
+            encap_pkt1 = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
                                     eth_src='00:01:00:00:00:11',
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64,
-                                    pktlen=100)
+                                    dl_vlan_enable=True,
+                                    vlan_vid=10,
+                                    pktlen=104)
+
+            encap_pkt2 = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
+                                    eth_src='00:01:00:00:00:11',
+                                    ip_dst='10.10.10.1',
+                                    ip_id=108,
+                                    ip_ttl=64,
+                                    dl_vlan_enable=True,
+                                    vlan_vid=20,
+                                    pktlen=104)
 
             print "Sending packet on native access port 6"
             self.dataplane.send(6, str(pkt))
             print "Packets expected on [geneve port1]. [vxlan port2], [nvgre port3], [encap vlan 10 port 4], [encap vlan 20 port 5]"
-            verify_packet_list(self, [geneve_pkt, vxlan_pkt, nvgre_pkt, encap_pkt, encap_pkt], [1, 2, 3, 4, 5])
+            verify_packet_list(self, [geneve_pkt, vxlan_pkt, nvgre_pkt, encap_pkt1, encap_pkt2], [1, 2, 3, 4, 5])
             time.sleep(5)
 
         finally:
