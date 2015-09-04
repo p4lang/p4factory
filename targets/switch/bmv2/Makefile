@@ -33,40 +33,25 @@ P4FACTORY := $(TARGET_ROOT)/../../..
 endif
 MAKEFILES_DIR := ${P4FACTORY}/makefiles
 
-ifndef VERBOSE
-VERBOSE = @
-else
-ifeq ($(VERBOSE),0)
-override VERBOSE = @
-else
-override VERBOSE =
-endif
-endif
-
-BUILD_DIR := ${TARGET_ROOT}/build/
-MAKE_DIR := ${BUILD_DIR}
-include ${MAKEFILES_DIR}/makedir.mk
-
-LIB_DIR := ${TARGET_ROOT}/build/
-MAKE_DIR := ${LIB_DIR}
-include ${MAKEFILES_DIR}/makedir.mk
-
 # This target's P4 name
 export P4_INPUT := ../p4src/switch.p4
 export P4_NAME := switch
 export P4_PREFIX := dc
 
-include $(MAKEFILES_DIR)/bmv2.mk
-
 SUBMODULES_CLEAN := $(SUBMODULE_SWITCHAPI)
 SUBMODULES_CLEAN += $(SUBMODULE_SWITCHSAI)
 SUBMODULES_CLEAN += $(SUBMODULE_SWITCHLINK)
 
-GLOBAL_INCLUDES := $(addprefix -I, $(BMV2_PD_INC))
+include $(MAKEFILES_DIR)/bmv2_common.mk
 
-$(BUILD_DIR)/main.o: main.c bmv2-pd
-	@echo Compiling : $(notdir $@)
-	$(VERBOSE)gcc -o $@ $(GLOBAL_INCLUDES) $(GLOBAL_CFLAGS) -c $<
+
+###################################
+#BUILD SWITCH API
+###################################
+
+LIB_DIR := ${TARGET_ROOT}/build/
+MAKE_DIR := ${LIB_DIR}
+include ${MAKEFILES_DIR}/makedir.mk
 
 # Special p4 utils case:
 MODULE_BASE_DIR := $(P4FACTORY)
@@ -79,27 +64,7 @@ ifndef p4utils_OBJS_C
 endif
 $(p4utils_OBJS_C) : MODULE_INFO := p4utils
 
-PD_LIBS := -L$(BMV2_PD_LIB_DIR)/ -Wl,-rpath=$(BMV2_PD_LIB_DIR) -lpd -lpdfixed -lpdthrift -lpdfixedthrift
 
-$(PD_LIBS): FORCE
-
-BIN_DIR := $(TARGET_ROOT)
-BINARY := drivers
-${BINARY}_LINK_LIBS := $(BUILD_DIR)/main.o ${p4utils_LIB} $(PD_LIBS)
-drivers : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
-	-lJudy -lthrift -ledit
-include ${MAKEFILES_DIR}/bin.mk
-ifndef drivers_BINARY
-	$(error Output binary not defined in drivers_BINARY)
-endif
-
-drivers : bmv2-pd
-drivers : ${drivers_BINARY}
-	cp -r $(BMV2_THRIFT_PY_DIR)/* $(TARGET_ROOT)/../of-tests/pd_thrift/
-
-###################################
-#BUILD SWITCH API
-###################################
 SWITCHAPI_INC := ${TARGET_ROOT}/../p4src/includes
 SWITCHAPI_INC += $(BMV2_PD_INC)
 SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
@@ -181,19 +146,11 @@ drivers-switchsai : $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
 drivers-switchsai : ${drivers-switchsai_BINARY} switchsai_THRIFT
 	@echo "DONE!"
 
-bm: bmv2 bmv2-pd drivers
-
 bm-switchapi: bmv2 bmv2-pd drivers-switchapi
 
 bm-switchsai: bmv2 bmv2-pd drivers-switchsai
 
-.DEFAULT_GOAL := bm
-
-clean : bmv2-clean
-	@echo Cleaning Files
-	@rm -rf ${CLEAN_TARGETS}
-	@echo Cleaning Directories
-	@rm -rf ${CLEAN_DIRECTORIES}
+clean-local :
 	@$(foreach d,${SUBMODULES_CLEAN},${MAKE} -C ${d} $@ && ) true
 
-.PHONY: bm bm-switchapi clean FORCE
+.PHONY: bm-switchapi clean-local FORCE

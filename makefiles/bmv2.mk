@@ -7,18 +7,6 @@ $(BMV2_PD_DIR):
 	@echo $(BMV2_PD_DIR)
 	mkdir -p $(BMV2_PD_DIR)
 
-# TODO: this probably belongs in p4c-bm
-bmv2-pd-sane:
-	@echo "$(BMV2_PD_ENV)" > .bmv2-pd-sane.tmp
-	@if test -f .bmv2-pd-sane; then :; else \
-		touch .bmv2-pd-sane;\
-	fi
-	@if diff .bmv2-pd-sane .bmv2-pd-sane.tmp >/dev/null; then :; else \
-		echo "p4c-bm env change"; \
-		$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV) clean; \
-	fi
-	@mv .bmv2-pd-sane.tmp .bmv2-pd-sane
-
 bmv2-pd: bmv2-pd-sane $(P4_INPUT) | $(BMV2_PD_DIR)
 	@echo $(BUILD_DIR)
 	$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV)
