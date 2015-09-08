@@ -151,6 +151,6 @@ bm-switchapi: bmv2 bmv2-pd drivers-switchapi
 bm-switchsai: bmv2 bmv2-pd drivers-switchsai
 
 clean-local :
-	@$(foreach d,${SUBMODULES_CLEAN},${MAKE} -C ${d} $@ && ) true
+	@$(foreach d,${SUBMODULES_CLEAN},${MAKE} -C ${d} clean && ) true
 
 .PHONY: bm-switchapi clean-local FORCE

@@ -181,14 +181,17 @@ into 2 different processes.
 For example, the l2_switch target supports bmv2. To run the code, you can do the
 following:
 
-      cd targets/l2_switch/
+      cd targets/l2_switch/bmv2/
       make bm
-      ./run.sh
-      sudo ./drivers (in a second terminal)
+      ./run_bm.sh       # to start the data plane 
+      sudo ./drivers    # in a second terminal, to start the PD APIs (RPC server)
 
 You can then run the tests in a third terminal, by going up one directory:
 
     sudo python run_tests.py --test-dir of-tests/tests/
 
 The switch.p4 target alread supports bmv2. For more information take a look at
-targets/switch/bmv2/README.md.
+the [bmv2 README](targets/switch/bmv2/README.md).
+
+The new behavioral model code is also hosted on p4lang, in [this
+repository](https://github.com/p4lang/behavioral-model).
