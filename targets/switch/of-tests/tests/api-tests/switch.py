@@ -451,6 +451,8 @@ class L2DynamicLearnAgeTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_interface_delete(device, if2)
             self.client.switcht_api_interface_delete(device, if3)
 
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
+
             self.client.switcht_api_vlan_delete(device, vlan)
 
 class L3IPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
@@ -951,43 +953,40 @@ class L3IPv6EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_l3_route_add(device, vrf, i_ip4, ecmp)
 
         try:
-            pkt = simple_tcpv6_packet(
-                                    eth_dst='00:77:66:55:44:33',
-                                    eth_src='00:22:22:22:22:22',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1234,
-                                    ipv6_hlim=64)
+            recv_ports = set()
+            for sport in xrange(16):
+                pkt = simple_tcpv6_packet(
+                    eth_dst='00:77:66:55:44:33',
+                    eth_src='00:22:22:22:22:22',
+                    ipv6_dst='5000:1:1:0:0:0:0:1',
+                    ipv6_src='2000:1:1:0:0:0:0:1',
+                    tcp_sport=0x1234 + sport,
+                    ipv6_hlim=64
+                )
 
-            exp_pkt = simple_tcpv6_packet(
-                                    eth_dst='00:11:22:33:44:55',
-                                    eth_src='00:77:66:55:44:33',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1234,
-                                    ipv6_hlim=63)
+                exp_pkt_2 = simple_tcpv6_packet(
+                    eth_dst='00:11:22:33:44:55',
+                    eth_src='00:77:66:55:44:33',
+                    ipv6_dst='5000:1:1:0:0:0:0:1',
+                    ipv6_src='2000:1:1:0:0:0:0:1',
+                    tcp_sport=0x1234 + sport,
+                    ipv6_hlim=63
+                )
 
-            self.dataplane.send(1, str(pkt))
-            verify_packets(self, exp_pkt, [2])
+                exp_pkt_3 = simple_tcpv6_packet(
+                    eth_dst='00:11:22:33:44:56',
+                    eth_src='00:77:66:55:44:33',
+                    ipv6_dst='5000:1:1:0:0:0:0:1',
+                    ipv6_src='2000:1:1:0:0:0:0:1',
+                    tcp_sport=0x1234 + sport,
+                    ipv6_hlim=63
+                )
 
-            pkt = simple_tcpv6_packet(
-                                    eth_dst='00:77:66:55:44:33',
-                                    eth_src='00:22:22:22:22:45',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1248,
-                                    ipv6_hlim=64)
+                self.dataplane.send(1, str(pkt))
+                recv_port = verify_packet_list_any(self, [exp_pkt_2, exp_pkt_3], [2, 3])
+                recv_ports.add(recv_port)
+            self.assertTrue(len(recv_ports) == 2, "")
 
-            exp_pkt = simple_tcpv6_packet(
-                                    eth_dst='00:11:22:33:44:56',
-                                    eth_src='00:77:66:55:44:33',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1248,
-                                    ipv6_hlim=63)
-
-            self.dataplane.send(1, str(pkt))
-            verify_packets(self, exp_pkt, [3])
         finally:
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip4, ecmp)
 

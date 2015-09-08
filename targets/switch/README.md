@@ -121,3 +121,10 @@ To run switchlink testcases,
 The switchlink testcases have been verified with docker version 1.7.0 and
 Mininet version 2.2.1 running on Ubuntu 14.04.
 
+Trying it with bmv2
+========
+
+As explained at the end of the [p4factory README](../../README.md), we are
+currently working on a new version of the behavioral model, which will
+eventually deprecate the original code. To try this code with the switch.p4
+target, follow the instructions in [bmv2/README](bmv2/README.md).

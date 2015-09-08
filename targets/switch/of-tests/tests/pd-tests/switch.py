@@ -136,6 +136,14 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
         client.ipv6_racl_set_default_action_nop(
                                      sess_hdl, dev_tgt)
 
+    mbr_hdl = client.fabric_lag_action_profile_add_member_with_nop(
+        sess_hdl, dev_tgt
+    )
+    client.fabric_lag_set_default_entry(
+        sess_hdl, dev_tgt,
+        mbr_hdl
+    )
+
 def populate_init_entries(client, sess_hdl, dev_tgt):
     match_spec = dc_mac_rewrite_match_spec_t(
                             egress_metadata_smac_idx=rewrite_index,

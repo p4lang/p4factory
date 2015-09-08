@@ -944,6 +944,7 @@ action f_insert_ipv4_header(proto) {
     modify_field(ipv4.ttl, 64);
     modify_field(ipv4.version, 0x4);
     modify_field(ipv4.ihl, 0x5);
+    modify_field(ipv4.identification, 0);
 }
 
 action f_insert_ipv6_header(proto) {
@@ -1097,7 +1098,6 @@ action ipv4_erspan_t3_rewrite() {
     f_insert_erspan_t3_header();
     f_insert_ipv4_header(IP_PROTOCOLS_GRE);
     add(ipv4.totalLen, egress_metadata.payload_length, 50);
-    modify_field(ipv4.identification, 0);
 }
 
 action ipv6_erspan_t3_rewrite() {
