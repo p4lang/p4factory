@@ -2,7 +2,7 @@ switch.p4 with bmv2
 ===================
 
 This directory lets you run the switch.p4 program using the new behavioral-model
-code, which we call bmv2. All but 3 of the unit tests work with bmv2.
+code, which we call bmv2.
 
 Unlike in the original behavioral-model code (p4c-behavioral), the data plane
 and the application run in 2 different processes, and you will have to run these
