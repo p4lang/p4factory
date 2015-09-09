@@ -28,8 +28,7 @@ except ImportError:
     _termcolor_available = False
 
 _PD_TARGETS = [
-    "basic_routing",
-    "l2_switch",
+    "basic_routing"
 ]
 
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -57,7 +56,7 @@ def print_success(test_name):
 def print_failure(test_name):
     my_print(test_name + " : " + "FAILED", "red")
 
-def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
+def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None, make_args="", extra_args=""):
     cleanup()
     target_dir = os.path.join(_THIS_DIR, "targets", target)
     save_cwd = os.getcwd()
@@ -80,6 +79,10 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
         cmd = ['make', make_tgt]
     else:
         cmd = ['make']
+
+    if make_args:
+        cmd.append(make_args)
+
     print ' '.join(cmd)
     subprocess.call(cmd)
 
@@ -94,7 +97,9 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
     time.sleep(10)
 
     test_dir = os.path.join("of-tests/tests", test_subdir)
-    cmd = ['sudo', './run_tests.py', '--test-dir', test_dir]
+    cmd = ['sudo', './run_tests.py','--test-dir', test_dir]
+    if extra_args:
+        cmd.append(extra_args)
     print ' '.join(cmd)
     returncode = subprocess.call(cmd)
 
@@ -112,19 +117,22 @@ def pd_tests():
     for target in _PD_TARGETS:
         one_test(target)
 
-    # switch special case
-    one_test("switch", "pd-tests")
+    one_test("l2_switch", test_subdir="pd-tests")
+    one_test("switch", test_subdir="pd-tests")
 
 def switchapi_test():
-    one_test("switch", "api-tests",
+    one_test("switch", test_subdir="api-tests",
              do_make_clean = False, make_tgt = "bm-switchapi")
 
 def switchsai_test():
-    one_test("switch", "sai-tests",
+    one_test("switch", test_subdir="sai-tests",
              do_make_clean = False, make_tgt = "bm-switchsai")
 
-def saip4_test():
-    one_test("sai_p4", "sai_thrift")
+def openflow_test():
+    one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
+             make_args="PLUGIN_OPENFLOW=1")
+    one_test("switch", make_args="PLUGIN_OPENFLOW=1", extra_args="--openflow",
+             test_subdir="openflow-tests", make_tgt = "bm-p4ofagent")
 
 def check_ifaces():
     ifconfig_out = subprocess.check_output(['ifconfig'])
@@ -158,7 +166,7 @@ def main():
     pd_tests()
     switchapi_test()
     switchsai_test()
-    saip4_test()
+    openflow_test()
 
     print "**************************************"
 

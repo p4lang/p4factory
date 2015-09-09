@@ -99,6 +99,15 @@ ifndef SUBMODULE_SWITCHLINK
   endif
 endif
 
+ifndef SUBMODULE_P4OFAGENT
+  ifdef SUBMODULES
+    SUBMODULE_P4OFAGENT:= $(SUBMODULES)/p4ofagent
+  else
+	SUBMODULE_P4OFAGENT := $(ROOT)/submodules/p4ofagent
+    SUBMODULES_LOCAL += p4ofagent
+  endif
+endif
+
 ifdef SUBMODULES_LOCAL
   SUBMODULES_LOCAL_UPDATE := $(shell python $(ROOT)/submodules/init.py --update $(SUBMODULES_LOCAL))
   ifneq ($(lastword $(SUBMODULES_LOCAL_UPDATE)),submodules:ok.)
@@ -117,6 +126,7 @@ export SUBMODULE_P4C_GRAPHS
 export SUBMODULE_SWITCHAPI
 export SUBMODULE_SWITCHSAI
 export SUBMODULE_SWITCHLINK
+export SUBMODULE_P4OFAGENT
 
 MODULE_DIRS := $(ROOT)/modules
 
@@ -129,4 +139,5 @@ MODULE_DIRS := $(ROOT)/modules
 	@echo switchapi @ $(SUBMODULE_SWITCHAPI)
 	@echo switchsai @ $(SUBMODULE_SWITCHSAI)
 	@echo switchlink @ $(SUBMODULE_SWITCHLINK)
+	@echo p4ofagent @ $(SUBMODULE_P4OFAGENT)
 

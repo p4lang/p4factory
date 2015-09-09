@@ -125,6 +125,10 @@ table dmac {
         dmac_redirect_nexthop;
         dmac_redirect_ecmp;
         dmac_drop;
+#ifdef OPENFLOW_ENABLE
+        openflow_apply;
+        openflow_miss;
+#endif /* OPENFLOW_ENABLE */
     }
     size : DMAC_TABLE_SIZE;
     support_timeout: true;
