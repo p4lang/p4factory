@@ -1,5 +1,5 @@
 //uncomment to enable openflow
-#define OPENFLOW_ENABLE
+//#define OPENFLOW_ENABLE
 
 #ifdef OPENFLOW_ENABLE
     #include "openflow.p4"
