@@ -56,6 +56,8 @@ To build the target "project_name":
 This should result in an executable in the same directory called
 "behavioral_model"
 
+To add Openflow support to a target, please refer [here](https://github.com/p4lang/p4ofagent).
+
 Integration with Mininet
 ========
 
