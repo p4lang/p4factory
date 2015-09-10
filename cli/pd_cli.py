@@ -519,9 +519,9 @@ class PdCli(cmd.Cmd):
     """
     words = collections.deque(line.split())
     try:
-       l1_hdl = self.get_handle(words, "L1_HDL")
-       port_map = self.get_handle(words, "PORT_MAP")
-       lag_map = self.get_handle(words, "LAG_MAP")
+      l1_hdl = self.get_handle(words, "L1_HDL")
+      port_map = self.get_handle(words, "PORT_MAP")
+      lag_map = self.get_handle(words, "LAG_MAP")
       if port_map != -1:
         ports = chr(port_map) + ('\x00' * 31)
       else:
@@ -530,8 +530,8 @@ class PdCli(cmd.Cmd):
         lags = chr(lag_map) + ('\x00' * 31)
       else:
         lags = '\x00' * 32
-       self._thrift_client.mc_node_update(l1_hdl, ports, lags)
-       print "Node has been updated."
+      self._thrift_client.mc_node_update(l1_hdl, ports, lags)
+      print "Node has been updated."
     except NameError as ne:
       print >> sys.stderr, ne
     except thrift.protocol.TProtocol.TProtocolException as e:
@@ -547,9 +547,9 @@ class PdCli(cmd.Cmd):
     """
     words = collections.deque(line.split())
     try:
-       mgrp_hdl = self.get_handle(words, "MGRP_HDL")
-       self._thrift_client.mc_mgrp_destroy(mgrp_hdl)
-       print "Multicast group has been destroyed."
+      mgrp_hdl = self.get_handle(words, "MGRP_HDL")
+      self._thrift_client.mc_mgrp_destroy(mgrp_hdl)
+      print "Multicast group has been destroyed."
     except NameError as ne:
       print >> sys.stderr, ne
     except thrift.protocol.TProtocol.TProtocolException as e:
@@ -565,9 +565,9 @@ class PdCli(cmd.Cmd):
     """
     words = collections.deque(line.split())
     try:
-       l1_hdl = self.get_handle(words, "L1_HDL")
-       self._thrift_client.mc_l1_node_destroy(l1_hdl)
-       print "Node has been destroyed."
+      l1_hdl = self.get_handle(words, "L1_HDL")
+      self._thrift_client.mc_l1_node_destroy(l1_hdl)
+      print "Node has been destroyed."
     except NameError as ne:
       print >> sys.stderr, ne
     except thrift.protocol.TProtocol.TProtocolException as e:
@@ -583,10 +583,10 @@ class PdCli(cmd.Cmd):
     """
     words = collections.deque(line.split())
     try:
-       mgrp_hdl = self.get_handle(words, "MGRP_HANDLE")
-       l1_hdl = self.get_handle(words, "L1_HANDLE")
-       self._thrift_client.mc_associate_node(mgrp_hdl, l1_hdl)
-       print "Node has been associated to the multicast group"
+      mgrp_hdl = self.get_handle(words, "MGRP_HANDLE")
+      l1_hdl = self.get_handle(words, "L1_HANDLE")
+      self._thrift_client.mc_associate_node(mgrp_hdl, l1_hdl)
+      print "Node has been associated to the multicast group"
     except NameError as ne:
       print >> sys.stderr, ne
     except thrift.protocol.TProtocol.TProtocolException as e:
@@ -602,10 +602,10 @@ class PdCli(cmd.Cmd):
     """
     words = collections.deque(line.split())
     try:
-       mgrp_hdl = self.get_handle(words, "MGRP_HANDLE")
-       l1_hdl = self.get_handle(words, "L1_HANDLE")
-       self._thrift_client.mc_associate_node(mgrp_hdl, l1_hdl)
-       print "Node has been dissociated from the multicast group"
+      mgrp_hdl = self.get_handle(words, "MGRP_HANDLE")
+      l1_hdl = self.get_handle(words, "L1_HANDLE")
+      self._thrift_client.mc_associate_node(mgrp_hdl, l1_hdl)
+      print "Node has been dissociated from the multicast group"
     except NameError as ne:
       print >> sys.stderr, ne
     except thrift.protocol.TProtocol.TProtocolException as e:
