@@ -56,7 +56,8 @@ def print_success(test_name):
 def print_failure(test_name):
     my_print(test_name + " : " + "FAILED", "red")
 
-def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None, make_args="", extra_args=""):
+def one_test(target, test_subdir = "", do_make_clean = True,
+             make_tgt = None, make_args="", extra_args=""):
     cleanup()
     target_dir = os.path.join(_THIS_DIR, "targets", target)
     save_cwd = os.getcwd()
