@@ -39,6 +39,10 @@ header_type egress_metadata_t {
 metadata ingress_metadata_t ingress_metadata;
 metadata egress_metadata_t egress_metadata;
 
+#ifdef OPENFLOW_ENABLE
+    #include "openflow.p4"
+#endif /* OPENFLOW_ENABLE */
+
 #include "port.p4"
 #include "l2.p4"
 #include "l3.p4"
@@ -132,6 +136,12 @@ control ingress {
         }
 #endif /* TUNNEL_DISABLE */
 
+        
+#ifdef OPENFLOW_ENABLE
+        /* openflow processing for ingress */
+        process_ofpat_ingress();
+#endif /* OPENFLOW_ENABLE */
+
         /* decide final forwarding choice */
         process_fwd_results();
 
@@ -152,9 +162,16 @@ control ingress {
         /* generate learn notify digest if permitted */
         process_mac_learning();
     } else {
-
-        /* ingress fabric processing */
-        process_ingress_fabric();
+#ifdef OPENFLOW_ENABLE
+        apply(packet_out) {
+            nop {
+#endif /* OPENFLOW_ENABLE */
+                /* ingress fabric processing */
+                process_ingress_fabric();
+#ifdef OPENFLOW_ENABLE
+            }
+        }
+#endif /* OPENFLOW_ENABLE */
     }
 
     if ((ingress_metadata.port_type == PORT_TYPE_NORMAL) or
@@ -173,55 +190,63 @@ control ingress {
 
 control egress {
 
-    /* check for -ve mirrored pkt */
-    if ((intrinsic_metadata.deflection_flag == FALSE) and
-        (egress_metadata.bypass == FALSE)) {
-
-        /* check if pkt is mirrored */
-        if (pkt_is_mirrored) {
-
-            /* set the nexthop for the mirror id */
-            apply(mirror_nhop);
-        } else {
-
-            /* multi-destination replication */
-            process_replication();
-        }
-
-        /* determine egress port properties */
-        apply(egress_port_mapping) {
-            egress_port_type_normal {
-                /* strip vlan header */
-                process_vlan_decap();
-
-                /* perform tunnel decap */
-                process_tunnel_decap();
-
-                /* egress bd properties */
-                process_egress_bd();
-
-                /* apply nexthop_index based packet rewrites */
-                process_rewrite();
-
-                /* rewrite source/destination mac if needed */
-                process_mac_rewrite();
+#ifdef OPENFLOW_ENABLE
+    if (openflow_metadata.ofvalid == TRUE) {
+        process_ofpat_egress();
+    } else {
+#endif /* OPENFLOW_ENABLE */
+        /* check for -ve mirrored pkt */
+        if ((intrinsic_metadata.deflection_flag == FALSE) and
+            (egress_metadata.bypass == FALSE)) {
+    
+            /* check if pkt is mirrored */
+            if (pkt_is_mirrored) {
+    
+                /* set the nexthop for the mirror id */
+                apply(mirror_nhop);
+            } else {
+    
+                /* multi-destination replication */
+                process_replication();
             }
+    
+            /* determine egress port properties */
+            apply(egress_port_mapping) {
+                egress_port_type_normal {
+                    /* strip vlan header */
+                    process_vlan_decap();
+    
+                    /* perform tunnel decap */
+                    process_tunnel_decap();
+    
+                    /* egress bd properties */
+                    process_egress_bd();
+    
+                    /* apply nexthop_index based packet rewrites */
+                    process_rewrite();
+    
+                    /* rewrite source/destination mac if needed */
+                    process_mac_rewrite();
+                }
+            }
+    
+            /* perform tunnel encap */
+            process_tunnel_encap();
+    
+            if (egress_metadata.port_type == PORT_TYPE_NORMAL) {
+                /* egress mtu checks */
+                process_mtu();
+    
+                /* egress vlan translation */
+                process_vlan_xlate();
+            }
+    
+            /* egress filter */
+            process_egress_filter();
         }
-
-        /* perform tunnel encap */
-        process_tunnel_encap();
-
-        if (egress_metadata.port_type == PORT_TYPE_NORMAL) {
-            /* egress mtu checks */
-            process_mtu();
-
-            /* egress vlan translation */
-            process_vlan_xlate();
-        }
-
-        /* egress filter */
-        process_egress_filter();
+#ifdef OPENFLOW_ENABLE
     }
+#endif /* OPENFLOW_ENABLE */
 
     /* apply egress acl */
     process_egress_acl();

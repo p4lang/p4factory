@@ -19,12 +19,22 @@ from oftest.testutils import *
 
 from utils import *
 
+sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
+                             'targets', 'l2_switch', 'of-tests', 'tests',
+                             'openflow-tests')) 
+
+from openflow import repopulate_openflow_defaults
+
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
 
 
 def setup_default_table_configurations(client, sess_hdl, dev_tgt):
     client.clean_all(sess_hdl, dev_tgt)
+    try:
+        repopulate_openflow_defaults(client, sess_hdl, dev_tgt)
+    except AttributeError:
+        print "Not repopulating OF tables, not generated."
 
     result = client.smac_set_default_action_mac_learn(sess_hdl, dev_tgt)
     assert result == 0

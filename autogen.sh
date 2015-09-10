@@ -6,3 +6,4 @@ cd submodules/switchlink/ && ./autogen.sh && cd -
 # issue on a fresh clone of the behavioral-model repository...
 cd submodules/bm/ && ./autogen.sh > /dev/null; ./autogen.sh && cd -
 cd submodules/p4c-bm/pd_mk/ && ./autogen.sh && cd -
+cd submodules/p4ofagent && ./autogen.sh && cd -

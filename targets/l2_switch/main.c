@@ -57,6 +57,10 @@ limitations under the License.
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifdef ENABLE_PLUGIN_OPENFLOW
+    #include "p4ofagent/p4ofagent.h"
+#endif /* ENABLE_PLUGIN_OPENFLOW */
+
 TAILQ_HEAD(interfaces_head, entry) interfaces;
 struct entry {
   char *str;
@@ -74,6 +78,8 @@ static p4ns_tcp_over_ip_t p4nsdb_addr;
 static p4ns_tcp_over_ip_t listener_addr;
 static p4ns_tcp_over_ip_t pd_server_addr;
 static bool no_veth = false;
+static char *of_controller_str = NULL;
+static int of_ipv6 = 0;
 
 pthread_t ctl_listener_thread;
 
@@ -250,6 +256,8 @@ parse_options(int argc, char **argv)
       OPT_NOPCAP,
       OPT_PDSERVER,
       OPT_NOVETH,
+      OPT_OFIP,
+      OPT_OFIPV6,
     };
     static struct option long_options[] = {
       {"verbose", no_argument, 0, 'v' },
@@ -264,6 +272,8 @@ parse_options(int argc, char **argv)
       {"pd-server", required_argument, 0, OPT_PDSERVER },
       {"no-pcap", no_argument, 0, OPT_NOPCAP },
       {"no-veth", no_argument, 0, OPT_NOVETH },
+      {"of-ip", required_argument, 0, OPT_OFIP },
+      {"of-ipv6", no_argument, 0, OPT_OFIPV6 },
       {0, 0, 0, 0 }
     };
     int c = getopt_long(argc, argv, "vtl:i:h",
@@ -310,6 +320,12 @@ parse_options(int argc, char **argv)
       break;
     case OPT_NOVETH:
       no_veth = true;
+      break;
+    case OPT_OFIP:
+      of_controller_str = strdup (optarg);
+      break;
+    case OPT_OFIPV6:
+      of_ipv6 = 1;
       break;
     case 'h':
     case '?':
@@ -420,6 +436,10 @@ main(int argc, char* argv[])
 
     /* Start up the RPC server */
     CHECK(start_p4_pd_rpc_server(pd_server_addr.port));
+
+#ifdef ENABLE_PLUGIN_OPENFLOW 
+    p4ofagent_init (of_ipv6, of_controller_str); 
+#endif /* ENABLE_PLUGIN_OPENFLOW */
 
     if (!listener_str && !no_veth) {  /* standalone mode */
         for (n_veth = 0; n_veth < NUM_VETH_INTERFACES; n_veth++) {
