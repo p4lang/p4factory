@@ -127,7 +127,7 @@ Mininet version 2.2.1 running on Ubuntu 14.04.
 
 To run the Openflow testcases,
 
-sudo ./run_tests.py --openflow --test-dir of-tests/tests/openflow-tests
+    sudo ./run_tests.py --openflow --test-dir of-tests/tests/openflow-tests
 
 Trying it with bmv2
 ========
