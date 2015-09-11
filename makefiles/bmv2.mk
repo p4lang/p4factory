@@ -7,7 +7,7 @@ $(BMV2_PD_DIR):
 	@echo $(BMV2_PD_DIR)
 	mkdir -p $(BMV2_PD_DIR)
 
-bmv2-pd: bmv2-pd-sane $(P4_INPUT) | $(BMV2_PD_DIR)
+bmv2-pd: $(P4_INPUT) | $(BMV2_PD_DIR)
 	@echo $(BUILD_DIR)
 	$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV)
 	$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV) 'DESTDIR=$(BUILD_DIR)' install
@@ -38,6 +38,5 @@ bmv2-clean:
 	$(MAKE) -C $(SUBMODULE_BM) clean
 	$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV) clean
 	rm -f $(BMV2_EXE) $(BMV2_JSON)
-	rm -f .bmv2-pd-sane
 
 .PHONY: bmv2-pd bmv2-pd-sane bmv2-clean bmv2 $(BMV2_EXE)

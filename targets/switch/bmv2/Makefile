@@ -93,7 +93,7 @@ THRIFT_DEP_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
 THRIFT_SERVICE_NAMES := switch_api_rpc
 include ${MAKEFILES_DIR}/thrift-py.mk
 
-switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
+switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE} FORCE
 	@echo "Copying python thrift files"
 	@mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
 	@cp -r ${THRIFT_TEMP_DIR}/switch_api/* ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/
@@ -127,13 +127,13 @@ ifndef drivers-switchsai_BINARY
 	$(error Output binary not defined in drivers-switchsai_BINARY)
 endif
 
-SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift/switch_sai_thrift
+SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../of-tests/pd_thrift/switch_sai_thrift
 THRIFT_INPUT_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_DEP_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_SERVICE_NAMES := switch_sai_rpc
 include ${MAKEFILES_DIR}/thrift-py.mk
 
-switchsai_THRIFT : switchapi_THRIFT
+switchsai_THRIFT : switchapi_THRIFT FORCE
 	@mkdir -p ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}
 	@cp -r ${THRIFT_TEMP_DIR}/switch_sai/* ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/
 	@rm -r ${THRIFT_TEMP_DIR}/switch_sai/

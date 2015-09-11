@@ -33,9 +33,13 @@ ifndef drivers_BINARY
 	$(error Output binary not defined in drivers_BINARY)
 endif
 
+THRIFT_PY_OUTPUT_DIR := $(TARGET_ROOT)/../of-tests/pd_thrift/
+MAKE_DIR := ${THRIFT_PY_OUTPUT_DIR}
+include ${MAKEFILES_DIR}/makedir.mk
+
 drivers : bmv2-pd
-drivers : ${drivers_BINARY}
-	cp -r $(BMV2_THRIFT_PY_DIR)/* $(TARGET_ROOT)/../of-tests/pd_thrift/
+drivers : ${drivers_BINARY} FORCE
+	cp -r $(BMV2_THRIFT_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
 
 bm: bmv2 bmv2-pd drivers
 
