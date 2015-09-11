@@ -4,6 +4,9 @@ sudo: required
 
 language: c
 
+services:
+  - docker
+
 # There is probably some redundant stuff in this list. If you find one, remove
 # it 
 addons:
@@ -51,7 +54,6 @@ addons:
       - redis-server      
 
 before_install:
-  - sudo modprobe veth
   - git submodule update --init
   - cd submodules/p4ofagent/
   - git submodule update --init
@@ -79,6 +81,7 @@ install:
   - sudo ldconfig
 
 before_script:
+  - cp travis/veth_setup.sh tools/
   - cd tools; sudo ./veth_setup.sh; sudo ./veth_disable_ipv6.sh; cd ..
 
 script:
