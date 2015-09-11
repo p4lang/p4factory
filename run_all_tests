@@ -107,6 +107,8 @@ def one_test(target, test_subdir = "", do_make_clean = True,
         cmd = ['make', make_tgt]
     else:
         cmd = ['make']
+    if args.jobs is not None and args.jobs > 0:
+        cmd.append("-j" + str(args.jobs))
 
     if make_args:
         cmd.append(make_args)
@@ -278,6 +280,7 @@ def openflow_test():
     one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
              make_args="PLUGIN_OPENFLOW=1")
     one_test("switch", make_args="PLUGIN_OPENFLOW=1", extra_args="--openflow",
+             do_make_clean = False,
              test_subdir="openflow-tests", make_tgt = "bm-p4ofagent")
 
 def check_ifaces():
