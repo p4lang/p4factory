@@ -262,6 +262,10 @@ def switchsai_test():
     one_test("switch", test_subdir="sai-tests",
              do_make_clean = False, make_tgt = "bm-switchsai")
 
+def sai_p4_test():
+    one_test("sai_p4", test_subdir="sai_thrift",
+             do_make_clean = True)
+
 def bmv2_switchsai_test():
     bmv2_one_test("switch", test_subdir="sai-tests",
                   do_make_clean = False, make_tgt = "bm-switchsai",
@@ -311,6 +315,7 @@ def main():
     switchapi_test()
     switchsai_test()
     openflow_test()
+    sai_p4_test()
 
     print "**************************************"
 
