@@ -83,6 +83,7 @@ install:
   - git clone https://github.com/p4lang/scapy-vxlan.git && cd scapy-vxlan && sudo python setup.py install && cd ..
   - cd .. && sudo rm -rf install_tmp/
   - sudo ldconfig
+  - sudo pip install -r submodules/p4c-bm/requirements.txt
   - ./autogen.sh; ./configure
 
 before_script:
