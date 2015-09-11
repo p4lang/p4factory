@@ -4,6 +4,8 @@ sudo: required
 
 language: c
 
+# My very smart trick to force inclusion of the veth kernel module
+# (even though we do not use docker at all her)
 services:
   - docker
 
@@ -53,6 +55,7 @@ addons:
       - python-yaml
       - redis-server      
 
+# need to replace github ssh references with https
 before_install:
   - git submodule update --init
   - cd submodules/p4ofagent/
@@ -64,6 +67,7 @@ before_install:
   - find -name ".gitmodules" -type f -exec sed -i 's/git@github.com:/https:\/\/github.com\//' {} \;
   - cd ../../../../../../
   - git submodule update --init --recursive
+  # following is failing for some reason
   # - sudo apt-get update -qq
   - sudo apt-get install ethtool
   - sudo pip install --upgrade pip
@@ -79,10 +83,11 @@ install:
   - git clone https://github.com/p4lang/scapy-vxlan.git && cd scapy-vxlan && sudo python setup.py install && cd ..
   - cd .. && sudo rm -rf install_tmp/
   - sudo ldconfig
+  - ./autogen.sh; ./configure
 
 before_script:
   - cp travis/veth_setup.sh tools/
   - cd tools; sudo ./veth_setup.sh; sudo ./veth_disable_ipv6.sh; cd ..
 
 script:
-  - sudo ./run_all_tests
+  - sudo ./run_all_tests -j2 # Travis VMs have 1.5 cores
