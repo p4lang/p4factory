@@ -64,7 +64,7 @@ before_install:
   - find -name ".gitmodules" -type f -exec sed -i 's/git@github.com:/https:\/\/github.com\//' {} \;
   - cd ../../../../../../
   - git submodule update --init --recursive
-  - sudo apt-get update -qq
+  # - sudo apt-get update -qq
   - sudo apt-get install ethtool
   - sudo pip install --upgrade pip
   - sudo pip install --upgrade thrift
