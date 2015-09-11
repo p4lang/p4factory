@@ -35,7 +35,8 @@ RUN apt-get install -y \
     python-yaml \
     redis-server \
     redis-tools \
-    libgmp-dev
+    libgmp-dev \
+    python-pip
 
 ADD p4factory /p4factory
 
@@ -60,3 +61,5 @@ RUN mkdir -p /tmp/p4-hlir ; \
     cd p4-hlir ; \
     python setup.py install ; \
     rm -fr /tmp/p4-hlir
+
+RUN pip install -r /p4factory/submodules/p4c-bm/requirements.txt

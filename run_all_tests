@@ -36,6 +36,8 @@ parser.add_argument('--jobs', '-j', type=int, required=False,
                     help='Number of jobs when running make')
 parser.add_argument('--no-bmv2', action='store_true', default = False,
                     help='Disable BMv2 tests')
+parser.add_argument('--travis', action='store_true', default = False,
+                    help='Skip some tests because of travis time limit')
 
 args = parser.parse_args()
 
@@ -252,6 +254,7 @@ def switchapi_test():
              do_make_clean = False, make_tgt = "bm-switchapi")
 
 def bmv2_switchapi_test():
+    if args.travis: return
     os.environ["BMV2_TEST"] = "1"
     bmv2_one_test("switch", test_subdir="api-tests",
                   do_make_clean = False, make_tgt = "bm-switchapi",
