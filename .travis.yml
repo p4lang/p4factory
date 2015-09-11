@@ -78,10 +78,7 @@ install:
   - sudo ldconfig
 
 before_script:
-  - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-  - sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-  - sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
-  - cd tools; sudo ./veth_setup.sh; cd ..
+  - cd tools; sudo ./veth_setup.sh; sudo ./veth_disable_ipv6.sh; cd ..
 
 script:
   - sudo ./run_all_tests
