@@ -259,6 +259,8 @@ def bmv2_switchapi_test():
     del os.environ["BMV2_TEST"]
 
 def switchsai_test():
+    one_test("sai_p4", test_subdir="sai_thrift",
+             do_make_clean = True)
     one_test("switch", test_subdir="sai-tests",
              do_make_clean = False, make_tgt = "bm-switchsai")
 
