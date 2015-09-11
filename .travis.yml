@@ -51,6 +51,7 @@ addons:
       - redis-server      
 
 before_install:
+  - sudo modprobe veth
   - git submodule update --init
   - cd submodules/p4ofagent/
   - git submodule update --init
