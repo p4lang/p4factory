@@ -124,7 +124,7 @@ def one_test(target, test_subdir = "", do_make_clean = True,
     logfd = open(logfile, 'w')
     bm_proc = Popen(cmd, stdout = logfd, stderr = subprocess.STDOUT)
 
-    time.sleep(10)
+    time.sleep(5)
 
     test_dir = os.path.join("of-tests/tests", test_subdir)
     cmd = ['sudo', './run_tests.py','--test-dir', test_dir]
@@ -280,6 +280,8 @@ def openflow_test():
     one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
              make_args="PLUGIN_OPENFLOW=1")
     # I have to make clean here, otherwise it fails...
+    # and takes too long for travis
+    if args.travis: return
     one_test("switch", make_args="PLUGIN_OPENFLOW=1", extra_args="--openflow",
              test_subdir="openflow-tests", make_tgt = "bm-p4ofagent")
 
