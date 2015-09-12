@@ -1,6 +1,8 @@
 P4 Model Repository
 ========
 
+[![Build Status](https://travis-ci.org/p4lang/p4factory.svg?branch=master)](https://travis-ci.org/p4lang/p4factory)
+
 This repository maintains a sample set of the P4 programs and allows building
 P4 for the P4 Behavioral Model.
 
