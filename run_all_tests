@@ -279,8 +279,8 @@ def bmv2_switchsai_test():
 def openflow_test():
     one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
              make_args="PLUGIN_OPENFLOW=1")
+    # I have to make clean here, otherwise it fails...
     one_test("switch", make_args="PLUGIN_OPENFLOW=1", extra_args="--openflow",
-             do_make_clean = False,
              test_subdir="openflow-tests", make_tgt = "bm-p4ofagent")
 
 def check_ifaces():
