@@ -36,6 +36,8 @@ parser.add_argument('--jobs', '-j', type=int, required=False,
                     help='Number of jobs when running make')
 parser.add_argument('--no-bmv2', action='store_true', default = False,
                     help='Disable BMv2 tests')
+parser.add_argument('--travis', action='store_true', default = False,
+                    help='Skip some tests because of travis time limit')
 
 args = parser.parse_args()
 
@@ -105,6 +107,8 @@ def one_test(target, test_subdir = "", do_make_clean = True,
         cmd = ['make', make_tgt]
     else:
         cmd = ['make']
+    if args.jobs is not None and args.jobs > 0:
+        cmd.append("-j" + str(args.jobs))
 
     if make_args:
         cmd.append(make_args)
@@ -252,6 +256,7 @@ def switchapi_test():
              do_make_clean = False, make_tgt = "bm-switchapi")
 
 def bmv2_switchapi_test():
+    if args.travis: return
     os.environ["BMV2_TEST"] = "1"
     bmv2_one_test("switch", test_subdir="api-tests",
                   do_make_clean = False, make_tgt = "bm-switchapi",
@@ -274,6 +279,7 @@ def bmv2_switchsai_test():
 def openflow_test():
     one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
              make_args="PLUGIN_OPENFLOW=1")
+    # I have to make clean here, otherwise it fails...
     one_test("switch", make_args="PLUGIN_OPENFLOW=1", extra_args="--openflow",
              test_subdir="openflow-tests", make_tgt = "bm-p4ofagent")
 
