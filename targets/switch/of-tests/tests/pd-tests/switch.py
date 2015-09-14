@@ -604,7 +604,7 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
         print "Cleaning state"
-        #self.client.clean_all(sess_hdl, dev_tgt)
+        self.client.clean_all(sess_hdl, dev_tgt)
 
         #Add the default entries
         populate_default_entries(self.client, sess_hdl, dev_tgt)
