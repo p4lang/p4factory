@@ -32,7 +32,7 @@ limitations under the License.
 #define P4_URPF_DISABLE
 #endif
 
-#define OPENFLOW_ENABLE
+//#define OPENFLOW_ENABLE
 
 #ifdef IPV6_DISABLE
 #define P4_IPV6_DISABLE

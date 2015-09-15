@@ -45,6 +45,8 @@ group_mod         = ofp.message.group_mod
 group_delete      = ofp.message.group_delete
 table_stats_req   = ofp.message.table_stats_request
 table_stats_reply = ofp.message.table_stats_reply
+packet_in         = ofp.message.packet_in
+packet_out        = ofp.message.packet_out
 buf               = ofp.OFP_NO_BUFFER
 
 # dmac table fields
@@ -130,7 +132,7 @@ def get_group_mod(gid, action_sets):
 ##############################
 
 def setup_default_table_configurations(client, sess_hdl, dev_tgt):
-    ifindex = 3
+    ifindex = 1
     action_spec = dc_set_bd_action_spec_t(
                             action_bd=TEST_VLAN,
                             action_vrf=0,
@@ -178,17 +180,6 @@ def setup(self):
 ##############
 # TEST CASES #
 ##############
-
-# Use this to test a 'miss' with a controller (like Ryu)
-####
-#class Inject(base_tests.SimpleDataPlane):
-#    """
-#    Simply sends a packet to the switch
-#    """
-#    def runTest(self):
-#        ports = sorted(config["port_map"].keys())
-#        pkt = str(simple_arp_packet())
-#        self.dataplane.send(9, pkt)
 
 class Output(openflow_base_tests.OFTestInterface):
     """
@@ -470,3 +461,39 @@ class TableStatsGet(openflow_base_tests.OFTestInterface):
         req = flow_delete(cookie=45, table_id=0)
         self.controller.message_send(req)
         do_barrier(self.controller)
+
+class PacketIn(openflow_base_tests.OFTestInterface):
+    """
+    """
+    def __init__(self):
+        openflow_base_tests.OFTestInterface.__init__(self, "dc")
+
+    def runTest(self):
+        setup(self)
+
+        ports = sorted(config["port_map"].keys())
+        in_port = ports[0]
+
+        table = openflow_tables["dmac"]
+        table.match_fields[eth_dst_addr].testval = TEST_ETH_DST
+        table.match_fields[ingress_vlan].testval = TEST_VLAN
+        pkt, match = get_match(table.match_fields)
+
+        output = {
+            "OUTPUT": ofp.const.OFPP_CONTROLLER 
+        }
+
+        instr = get_apply_actions(output)
+        req = flow_add(table_id=table.id, match=match, instructions=instr,
+                       buffer_id=buf, priority=1, cookie=46)
+        self.controller.message_send(req)
+        do_barrier(self.controller)
+
+        self.dataplane.send(in_port, pkt)
+        verify_packet_in(self, str(pkt), in_port, ofp.const.OFPR_ACTION,
+                         controller=self.controller)
+
+        req = flow_delete(cookie=46, table_id=0)
+        self.controller.message_send(req)
+        do_barrier(self.controller)
+
