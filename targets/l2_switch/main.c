@@ -439,6 +439,13 @@ main(int argc, char* argv[])
 
 #ifdef ENABLE_PLUGIN_OPENFLOW 
     p4ofagent_init (of_ipv6, of_controller_str); 
+    char pcap_filename_cpu[1024];
+    pcap_filename_cpu[0] = 0;
+    if (dump_pcap) {
+        snprintf(pcap_filename_cpu, 1024,
+                 "p4ns.%s-port%.2d.pcap", datapath_name, 64);
+    }
+    CHECK(bmi_port_interface_add(port_mgr, "veth250", 64, pcap_filename_cpu));
 #endif /* ENABLE_PLUGIN_OPENFLOW */
 
     if (!listener_str && !no_veth) {  /* standalone mode */
