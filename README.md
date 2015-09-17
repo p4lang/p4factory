@@ -1,6 +1,8 @@
 P4 Model Repository
 ========
 
+[![Build Status](https://travis-ci.org/p4lang/p4factory.svg?branch=master)](https://travis-ci.org/p4lang/p4factory)
+
 This repository maintains a sample set of the P4 programs and allows building
 P4 for the P4 Behavioral Model.
 
@@ -55,6 +57,8 @@ To build the target "project_name":
 
 This should result in an executable in the same directory called
 "behavioral_model"
+
+To add Openflow support to a target, please refer [here](https://github.com/p4lang/p4ofagent).
 
 Integration with Mininet
 ========
@@ -167,3 +171,31 @@ generated with the following command:
 
 The resulting files can be viewed using xdot or with a PNG viewer.
 
+Towards a better behavioral model: bmv2
+========
+
+We have released a new version of the behavioral model, written in C++. Some
+targets already support this new model -in addition to the original version,
+p4c-behavioral. If you see a target with a bmv2 directory, it means the new
+model is supported and you can try it out!
+
+The new model splits the switch logic and the auto-generated PD API (drivers)
+into 2 different processes.
+
+For example, the l2_switch target supports bmv2. To run the code, you can do the
+following:
+
+      cd targets/l2_switch/bmv2/
+      make bm
+      ./run_bm.sh       # to start the data plane 
+      sudo ./drivers    # in a second terminal, to start the PD APIs (RPC server)
+
+You can then run the tests in a third terminal, by going up one directory:
+
+    sudo python run_tests.py --test-dir of-tests/tests/
+
+The switch.p4 target already supports bmv2. For more information take a look at
+the [bmv2 README](targets/switch/bmv2/README.md).
+
+The new behavioral model code is also hosted on p4lang, in [this
+repository](https://github.com/p4lang/behavioral-model).

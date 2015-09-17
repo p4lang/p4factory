@@ -161,9 +161,10 @@ class L2TrunkToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
         exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
                                 eth_src='00:22:22:22:22:22',
                                 ip_dst='10.0.0.1',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
                                 ip_id=102,
-                                ip_ttl=64,
-                                pktlen=96)
+                                ip_ttl=64)
 
         try:
             self.dataplane.send(1, str(pkt))
@@ -449,6 +450,8 @@ class L2DynamicLearnAgeTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_interface_delete(device, if1)
             self.client.switcht_api_interface_delete(device, if2)
             self.client.switcht_api_interface_delete(device, if3)
+
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
@@ -950,43 +953,40 @@ class L3IPv6EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_l3_route_add(device, vrf, i_ip4, ecmp)
 
         try:
-            pkt = simple_tcpv6_packet(
-                                    eth_dst='00:77:66:55:44:33',
-                                    eth_src='00:22:22:22:22:22',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1234,
-                                    ipv6_hlim=64)
+            recv_ports = set()
+            for sport in xrange(16):
+                pkt = simple_tcpv6_packet(
+                    eth_dst='00:77:66:55:44:33',
+                    eth_src='00:22:22:22:22:22',
+                    ipv6_dst='5000:1:1:0:0:0:0:1',
+                    ipv6_src='2000:1:1:0:0:0:0:1',
+                    tcp_sport=0x1234 + sport,
+                    ipv6_hlim=64
+                )
 
-            exp_pkt = simple_tcpv6_packet(
-                                    eth_dst='00:11:22:33:44:55',
-                                    eth_src='00:77:66:55:44:33',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1234,
-                                    ipv6_hlim=63)
+                exp_pkt_2 = simple_tcpv6_packet(
+                    eth_dst='00:11:22:33:44:55',
+                    eth_src='00:77:66:55:44:33',
+                    ipv6_dst='5000:1:1:0:0:0:0:1',
+                    ipv6_src='2000:1:1:0:0:0:0:1',
+                    tcp_sport=0x1234 + sport,
+                    ipv6_hlim=63
+                )
 
-            self.dataplane.send(1, str(pkt))
-            verify_packets(self, exp_pkt, [2])
+                exp_pkt_3 = simple_tcpv6_packet(
+                    eth_dst='00:11:22:33:44:56',
+                    eth_src='00:77:66:55:44:33',
+                    ipv6_dst='5000:1:1:0:0:0:0:1',
+                    ipv6_src='2000:1:1:0:0:0:0:1',
+                    tcp_sport=0x1234 + sport,
+                    ipv6_hlim=63
+                )
 
-            pkt = simple_tcpv6_packet(
-                                    eth_dst='00:77:66:55:44:33',
-                                    eth_src='00:22:22:22:22:45',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1248,
-                                    ipv6_hlim=64)
+                self.dataplane.send(1, str(pkt))
+                recv_port = verify_packet_list_any(self, [exp_pkt_2, exp_pkt_3], [2, 3])
+                recv_ports.add(recv_port)
+            self.assertTrue(len(recv_ports) == 2, "")
 
-            exp_pkt = simple_tcpv6_packet(
-                                    eth_dst='00:11:22:33:44:56',
-                                    eth_src='00:77:66:55:44:33',
-                                    ipv6_dst='5000:1:1:0:0:0:0:1',
-                                    ipv6_src='2000:1:1:0:0:0:0:1',
-                                    tcp_sport=0x1248,
-                                    ipv6_hlim=63)
-
-            self.dataplane.send(1, str(pkt))
-            verify_packets(self, exp_pkt, [3])
         finally:
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip4, ecmp)
 
@@ -2677,7 +2677,9 @@ class L2AccessToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_dst='10.0.0.1',
                                 ip_id=102,
                                 ip_ttl=64,
-                                pktlen=100)
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                pktlen=104)
         try:
             self.dataplane.send(1, str(pkt))
             verify_packets(self, exp_pkt, [2])
@@ -3194,9 +3196,10 @@ class L2LNSubIntfEncapTest(api_base_tests.ThriftInterfaceDataPlane):
             exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
                                     eth_src='00:22:22:22:22:22',
                                     ip_dst='10.0.0.1',
+                                    dl_vlan_enable=True,
+                                    vlan_vid=20,
                                     ip_id=102,
-                                    ip_ttl=64,
-                                    pktlen=96)
+                                    ip_ttl=64)
             self.dataplane.send(1, str(pkt))
             verify_packets(self, exp_pkt, [2])
 
@@ -3209,11 +3212,12 @@ class L2LNSubIntfEncapTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=102,
                                     ip_ttl=64)
             exp_pkt = simple_tcp_packet(eth_dst='00:22:22:22:22:22',
+                                    dl_vlan_enable=True,
+                                    vlan_vid=10,
                                     eth_src='00:11:11:11:11:11',
                                     ip_dst='10.0.0.1',
                                     ip_id=102,
-                                    ip_ttl=64,
-                                    pktlen=96)
+                                    ip_ttl=64)
             self.dataplane.send(2, str(pkt))
             verify_packets(self, exp_pkt, [1])
 
@@ -6555,17 +6559,28 @@ class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     nvgre_tni=0x4545,
                                     inner_frame=pkt)
 
-            encap_pkt = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
+            encap_pkt1 = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
                                     eth_src='00:01:00:00:00:11',
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64,
-                                    pktlen=100)
+                                    dl_vlan_enable=True,
+                                    vlan_vid=10,
+                                    pktlen=104)
+
+            encap_pkt2 = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
+                                    eth_src='00:01:00:00:00:11',
+                                    ip_dst='10.10.10.1',
+                                    ip_id=108,
+                                    ip_ttl=64,
+                                    dl_vlan_enable=True,
+                                    vlan_vid=20,
+                                    pktlen=104)
 
             print "Sending packet on native access port 6"
             self.dataplane.send(6, str(pkt))
             print "Packets expected on [geneve port1]. [vxlan port2], [nvgre port3], [encap vlan 10 port 4], [encap vlan 20 port 5]"
-            verify_packet_list(self, [geneve_pkt, vxlan_pkt, nvgre_pkt, encap_pkt, encap_pkt], [1, 2, 3, 4, 5])
+            verify_packet_list(self, [geneve_pkt, vxlan_pkt, nvgre_pkt, encap_pkt1, encap_pkt2], [1, 2, 3, 4, 5])
             time.sleep(5)
 
         finally:

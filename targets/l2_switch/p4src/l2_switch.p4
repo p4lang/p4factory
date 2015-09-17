@@ -1,3 +1,10 @@
+//uncomment to enable openflow
+//#define OPENFLOW_ENABLE
+
+#ifdef OPENFLOW_ENABLE
+    #include "openflow.p4"
+#endif /* OPENFLOW_ENABLE */
+
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -24,7 +31,14 @@ metadata intrinsic_metadata_t intrinsic_metadata;
 
 parser parse_ethernet {
     extract(ethernet);
+#ifdef OPENFLOW_ENABLE
+    return select(latest.etherType) {
+        ETHERTYPE_BF_FABRIC : fabric_header;
+        default : ingress;
+    }
+#else
     return ingress;
+#endif /* OPENFLOW_ENABLE */
 }
 
 action _drop() {
@@ -65,7 +79,14 @@ table dmac {
     reads {
         ethernet.dstAddr : exact;
     }
-    actions {forward; broadcast;}
+    actions {
+        forward;
+        broadcast;
+#ifdef OPENFLOW_ENABLE
+        openflow_apply;
+        openflow_miss;
+#endif /* OPENFLOW_ENABLE */
+    }
     size : 512;
 }
 
@@ -78,12 +99,26 @@ table mcast_src_pruning {
 }
 
 control ingress {
-    apply(smac);
-    apply(dmac);
+#ifdef OPENFLOW_ENABLE
+    apply(packet_out) {
+        nop {
+#endif /* OPENFLOW_ENABLE */
+            apply(smac);
+            apply(dmac);
+#ifdef OPENFLOW_ENABLE
+        }
+    }
+
+    process_ofpat_ingress ();
+#endif /* OPENFLOW_ENABLE */
 }
 
 control egress {
     if(standard_metadata.ingress_port == standard_metadata.egress_port) {
         apply(mcast_src_pruning);
     }
+
+#ifdef OPENFLOW_ENABLE
+    process_ofpat_egress();
+#endif /*OPENFLOW_ENABLE */
 }

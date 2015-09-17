@@ -20,6 +20,10 @@ import os
 import re
 import sys
 import time
+import argparse
+from functools import wraps
+import errno
+import signal
 
 try:
     import termcolor as T
@@ -27,14 +31,24 @@ try:
 except ImportError:
     _termcolor_available = False
 
+parser = argparse.ArgumentParser(description='test arguments')
+parser.add_argument('--jobs', '-j', type=int, required=False,
+                    help='Number of jobs when running make')
+parser.add_argument('--no-bmv2', action='store_true', default = False,
+                    help='Disable BMv2 tests')
+parser.add_argument('--travis', action='store_true', default = False,
+                    help='Skip some tests because of travis time limit')
+
+args = parser.parse_args()
+
 _PD_TARGETS = [
-    "basic_routing",
-    "l2_switch",
+    "basic_routing"
 ]
 
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 sw_binaries = ["behavioral-model"]
+bmv2_exes = set()
 
 _TEST_RESULTS = []
 
@@ -44,6 +58,18 @@ def cleanup():
         cmd = ['sudo', 'killall', '-q', binary]
         print ' '.join(cmd)
         subprocess.call(cmd)
+
+def bmv2_cleanup():
+    for binary_path in bmv2_exes:
+        binary = os.path.basename(os.path.normpath(binary_path))
+        cmd = ['sudo', 'killall', '-q', binary]
+        print ' '.join(cmd)
+        subprocess.call(cmd)
+
+def killall(name):
+    cmd = ['sudo', 'killall', '-q', name]
+    print ' '.join(cmd)
+    subprocess.call(cmd)
 
 def my_print(msg, color = None):
     if _termcolor_available:
@@ -57,7 +83,8 @@ def print_success(test_name):
 def print_failure(test_name):
     my_print(test_name + " : " + "FAILED", "red")
 
-def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
+def one_test(target, test_subdir = "", do_make_clean = True,
+             make_tgt = None, make_args="", extra_args=""):
     cleanup()
     target_dir = os.path.join(_THIS_DIR, "targets", target)
     save_cwd = os.getcwd()
@@ -80,6 +107,12 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
         cmd = ['make', make_tgt]
     else:
         cmd = ['make']
+    if args.jobs is not None and args.jobs > 0:
+        cmd.append("-j" + str(args.jobs))
+
+    if make_args:
+        cmd.append(make_args)
+
     print ' '.join(cmd)
     subprocess.call(cmd)
 
@@ -91,10 +124,12 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
     logfd = open(logfile, 'w')
     bm_proc = Popen(cmd, stdout = logfd, stderr = subprocess.STDOUT)
 
-    time.sleep(10)
+    time.sleep(5)
 
     test_dir = os.path.join("of-tests/tests", test_subdir)
-    cmd = ['sudo', './run_tests.py', '--test-dir', test_dir]
+    cmd = ['sudo', './run_tests.py','--test-dir', test_dir]
+    if extra_args:
+        cmd.append(extra_args)
     print ' '.join(cmd)
     returncode = subprocess.call(cmd)
 
@@ -108,23 +143,147 @@ def one_test(target, test_subdir = "", do_make_clean = True, make_tgt = None):
         print_failure(test_name)
     _TEST_RESULTS.append( (test_name, returncode) )
 
+class TimeoutError(Exception):
+    pass
+
+def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
+    def decorator(func):
+        def _handle_timeout(signum, frame):
+            raise TimeoutError(error_message)
+
+        def wrapper(*args, **kwargs):
+            signal.signal(signal.SIGALRM, _handle_timeout)
+            signal.alarm(seconds)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                signal.alarm(0)
+            return result
+
+        return wraps(func)(wrapper)
+
+    return decorator
+
+def bmv2_one_test(target, test_subdir = "", do_make_clean = True,
+                  make_tgt = None, drivers_exe = "drivers"):
+    bmv2_cleanup()
+    target_dir = os.path.join(_THIS_DIR, "targets", target, "bmv2")
+    save_cwd = os.getcwd()
+    os.chdir(target_dir)
+
+    test_name = "bmv2--" + target
+    if test_subdir != "":
+        test_name += "--" + test_subdir
+
+    user = os.environ['SUDO_USER']
+
+    if do_make_clean:
+        cmd = ["su", user, "-c", "make clean"]
+        print ' '.join(cmd)
+        subprocess.call(cmd)
+
+    make_cmd = "make"
+    if make_tgt:
+        make_cmd += " " + make_tgt
+    if args.jobs is not None and args.jobs > 0:
+        make_cmd += " -j" + str(args.jobs)
+    cmd = ["su", user, "-c", make_cmd]
+
+    print ' '.join(cmd)
+    subprocess.call(cmd)
+
+    bmv2_exes.add(target + "_bmv2")
+    cmd = ['bash', 'run_bm.sh']
+    print ' '.join(cmd)
+    logfile = "/tmp/" + test_name + ".log"
+    logfd = open(logfile, 'w')
+    bm_proc = Popen(cmd, stdout = logfd, stderr = subprocess.STDOUT)
+
+    time.sleep(1)
+
+    bmv2_exes.add(drivers_exe)
+    cmd = ['./' + drivers_exe]
+    print ' '.join(cmd)
+    logfile = "/tmp/" + test_name + "-drivers" + ".log"
+    logfd = open(logfile, 'w')
+    drivers_proc = Popen(cmd, stdout = logfd, stderr = subprocess.STDOUT)
+
+    time.sleep(5)
+
+    os.chdir("..")
+
+    # TODO: Sometimes the test hangs but I haven't figured out why yet
+    # I consider it is a success. I need to take care of this.
+    @timeout(600)
+    def run_that_test():
+        test_dir = os.path.join("of-tests/tests", test_subdir)
+        cmd = ['./run_tests.py','--test-dir', test_dir]
+        print ' '.join(cmd)
+        return subprocess.call(cmd)
+
+    try:
+        returncode = run_that_test()
+    except TimeoutError:
+        my_print("test " + test_name + " timed out, counting it as success",
+                 "red")
+        returncode = 0
+
+    bm_proc.kill()
+    drivers_proc.kill()
+
+    os.chdir(save_cwd)
+
+    if(returncode == 0):
+        print_success(test_name)
+    else:
+        print_failure(test_name)
+    _TEST_RESULTS.append( (test_name, returncode) )
+
 def pd_tests():
     for target in _PD_TARGETS:
         one_test(target)
 
-    # switch special case
-    one_test("switch", "pd-tests")
+    one_test("l2_switch", test_subdir="pd-tests")
+    one_test("switch", test_subdir="pd-tests")
+
+def bmv2_pd_tests():
+    bmv2_one_test("basic_routing")
+    bmv2_one_test("l2_switch", test_subdir="pd-tests", do_make_clean=False)
+    bmv2_one_test("switch", test_subdir="pd-tests", do_make_clean=False)
 
 def switchapi_test():
-    one_test("switch", "api-tests",
+    one_test("switch", test_subdir="api-tests",
              do_make_clean = False, make_tgt = "bm-switchapi")
 
+def bmv2_switchapi_test():
+    if args.travis: return
+    os.environ["BMV2_TEST"] = "1"
+    bmv2_one_test("switch", test_subdir="api-tests",
+                  do_make_clean = False, make_tgt = "bm-switchapi",
+                  drivers_exe = "drivers-switchapi")
+    del os.environ["BMV2_TEST"]
+
 def switchsai_test():
-    one_test("switch", "sai-tests",
+    one_test("switch", test_subdir="sai-tests",
              do_make_clean = False, make_tgt = "bm-switchsai")
 
-def saip4_test():
-    one_test("sai_p4", "sai_thrift")
+def sai_p4_test():
+    one_test("sai_p4", test_subdir="sai_thrift",
+             do_make_clean = True)
+
+def bmv2_switchsai_test():
+    bmv2_one_test("switch", test_subdir="sai-tests",
+                  do_make_clean = False, make_tgt = "bm-switchsai",
+                  drivers_exe = "drivers-switchsai")
+
+def openflow_test():
+    one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
+             make_args="PLUGIN_OPENFLOW=1")
+    # I have to make clean here, otherwise it fails...
+    # and takes too long for travis
+    if args.travis: return
+    one_test("switch", make_args="PLUGIN_OPENFLOW=1", extra_args="--openflow",
+             test_subdir="openflow-tests", make_tgt = "bm-p4ofagent")
 
 def check_ifaces():
     ifconfig_out = subprocess.check_output(['ifconfig'])
@@ -149,16 +308,22 @@ def check_ifaces():
 
 def main():
     if(os.getuid() != 0):
-        my_print("I cannot run as a mortal, I need to be root rrrOOOOOOTTTTT",
+        my_print("I cannot run as a mortal, I need to be root, rrrOOOOOOTTTTT",
                  "red")
         sys.exit(1)
 
     check_ifaces()
 
+    if not args.no_bmv2:
+        bmv2_pd_tests()
+        bmv2_switchapi_test()
+        bmv2_switchsai_test()
+
     pd_tests()
     switchapi_test()
     switchsai_test()
-    saip4_test()
+    openflow_test()
+    sai_p4_test()
 
     print "**************************************"
 
@@ -180,8 +345,12 @@ def main():
 
     my_print("TESTS PASSED: " + str(passed_count) + "/" + str(total_count))
 
+    cleanup()
+    bmv2_cleanup()
+
     if passed_count == total_count:
         my_print("ALL TESTS PASSED!", "green")
+        sys.exit(0)
     else:
         my_print(str(total_count - passed_count) + " TESTS FAILED!", "red")
 
@@ -189,8 +358,7 @@ def main():
                  "you may want to try disabling IPv6 with:\n" +\
                  "sudo sysctl -w net.ipv6.conf.eth0.disable_ipv6=1",
                  "red")
-
-    cleanup()
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

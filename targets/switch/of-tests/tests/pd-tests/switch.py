@@ -136,6 +136,14 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
         client.ipv6_racl_set_default_action_nop(
                                      sess_hdl, dev_tgt)
 
+    mbr_hdl = client.fabric_lag_action_profile_add_member_with_nop(
+        sess_hdl, dev_tgt
+    )
+    client.fabric_lag_set_default_entry(
+        sess_hdl, dev_tgt,
+        mbr_hdl
+    )
+
 def populate_init_entries(client, sess_hdl, dev_tgt):
     match_spec = dc_mac_rewrite_match_spec_t(
                             egress_metadata_smac_idx=rewrite_index,
@@ -1116,7 +1124,7 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         lag_map = set_port_or_lag_bitmap(256, [])
         mgrp_hdl = self.mc.mc_mgrp_create(mc_sess_hdl, 0, mgid)
         node_hdl = self.mc.mc_node_create(mc_sess_hdl, 0, rid, port_map, lag_map)
-        self.mc.mc_associate_node(mc_sess_hdl, mgrp_hdl, node_hdl)
+        self.mc.mc_associate_node(mc_sess_hdl, 0, mgrp_hdl, node_hdl)
 
         pkt = simple_tcp_packet(eth_dst='00:44:44:44:44:44',
                                 eth_src='00:22:22:22:22:22',
@@ -1128,6 +1136,6 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         self.dataplane.send(1, str(pkt))
         verify_packets(self, pkt, [port2, port3, port4])
         time.sleep(1)
-        self.mc.mc_dissociate_node(mc_sess_hdl, mgrp_hdl, node_hdl)
-        self.mc.mc_node_destroy(mc_sess_hdl, node_hdl)
-        self.mc.mc_mgrp_destroy(mc_sess_hdl, mgrp_hdl)
+        self.mc.mc_dissociate_node(mc_sess_hdl, 0, mgrp_hdl, node_hdl)
+        self.mc.mc_node_destroy(mc_sess_hdl, 0, node_hdl)
+        self.mc.mc_mgrp_destroy(mc_sess_hdl, 0, mgrp_hdl)

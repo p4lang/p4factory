@@ -71,7 +71,9 @@ action acl_mirror(session_id) {
     modify_field(i2e_metadata.mirror_session_id, session_id);
     modify_field(i2e_metadata.ingress_tstamp, _ingress_global_tstamp_);
     modify_field(ingress_metadata.enable_dod, 0);
+#ifndef __TARGET_BMV2__
     clone_ingress_pkt_to_egress(session_id, i2e_mirror_info);
+#endif
 }
 
 action acl_redirect_nexthop(nexthop_index) {
@@ -402,7 +404,9 @@ field_list mirror_info {
 
 action negative_mirror(clone_spec, drop_reason) {
     modify_field(ingress_metadata.drop_reason, drop_reason);
+#ifndef __TARGET_BMV2__
     clone_ingress_pkt_to_egress(clone_spec, mirror_info);
+#endif
     drop();
 }
 
@@ -422,7 +426,9 @@ field_list cpu_info {
 
 action copy_to_cpu(reason_code) {
     modify_field(fabric_metadata.reason_code, reason_code);
+#ifndef __TARGET_BMV2__
     clone_ingress_pkt_to_egress(CPU_MIRROR_SESSION_ID, cpu_info);
+#endif
 }
 
 action drop_packet() {
@@ -498,7 +504,9 @@ control process_system_acl {
 #ifndef ACL_DISABLE
 action egress_port_mirror(session_id) {
     modify_field(i2e_metadata.mirror_session_id, session_id);
+#ifndef __TARGET_BMV2__
     clone_egress_pkt_to_egress(session_id, e2e_mirror_info);
+#endif
 }
 
 action egress_port_mirror_drop(session_id) {

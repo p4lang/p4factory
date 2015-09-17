@@ -14,6 +14,7 @@ python-setuptools python-sympy python-yaml redis-server thrift-compiler \
 wireshark
 
 sudo pip install --upgrade thrift
+sudo pip install tenjin
 
 # build thrift from sources
 mkdir install_tmp

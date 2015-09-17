@@ -39,6 +39,7 @@ import pdb
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
+is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
 
 class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
@@ -135,7 +136,9 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
 
 class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
-        print
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Sending packet port 1 -> port 2 (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
@@ -250,6 +253,9 @@ class MirrorSessionTest(api_base_tests.ThriftInterfaceDataPlane):
 
 class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Test e2e Mirror packet port 1 -> port 2 (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
@@ -351,6 +357,9 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
 
 class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Test i2e Erspan Mirror packet port 1 -> port 2 (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)

@@ -1,3 +1,6 @@
 cd submodules/switchapi/ && ./configure "$@" && cd -
 cd submodules/switchsai/ && ./configure "$@" && cd -
 cd submodules/switchlink/ && ./configure "$@" && cd -
+cd submodules/bm/ && ./configure 'CXXFLAGS=-O0 -g' 'CPPFLAGS=-DELOGGER_NANOMSG -DENABLE_SIMPLELOG' && cd -
+cd submodules/p4c-bm/pd_mk/ && ./configure 'CPPFLAGS=-DHOST_BYTE_ORDER_CALLER' --prefix="/bmv2_pd" && cd -
+cd submodules/p4ofagent && ./configure && cd -

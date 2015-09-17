@@ -53,6 +53,7 @@ SWITCHAPI_INC := ${TARGET_ROOT}/p4src/includes
 SWITCHAPI_INC += ${TARGET_ROOT}/build/inc
 SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHAPI_INC += ${C_INCLUDE_PATH}
+SWITCHAPI_INC += ${TARGET_ROOT}
 SWITCHAPI_INC := $(subst $(space),:,$(SWITCHAPI_INC))
 
 SWITCHAPI_LIB := $(SUBMODULE_SWITCHAPI)/libswitchapi.a
@@ -97,6 +98,7 @@ SWITCHSAI_INC += ${TARGET_ROOT}/build/inc
 SWITCHSAI_INC += $(SUBMODULE_SWITCHAPI)/inc
 SWITCHSAI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHSAI_INC += ${C_INCLUDE_PATH}
+SWITCHSAI_INC += ${TARGET_ROOT}
 SWITCHSAI_INC := $(subst $(space),:,$(SWITCHSAI_INC))
 
 SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/libswitchsai.a
@@ -165,6 +167,42 @@ bm-switchlink : GLOBAL_CFLAGS += -DSWITCHLINK_ENABLE=1
 bm-switchlink : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
 bm-switchlink : ${bm-switchlink_BINARY}
 	cp ${bm-switchlink_BINARY} behavioral-model
+
+###################################
+#BUILD P4OFAGENT
+###################################
+P4OFAGENT_LIB := $(SUBMODULE_P4OFAGENT)/libp4ofagent.a
+P4OFAGENT_INC += $(P4FACTORY)/modules/p4utils/module/inc
+P4OFAGENT_INC += $(TARGET_ROOT)/build/inc
+P4OFAGENT_INC += ${C_INCLUDE_PATH}
+P4OFAGENT_INC := $(subst $(space),:,$(P4OFAGENT_INC))
+
+${P4OFAGENT_LIB} : FORCE $(BM_LIB)
+	@${MAKE} -C $(SUBMODULE_P4OFAGENT) p4ofagent C_INCLUDE_PATH=$(P4OFAGENT_INC)
+
+BINARY := bm-p4ofagent
+${BINARY}_LINK_LIBS := $(P4OFAGENT_LIB) $(BM_PLUGIN_LIBS) \
+	$(SWITCHAPI_LIB) ${bm-p4ofagent_LINK_LIBS} ${bm_LINK_LIBS} \
+	${BM_LIB} ${p4utils_LIB} 
+bm-p4ofagent : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
+	-lJudy -lthrift -ledit $(P4OFAGENT_LIB) 
+
+include ${MAKEFILES_DIR}/bin.mk
+ifndef bm-p4ofagent_BINARY
+	$(error Output binary not defined in bm-p4ofagent_BINARY)
+endif
+
+bm-p4ofagent : BM_PARAMS += --plugin of
+bm-p4ofagent : BM_PARAMS += --openflow-mapping-dir $(TARGET_ROOT)/openflow_mapping
+bm-p4ofagent : BM_PARAMS += --openflow-mapping-mod l2
+bm-p4ofagent : export LIB_P4OFAGENT_ENABLE=1
+bm-switchapi : export LIB_SWITCHAPI_ENABLE=1
+bm-p4ofagent : GLOBAL_CFLAGS += -DENABLE_PLUGIN_OPENFLOW
+bm-p4ofagent : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE
+bm-p4ofagent : GLOBAL_CFLAGS += -I$(SUBMODULE_P4OFAGENT)
+bm-p4ofagent : $(BM_LIB) $(SWITCHAPI_LIB) $(P4OFAGENT_LIB) ${GEN_THRIFT_PY_MODULE}
+bm-p4ofagent : ${bm-p4ofagent_BINARY} 
+	cp ${bm-p4ofagent_BINARY} behavioral-model
 
 all: bm
 

@@ -16,3 +16,12 @@
 [submodule "submodules/switchlink"]
 	path = submodules/switchlink
 	url = https://github.com/p4lang/switchlink.git
+[submodule "submodules/p4c-bm"]
+	path = submodules/p4c-bm
+	url = https://github.com/p4lang/p4c-bm.git
+[submodule "submodules/bm"]
+	path = submodules/bm
+	url = https://github.com/p4lang/behavioral-model.git
+[submodule "submodules/p4ofagent"]
+	path = submodules/p4ofagent
+	url = https://github.com/p4lang/p4ofagent

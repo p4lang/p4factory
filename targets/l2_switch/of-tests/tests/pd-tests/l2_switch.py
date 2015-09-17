@@ -1,9 +1,9 @@
-# Copyright 2013-present Barefoot Networks, Inc. 
-# 
+# Copyright 2013-present Barefoot Networks, Inc.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -19,12 +19,22 @@ from oftest.testutils import *
 
 from utils import *
 
+sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
+                             'targets', 'l2_switch', 'of-tests', 'tests',
+                             'openflow-tests')) 
+
+from openflow import repopulate_openflow_defaults
+
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
 
 
 def setup_default_table_configurations(client, sess_hdl, dev_tgt):
     client.clean_all(sess_hdl, dev_tgt)
+    try:
+        repopulate_openflow_defaults(client, sess_hdl, dev_tgt)
+    except AttributeError:
+        print "Not repopulating OF tables, not generated."
 
     result = client.smac_set_default_action_mac_learn(sess_hdl, dev_tgt)
     assert result == 0
@@ -44,7 +54,7 @@ def setup_pre(mc, sess_hdl, dev_tgt):
     node_hdl = mc.mc_node_create(sess_hdl, dev_tgt.dev_id, 0,
                                  bytes_to_string(port_map),
                                  bytes_to_string(lag_map))
-    mc.mc_associate_node(sess_hdl, mgrp_hdl, node_hdl)
+    mc.mc_associate_node(sess_hdl, dev_tgt.dev_id, mgrp_hdl, node_hdl)
 
 
 class SimpleReplicationTest(pd_base_tests.ThriftInterfaceDataPlane):

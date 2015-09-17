@@ -54,6 +54,10 @@ to program the softswitch,
 
     make bm-switchlink
 
+To build the softswitch with an Openflow Agent,
+
+    make bm-p4ofagent PLUGIN_OPENFLOW=1
+
 To build the docker-image for a target, set the variable DOCKER_IMAGE in the
 file 'Makefile' to the appropriate target name and run the following command.
 By default, DOCKER_IMAGE is set to 'bm-switchlink'.
@@ -63,9 +67,9 @@ By default, DOCKER_IMAGE is set to 'bm-switchlink'.
 Invoking make without an explicit target builds the softswitch with only the
 auto-generated API (make bm).
 
-For details on the features supported by switchapi, switchsai, and switchlink
-libraries, please refer to the README.md file in the switchapi, switchsai, and
-switchlink repositories respectively.
+For details on the features supported by switchapi, switchsai, switchlink, and p4ofagent
+libraries, please refer to the README.md file in the switchapi, switchsai, switchlink,
+and p4ofagent repositories, respectively.
 
 Running Tests
 -------------
@@ -121,3 +125,14 @@ To run switchlink testcases,
 The switchlink testcases have been verified with docker version 1.7.0 and
 Mininet version 2.2.1 running on Ubuntu 14.04.
 
+To run the Openflow testcases,
+
+    sudo ./run_tests.py --openflow --test-dir of-tests/tests/openflow-tests
+
+Trying it with bmv2
+========
+
+As explained at the end of the [p4factory README](../../README.md), we are
+currently working on a new version of the behavioral model, which will
+eventually deprecate the original code. To try this code with the switch.p4
+target, follow the instructions in [bmv2/README](bmv2/README.md).
