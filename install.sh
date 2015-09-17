@@ -30,6 +30,16 @@ sudo make install
 sudo ldconfig
 cd ..
 
+# Install libnanomsg
+wget -c http://download.nanomsg.org/nanomsg-0.5-beta.tar.gz
+tar zxvf nanomsg-0.5-beta.tar.gz
+cd nanomsg-0.5-beta
+./configure
+make -j4
+sudo make install
+sudo ldconfig
+cd ..
+
 # Install high level interpreter and scapy
 
 git clone https://github.com/p4lang/p4-hlir.git
