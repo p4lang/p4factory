@@ -7,7 +7,7 @@ The P4 program does the following:
 - the original packet is dropped in the egress pipeline
 
 Take a look at `p4src/copy_to_cpu.p4`. The program is very short and should be easy to understand.
-You will notice that we use a mirror session id of `250` in the program. This number is not relevant in itself, but needs to consistent between the P4 program and the runtime application.
+You will notice that we use a mirror session id of `250` in the program. This number is not relevant in itself, but needs to be consistent between the P4 program and the runtime application.
 
 You can compile the P4 program with `make bm` as always.
 
@@ -20,6 +20,6 @@ To run the demo:
 - start the switch: `sudo ./behavioral-model`
 - configure the tables and the mirroring session: `python add_demo_entries.py`
 - start the CPU port listener: `sudo python receive.py`
-- send packets with `sudo python send_one.py`. Every time you send one pakcet, it should be displayed by the listener, encapsulated with our CPU header.
+- send packets with `sudo python send_one.py`. Every time you send one packet, it should be displayed by the listener, encapsulated with our CPU header.
 
 This is a very simple example obviously. Feel free to build upon it. For example, instead of dropping the original packet, you could try to broadcast it out of every non-ingress port to have a working L2 switch. You could also build a L2 controller which receives CPU packets and modifies tables appropriately.
