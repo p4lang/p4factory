@@ -1,4 +1,20 @@
 /*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/*
  * ACL processing : MAC, IPv4, IPv6, RACL/PBR
  * Qos processing
  */
@@ -396,30 +412,39 @@ control process_ipv6_racl {
 /*****************************************************************************/
 /* System ACL                                                                */
 /*****************************************************************************/
+counter drop_stats {
+    type : packets;
+    instance_count : DROP_STATS_TABLE_SIZE;
+}
+
+counter drop_stats_2 {
+    type : packets;
+    instance_count : DROP_STATS_TABLE_SIZE;
+}
+
 field_list mirror_info {
     ingress_metadata.ifindex;
     ingress_metadata.drop_reason;
     l3_metadata.lkp_ip_ttl;
 }
 
-action negative_mirror(clone_spec, drop_reason) {
-    modify_field(ingress_metadata.drop_reason, drop_reason);
+action negative_mirror(session_id) {
 #ifndef __TARGET_BMV2__
-    clone_ingress_pkt_to_egress(clone_spec, mirror_info);
+    clone_ingress_pkt_to_egress(session_id, mirror_info);
 #endif
     drop();
 }
 
 action redirect_to_cpu(reason_code) {
-    modify_field(standard_metadata.egress_spec, CPU_PORT_ID);
-    modify_field(intrinsic_metadata.mcast_grp, 0);
-    modify_field(fabric_metadata.reason_code, reason_code);
+    copy_to_cpu(reason_code);
+    drop();
 #ifdef FABRIC_ENABLE
     modify_field(fabric_metadata.dst_device, 0);
 #endif /* FABRIC_ENABLE */
 }
 
 field_list cpu_info {
+    ingress_metadata.bd;
     ingress_metadata.ifindex;
     fabric_metadata.reason_code;
 }
@@ -432,6 +457,11 @@ action copy_to_cpu(reason_code) {
 }
 
 action drop_packet() {
+    drop();
+}
+
+action drop_packet_with_reason(drop_reason) {
+    count(drop_stats, drop_reason);
     drop();
 }
 
@@ -457,10 +487,12 @@ table system_acl {
         ingress_metadata.ifindex : ternary;
 
         /* drop reasons */
+        l2_metadata.port_vlan_mapping_miss : ternary;
         security_metadata.ipsg_check_fail : ternary;
         acl_metadata.acl_deny : ternary;
         acl_metadata.racl_deny: ternary;
         l3_metadata.urpf_check_fail : ternary;
+        ingress_metadata.drop_flag : ternary;
 
         l3_metadata.rmac_hit : ternary;
 
@@ -470,6 +502,8 @@ table system_acl {
          */
         l3_metadata.routed : ternary;
         ipv6_metadata.ipv6_src_is_link_local : ternary;
+        l2_metadata.same_if_check : ternary;
+        tunnel_metadata.tunnel_if_check : ternary;
         l3_metadata.same_bd_check : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
         l2_metadata.stp_state : ternary;
@@ -477,7 +511,7 @@ table system_acl {
         ipv4_metadata.ipv4_unicast_enabled : ternary;
 
         /* egress information */
-        standard_metadata.egress_spec : ternary;
+        ingress_metadata.egress_ifindex : ternary;
 
         /* deflect on drop (-ve mirror) */
         ingress_metadata.enable_dod: ternary;
@@ -487,14 +521,29 @@ table system_acl {
         redirect_to_cpu;
         copy_to_cpu;
         drop_packet;
+        drop_packet_with_reason;
         negative_mirror;
         congestion_mirror_set;
     }
     size : SYSTEM_ACL_SIZE;
 }
 
+action drop_stats_update() {
+    count(drop_stats_2, ingress_metadata.drop_reason);
+}
+
+table drop_stats {
+    actions {
+        drop_stats_update;
+    }
+    size : DROP_STATS_TABLE_SIZE;
+}
+
 control process_system_acl {
     apply(system_acl);
+    if (ingress_metadata.drop_flag == TRUE) {
+        apply(drop_stats);
+    }
 }
 
 
@@ -516,8 +565,8 @@ action egress_port_mirror_drop(session_id) {
 
 table egress_acl {
     reads {
-        standard_metadata.egress_port : exact;
-        intrinsic_metadata.deflection_flag : exact;
+        standard_metadata.egress_port : ternary;
+        intrinsic_metadata.deflection_flag : ternary;
     }
     actions {
         nop;

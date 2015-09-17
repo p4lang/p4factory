@@ -38,9 +38,12 @@ export P4_INPUT := p4src/switch.p4
 export P4_NAME := switch
 export P4_PREFIX := dc
 
+export TARGET_PARAMS := -DRATE_LIMITING
+
 SUBMODULES_CLEAN := $(SUBMODULE_SWITCHAPI)
 SUBMODULES_CLEAN += $(SUBMODULE_SWITCHSAI)
 SUBMODULES_CLEAN += $(SUBMODULE_SWITCHLINK)
+SUBMODULES_CLEAN += $(SUBMODULE_P4OFAGENT)
 
 include ${MAKEFILES_DIR}/common.mk
 DOCKER_IMAGE := bm-switchlink
@@ -53,14 +56,13 @@ SWITCHAPI_INC := ${TARGET_ROOT}/p4src/includes
 SWITCHAPI_INC += ${TARGET_ROOT}/build/inc
 SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHAPI_INC += ${C_INCLUDE_PATH}
-SWITCHAPI_INC += ${TARGET_ROOT}
 SWITCHAPI_INC := $(subst $(space),:,$(SWITCHAPI_INC))
 
 SWITCHAPI_LIB := $(SUBMODULE_SWITCHAPI)/libswitchapi.a
 SWITCHAPI_SRC_DIR := $(SUBMODULE_SWITCHAPI)/src
 ${SWITCHAPI_LIB} : FORCE $(BM_LIB)
 	@${MAKE} -C $(SUBMODULE_SWITCHAPI) C_INCLUDE_PATH=$(SWITCHAPI_INC) \
-		CPLUS_INCLUDE_PATH=$(SWITCHAPI_INC)
+		CPLUS_INCLUDE_PATH=$(SWITCHAPI_INC) CFLAGS="$(GLOBAL_CFLAGS)"
 
 BINARY := bm-switchapi
 ${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} ${bm_LINK_LIBS} ${BM_LIB} ${p4utils_LIB}
@@ -85,7 +87,7 @@ switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
 	@cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
 bm-switchapi : export LIB_SWITCHAPI_ENABLE=1
-bm-switchapi : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
+bm-switchapi : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1 ${TARGET_PARAMS}
 bm-switchapi : $(BM_LIB) $(SWITCHAPI_LIB)
 bm-switchapi : ${bm-switchapi_BINARY} switchapi_THRIFT
 	cp ${bm-switchapi_BINARY} behavioral-model
@@ -98,13 +100,13 @@ SWITCHSAI_INC += ${TARGET_ROOT}/build/inc
 SWITCHSAI_INC += $(SUBMODULE_SWITCHAPI)/inc
 SWITCHSAI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHSAI_INC += ${C_INCLUDE_PATH}
-SWITCHSAI_INC += ${TARGET_ROOT}
 SWITCHSAI_INC := $(subst $(space),:,$(SWITCHSAI_INC))
 
 SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/libswitchsai.a
 SWITCHSAI_SRC_DIR := $(SUBMODULE_SWITCHSAI)/src
 ${SWITCHSAI_LIB} : FORCE $(BM_LIB)
-	@${MAKE} -C $(SUBMODULE_SWITCHSAI) C_INCLUDE_PATH=$(SWITCHSAI_INC)
+	@${MAKE} -C $(SUBMODULE_SWITCHSAI) libswitchsai.a \
+		AM_CPPFLAGS=-DSAI_BMLIB C_INCLUDE_PATH=$(SWITCHSAI_INC)
 
 BINARY := bm-switchsai
 ${BINARY}_LINK_LIBS := ${bm-switchapi_LINK_LIBS} ${SWITCHSAI_LIB}
@@ -133,7 +135,7 @@ switchsai_THRIFT : ${GEN_THRIFT_PY_MODULE}
 
 bm-switchsai : export LIB_SWITCHSAI_ENABLE=1
 bm-switchsai : export LIB_SWITCHAPI_ENABLE=1
-bm-switchsai : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
+bm-switchsai : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1 ${TARGET_PARAMS}
 bm-switchsai : GLOBAL_CFLAGS += -DSWITCHSAI_ENABLE=1
 bm-switchsai : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
 bm-switchsai : ${bm-switchsai_BINARY} switchsai_THRIFT
@@ -161,11 +163,11 @@ endif
 
 bm-switchlink : export LIB_SWITCHSAI_ENABLE=1
 bm-switchlink : export LIB_SWITCHAPI_ENABLE=1
-bm-switchlink : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1
+bm-switchlink : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1 ${TARGET_PARAMS}
 bm-switchlink : GLOBAL_CFLAGS += -DSWITCHSAI_ENABLE=1
 bm-switchlink : GLOBAL_CFLAGS += -DSWITCHLINK_ENABLE=1
-bm-switchlink : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
-bm-switchlink : ${bm-switchlink_BINARY}
+bm-switchlink : $(BM_LIB) $(SWITCHAPI_LIB) $(SWITCHSAI_LIB) switchsai_THRIFT
+bm-switchlink : ${bm-switchlink_BINARY} 
 	cp ${bm-switchlink_BINARY} behavioral-model
 
 ###################################
@@ -206,4 +208,4 @@ bm-p4ofagent : ${bm-p4ofagent_BINARY}
 
 all: bm
 
-.PHONY: bm-switchapi bm-switchsai bm-switchlink FORCE
+.PHONY: bm-switchapi bm-switchsai bm-switchlink bm-p4ofagent FORCE

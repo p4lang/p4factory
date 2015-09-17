@@ -26,13 +26,14 @@ limitations under the License.
 
 #define FABRIC_ENABLE
 #define EGRESS_FILTER
+#define INT_TRANSIT_ENABLE
+
+#define OPENFLOW_ENABLE
 
 // Defines for switchapi library
 #ifdef URPF_DISABLE
 #define P4_URPF_DISABLE
 #endif
-
-#define OPENFLOW_ENABLE
 
 #ifdef IPV6_DISABLE
 #define P4_IPV6_DISABLE
@@ -92,4 +93,10 @@ limitations under the License.
 
 #ifdef EGRESS_FILTER
 #define P4_EGRESS_FILTER
+#endif
+
+#ifdef INT_TRANSIT_ENABLE
+#define P4_INT_TRANSIT_ENABLE
+#define INT_ENABLE
+#define P4_INT_ENABLE
 #endif

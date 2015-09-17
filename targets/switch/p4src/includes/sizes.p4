@@ -1,3 +1,19 @@
+/*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 
 #ifdef MIN_PROFILE
 #define MIN_SRAM_TABLE_SIZE                    1024
@@ -71,6 +87,9 @@
 #define TUNNEL_DMAC_REWRITE_TABLE_SIZE         MIN_SRAM_TABLE_SIZE
 #define MIRROR_SESSIONS_TABLE_SIZE             MIN_SRAM_TABLE_SIZE
 #define MIRROR_COALESCING_SESSIONS_TABLE_SIZE  MIN_SRAM_TABLE_SIZE
+#define DROP_STATS_TABLE_SIZE                  MIN_SRAM_TABLE_SIZE
+#define INT_UNDERLAY_ENCAP_TABLE_SIZE          8
+
 
 #else
 
@@ -87,14 +106,13 @@
 #define VNID_MAPPING_TABLE_SIZE                16384
 #define BD_TABLE_SIZE                          16384
 #define BD_FLOOD_TABLE_SIZE                    49152
-#define BD_STATS_TABLE_SIZE                    49152
+#define BD_STATS_TABLE_SIZE                    16384
 #define OUTER_MCAST_RPF_TABLE_SIZE             512
 #define MPLS_TABLE_SIZE                        4096
 #define VALIDATE_MPLS_TABLE_SIZE               512
 
 #define ROUTER_MAC_TABLE_SIZE                  512
-#define DMAC_TABLE_SIZE                        65536
-#define SMAC_TABLE_SIZE                        65536
+#define MAC_TABLE_SIZE                         65536
 #define IPSG_TABLE_SIZE                        8192
 #define IPSG_PERMIT_SPECIAL_TABLE_SIZE         512
 #define INGRESS_MAC_ACL_TABLE_SIZE             512
@@ -121,7 +139,7 @@
 #define URPF_GROUP_TABLE_SIZE                  32768
 #define ECMP_GROUP_TABLE_SIZE                  1024
 #define ECMP_SELECT_TABLE_SIZE                 16384
-#define NEXTHOP_TABLE_SIZE                     65536
+#define NEXTHOP_TABLE_SIZE                     49152
 #define LAG_GROUP_TABLE_SIZE                   1024
 #define LAG_SELECT_TABLE_SIZE                  1024
 #define SYSTEM_ACL_SIZE                        512
@@ -131,7 +149,7 @@
 #define EGRESS_VNID_MAPPING_TABLE_SIZE         16384
 #define EGRESS_BD_MAPPING_TABLE_SIZE           16384
 #define REPLICA_TYPE_TABLE_SIZE                16
-#define RID_TABLE_SIZE                         65536
+#define RID_TABLE_SIZE                         49152
 #define TUNNEL_DECAP_TABLE_SIZE                512
 #define IP_MTU_TABLE_SIZE                      512
 #define EGRESS_VLAN_XLATE_TABLE_SIZE           32768
@@ -146,5 +164,9 @@
 
 #define MIRROR_SESSIONS_TABLE_SIZE             1024
 #define MIRROR_COALESCING_SESSIONS_TABLE_SIZE  8
+
+#define DROP_STATS_TABLE_SIZE                  256
+
+#define INT_UNDERLAY_ENCAP_TABLE_SIZE          8
 
 #endif
