@@ -28,7 +28,7 @@ if __name__ == "__main__":
     if "--openflow" in sys.argv:
         sys.argv.remove("--openflow")
         args =  ["-S 127.0.0.1", "-V1.3"]
-        args += ["--interface", "9@veth1"]
+        args += ["--interface", "0@veth1"]
         args += ["--interface", "2@veth5"]
         args += ["--interface", "3@veth7"]
         args += ["--interface", "4@veth9"]

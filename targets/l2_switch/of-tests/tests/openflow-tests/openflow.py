@@ -142,14 +142,7 @@ def repopulate_openflow_defaults(client, sess_hdl, dev_tgt):
     result = client.ofpat_group_egress_set_default_action_nop(
         sess_hdl, dev_tgt)
 
-class Output(openflow_base_tests.OFTestInterface):
-    """
-    Fowards a packet, relies on PDSetup being run first
-    """
-    def __init__(self):
-        openflow_base_tests.OFTestInterface.__init__(self, "l2_switch")
-
-    def runTest(self):
+def setup(self):
         sess_hdl = self.conn_mgr.client_init(16)
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
@@ -159,6 +152,16 @@ class Output(openflow_base_tests.OFTestInterface):
         setup_pre(self.mc, sess_hdl, dev_tgt)
 
         repopulate_openflow_defaults(self.client, sess_hdl, dev_tgt)
+
+class Output(openflow_base_tests.OFTestInterface):
+    """
+    Fowards a packet, relies on PDSetup being run first
+    """
+    def __init__(self):
+        openflow_base_tests.OFTestInterface.__init__(self, "l2_switch")
+
+    def runTest(self):
+        setup(self)
 
         ports = sorted(config["port_map"].keys())
         table, out_port = openflow_tables["dmac"], ports[1]
@@ -182,5 +185,39 @@ class Output(openflow_base_tests.OFTestInterface):
         verify_packet(self, exp_pkt, out_port)
 
         req = flow_delete(cookie=41, table_id=0)
+        self.controller.message_send(req)
+        do_barrier(self.controller)
+
+class PacketIn(openflow_base_tests.OFTestInterface):
+    """
+    """
+    def __init__(self):
+        openflow_base_tests.OFTestInterface.__init__(self, "l2_switch")
+
+    def runTest(self):
+        setup(self)
+
+        ports = sorted(config["port_map"].keys())
+        in_port = ports[0]
+
+        table = openflow_tables["dmac"]
+        table.match_fields[eth_dst_addr].testval = "00:01:02:03:04:05"
+        pkt, match = get_match(table.match_fields)
+
+        output = {
+            "OUTPUT": ofp.const.OFPP_CONTROLLER 
+        }
+
+        instr = get_apply_actions(output)
+        req = flow_add(table_id=table.id, match=match, instructions=instr,
+                       buffer_id=buf, priority=1, cookie=42)
+        self.controller.message_send(req)
+        do_barrier(self.controller)
+
+        self.dataplane.send(in_port, pkt)
+        verify_packet_in(self, str(pkt), in_port, ofp.const.OFPR_ACTION,
+                         controller=self.controller)
+
+        req = flow_delete(cookie=42, table_id=0)
         self.controller.message_send(req)
         do_barrier(self.controller)

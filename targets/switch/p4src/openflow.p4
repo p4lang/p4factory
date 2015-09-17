@@ -102,20 +102,11 @@ action openflow_apply(bmap, index, group_id) {
 //    modify_field(egress_metadata.bypass, TRUE);
 }
 
-action openflow_miss(reason) { //, table_id) {
-    add_header (fabric_payload_header);
-    modify_field(fabric_payload_header.etherType, ethernet.etherType);
+action openflow_miss(reason, table_id) {
+    modify_field(fabric_metadata.reason_code, reason);
 
-    add_header (fabric_header_cpu);
-    modify_field(fabric_header_cpu.reasonCode, reason);
-
-    add_header (fabric_header);
-    modify_field(fabric_header.dstPortOrGroup, CPU_PORT_ID);
-    modify_field(fabric_header.ingressIfindex, standard_metadata.ingress_port);
-
-//    shift_left(fabric_metadata.reason_code, fabric_metadata.reason_code, 16);
-//    bit_or(fabric_metadata.reason_code, fabric_metadata.reason_code, table_id);
-//    modify_field(fabric_header_cpu.reserved, table_id);
+    shift_left(fabric_metadata.reason_code, fabric_metadata.reason_code, 8);
+    bit_or(fabric_metadata.reason_code, fabric_metadata.reason_code, table_id);
 
     modify_field(standard_metadata.egress_spec, CPU_PORT_ID);
 }
