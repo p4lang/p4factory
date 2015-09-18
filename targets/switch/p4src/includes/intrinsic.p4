@@ -69,3 +69,7 @@ action deflect_on_drop() {
 #define pkt_is_mirrored \
     ((standard_metadata.instance_type != PKT_INSTANCE_TYPE_NORMAL) and \
      (standard_metadata.instance_type != PKT_INSTANCE_TYPE_REPLICATION))
+
+#define pkt_is_not_mirrored \
+    ((standard_metadata.instance_type == PKT_INSTANCE_TYPE_NORMAL) or \
+     (standard_metadata.instance_type == PKT_INSTANCE_TYPE_REPLICATION))

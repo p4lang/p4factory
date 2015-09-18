@@ -1,5 +1,5 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc.
+Copyright 2013-present Barefoot Networks, Inc. 
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,16 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#ifdef BASIC_PROFILE
-#define MIN_PROFILE
-#define MULTICAST_DISABLE
-#define STORM_CONTROL_DISABLE
-#define IPSG_DISABLE
-#define ACL_DISABLE
-#define QOS_DISABLE
-#define MTU_DISABLE
-#endif
 
 #define FABRIC_ENABLE
 #define EGRESS_FILTER
@@ -65,10 +55,6 @@ limitations under the License.
 
 #ifdef QOS_DISABLE
 #define P4_QOS_DISABLE
-#endif
-
-#ifdef MTU_DISABLE
-#define P4_MTU_DISABLE
 #endif
 
 #ifdef STP_DISABLE

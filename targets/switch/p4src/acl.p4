@@ -172,11 +172,6 @@ table ip_acl {
         l3_metadata.lkp_l4_sport : ternary;
         l3_metadata.lkp_l4_dport : ternary;
 
-        l3_metadata.lkp_icmp_type: ternary;
-        l3_metadata.lkp_icmp_code: ternary;
-
-        l2_metadata.lkp_mac_type : ternary;
-
         tcp.flags : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
     }
@@ -216,11 +211,6 @@ table ipv6_acl {
         l3_metadata.lkp_ip_proto : ternary;
         l3_metadata.lkp_l4_sport : ternary;
         l3_metadata.lkp_l4_dport : ternary;
-
-        l3_metadata.lkp_icmp_type : ternary;
-        l3_metadata.lkp_icmp_code : ternary;
-
-        l2_metadata.lkp_mac_type : ternary;
 
         tcp.flags : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
@@ -425,7 +415,6 @@ counter drop_stats_2 {
 field_list mirror_info {
     ingress_metadata.ifindex;
     ingress_metadata.drop_reason;
-    l3_metadata.lkp_ip_ttl;
 }
 
 action negative_mirror(session_id) {

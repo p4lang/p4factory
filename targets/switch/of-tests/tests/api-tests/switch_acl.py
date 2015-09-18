@@ -40,18 +40,19 @@ import pdb
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
 is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
+swports = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
-        print "Sending packet port 1 -> port 2 (192.168.0.1 -> 10.0.0.1 [id = 101])"
+        print "Sending packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
 
         rmac = self.client.switcht_api_router_mac_group_create(0)
         self.client.switcht_api_router_mac_add(0, rmac, '00:77:66:55:44:33')
 
-        iu1 = interface_union(port_lag_handle = 1)
+        iu1 = interface_union(port_lag_handle = swports[1])
         i_info1 = switcht_interface_info_t(device=0, type=4, u=iu1, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if1 = self.client.switcht_api_interface_create(0, i_info1)
         i_ip1 = switcht_ip_addr_t(ipaddr='192.168.0.2', prefix_length=16)
@@ -92,7 +93,7 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 #ip_tos=3,
                                 ip_ttl=63)
-        verify_packets(self, exp_pkt, [2])
+        verify_packets(self, exp_pkt, [swports[2]])
 
 
         # setup a deny ACL to verify that the same packet does not make it
@@ -109,7 +110,7 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
 
         # check for absence of packet here!
         try:
-            verify_packets(self, exp_pkt, [2])
+            verify_packets(self, exp_pkt, [swports[2]])
             print 'FAILED - did not expect packet'
         except:
             print 'Success'
@@ -139,14 +140,15 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
         if is_bmv2:
             print "BMV2_TEST == 1 => test skipped"
             return
-        print "Sending packet port 1 -> port 2 (192.168.0.1 -> 10.0.0.1 [id = 101])"
+        print
+        print "Sending packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
 
         rmac = self.client.switcht_api_router_mac_group_create(device=0)
         self.client.switcht_api_router_mac_add(0, rmac, '00:77:66:55:44:33')
 
-        iu1 = interface_union(port_lag_handle = 1)
+        iu1 = interface_union(port_lag_handle = swports[1])
         i_info1 = switcht_interface_info_t(device=0, type=4, u=iu1, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if1 = self.client.switcht_api_interface_create(0, i_info1)
         i_ip1 = switcht_ip_addr_t(ipaddr='192.168.0.2', prefix_length=16)
@@ -187,7 +189,15 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 #ip_tos=3,
                                 ip_ttl=63)
-        verify_packets(self, exp_pkt, [2])
+        verify_packets(self, exp_pkt, [swports[2]])
+
+        # create a mirror session
+        minfo1 = switcht_mirror_info_t(session_id=1, direction=1,
+                                      egress_port=4, mirror_type=0,
+                                      session_type=0,
+                                      cos=0, max_pkt_len=0,
+                                      ttl=0, enable=1, nhop_handle=0)
+        mirror1 = self.client.switcht_api_mirror_session_create(0, minfo1)
 
         # setup a Mirror acl
         # ip acl
@@ -197,26 +207,23 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
         kvp = []
         kvp.append(switcht_acl_ip_key_value_pair_t(1, int("0a0a0a01", 16), int("ffffffff", 16)))
         action = 9
-        action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(clone_spec = 1))
+        action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(mirror_handle=mirror1))
         ace = self.client.switcht_api_acl_ip_rule_create(0, acl, 10, 1, kvp, action, action_param)
         self.client.switcht_api_acl_reference(0, acl, if1)
 
-        # create a mirror session
-        self.client.switcht_mirror_session_create(0, 1, 1, 4, 0, 0, 0, 0)
-
         # send the test packet(s)
         self.dataplane.send(1, str(pkt))
-        verify_packet(self, exp_pkt, 2)
+        verify_packet(self, exp_pkt, swports[2])
         # verify mirrored packet
-        verify_packet(self, pkt, 4)
+        verify_packet(self, pkt, swports[4])
         verify_no_other_packets(self)
 
         # delete the mirror sesion
         print "Delete Mirror ACL"
-        self.client.switcht_mirror_session_delete(0, 1)
+        self.client.switcht_api_mirror_session_delete(0, mirror1)
         # clean-up test, make sure pkt is not mirrored after session is deleted
         self.dataplane.send(1, str(pkt))
-        verify_packet(self, exp_pkt, 2)
+        verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
         # ip_acl cleanup
         self.client.switcht_api_acl_remove(0, acl, if1)
@@ -241,35 +248,47 @@ class MirrorSessionTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         self.client.switcht_api_init(0)
         print "create mirror sessions"
-        self.client.switcht_mirror_session_create(0, 1, 1, 3, 0, 0, 0, 0)
-        self.client.switcht_mirror_session_create(0, 101, 2, 3, 0, 0, 0, 0)
-        self.client.switcht_mirror_session_create(0, 201, 3, 3, 0, 0, 0, 0)
+        minfo1 = switcht_mirror_info_t(session_id=1, direction=1,
+                                      egress_port=3, mirror_type=0,
+                                      session_type=0,
+                                      cos=0, max_pkt_len=0,
+                                      ttl=0, enable=1, nhop_handle=0)
+        mirror1 = self.client.switcht_api_mirror_session_create(0, minfo1)
+        minfo2 = switcht_mirror_info_t(session_id=101, direction=2,
+                                      egress_port=3, mirror_type=0,
+                                      session_type=0,
+                                      cos=0, max_pkt_len=0,
+                                      ttl=0, enable=1, nhop_handle=0)
+        mirror2 = self.client.switcht_api_mirror_session_create(0, minfo2)
+        minfo3 = switcht_mirror_info_t(session_id=201, direction=3,
+                                      egress_port=3, mirror_type=0,
+                                      session_type=0,
+                                      cos=0, max_pkt_len=0,
+                                      ttl=0, enable=1, nhop_handle=0)
+        mirror3 = self.client.switcht_api_mirror_session_create(0, minfo3)
         print "delete mirror sessions"
-        self.client.switcht_mirror_session_delete(0, 1)
-        self.client.switcht_mirror_session_delete(0, 101)
-        self.client.switcht_mirror_session_delete(0, 201)
+        self.client.switcht_api_mirror_session_delete(0, mirror1)
+        self.client.switcht_api_mirror_session_delete(0, mirror2)
+        self.client.switcht_api_mirror_session_delete(0, mirror3)
         # delete again -ve test
-        self.client.switcht_mirror_session_delete(0, 201)
+        self.client.switcht_api_mirror_session_delete(0, mirror3)
 
 class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
-        if is_bmv2:
-            print "BMV2_TEST == 1 => test skipped"
-            return
-        print "Test e2e Mirror packet port 1 -> port 2 (192.168.0.1 -> 10.0.0.1 [id = 101])"
+        print "Test e2e Mirror packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
 
         rmac = self.client.switcht_api_router_mac_group_create(device=0)
         self.client.switcht_api_router_mac_add(0, rmac, '00:77:66:55:44:33')
 
-        iu1 = interface_union(port_lag_handle = 1)
+        iu1 = interface_union(port_lag_handle = swports[1])
         i_info1 = switcht_interface_info_t(device=0, type=4, u=iu1, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if1 = self.client.switcht_api_interface_create(0, i_info1)
         i_ip1 = switcht_ip_addr_t(ipaddr='192.168.0.2', prefix_length=16)
         self.client.switcht_api_l3_interface_address_add(0, if1, vrf, i_ip1)
 
-        iu2 = interface_union(port_lag_handle = 2)
+        iu2 = interface_union(port_lag_handle = swports[2])
         i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if2 = self.client.switcht_api_interface_create(0, i_info2)
         i_ip2 = switcht_ip_addr_t(ipaddr='10.0.0.2', prefix_length=16)
@@ -304,7 +323,12 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
                                 #ip_tos=3,
                                 ip_ttl=63)
         # create a mirror session
-        self.client.switcht_mirror_session_create(0, 1, 2, 4, 0, 0, 0, 0)
+        minfo1 = switcht_mirror_info_t(session_id=1, direction=2,
+                                      egress_port=4, mirror_type=0,
+                                      session_type=0,
+                                      cos=0, max_pkt_len=0,
+                                      ttl=0, enable=1, nhop_handle=0)
+        mirror1 = self.client.switcht_api_mirror_session_create(0, minfo1)
 
         # setup a egress Mirror acl
         print "Create Egress Mirror ACL to mirror e2e from 2->4"
@@ -314,27 +338,32 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
         kvp.append(switcht_acl_egr_port_key_value_pair_t(field=0, value=2, mask=-1))
         kvp.append(switcht_acl_egr_port_key_value_pair_t(field=1, value=0, mask=-1))
         action = 1
-        action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(clone_spec = 1))
+        action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(mirror_handle=mirror1))
         ace = self.client.switcht_api_acl_egr_port_rule_create(0, acl, 11, 1, kvp, action, action_param)
         self.client.switcht_api_acl_reference(0, acl, if2)
         self.dataplane.send(1, str(pkt))
-        verify_packet(self, exp_pkt, 2)
+        verify_packet(self, exp_pkt, swports[2])
         # verify mirrored packet
-        verify_packet(self, exp_pkt, 4)
+        verify_packet(self, exp_pkt, swports[4])
         verify_no_other_packets(self)
 
         # update the mirror sesion to different port
         print "Update Egress Mirror Session's egr_port to 3 and test packet again"
-        self.client.switcht_mirror_session_update(0, 1, 2, 3, 0, 0, 0, 0, 1)
+        minfo1 = switcht_mirror_info_t(session_id=1, direction=2,
+                                      egress_port=3, mirror_type=0,
+                                      session_type=0,
+                                      cos=0, max_pkt_len=0,
+                                      ttl=0, enable=1, nhop_handle=0)
+        self.client.switcht_api_mirror_session_update(0, mirror1, minfo1)
         self.dataplane.send(1, str(pkt))
-        verify_packet(self, exp_pkt, 2)
-        verify_packet(self, exp_pkt, 3)
+        verify_packet(self, exp_pkt, swports[2])
+        verify_packet(self, exp_pkt, swports[3])
         verify_no_other_packets(self)
         print "Delete Mirror Session"
-        self.client.switcht_mirror_session_delete(0, 1)
+        self.client.switcht_api_mirror_session_delete(0, mirror1)
         # clean-up test, make sure pkt is not mirrored after session is deleted
         self.dataplane.send(1, str(pkt))
-        verify_packet(self, exp_pkt, 2)
+        verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
         # ip_acl cleanup
         self.client.switcht_api_acl_remove(0, acl, if2)
@@ -357,23 +386,20 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
 
 class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
-        if is_bmv2:
-            print "BMV2_TEST == 1 => test skipped"
-            return
-        print "Test i2e Erspan Mirror packet port 1 -> port 2 (192.168.0.1 -> 10.0.0.1 [id = 101])"
+        print "Test i2e Erspan Mirror packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
 
         rmac = self.client.switcht_api_router_mac_group_create(device=0)
         self.client.switcht_api_router_mac_add(0, rmac, '00:77:66:55:44:33')
 
-        iu1 = interface_union(port_lag_handle = 1)
+        iu1 = interface_union(port_lag_handle = swports[1])
         i_info1 = switcht_interface_info_t(device=0, type=4, u=iu1, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if1 = self.client.switcht_api_interface_create(0, i_info1)
         i_ip1 = switcht_ip_addr_t(ipaddr='192.168.0.2', prefix_length=16)
         self.client.switcht_api_l3_interface_address_add(0, if1, vrf, i_ip1)
 
-        iu2 = interface_union(port_lag_handle = 2)
+        iu2 = interface_union(port_lag_handle = swports[2])
         i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if2 = self.client.switcht_api_interface_create(0, i_info2)
         i_ip2 = switcht_ip_addr_t(ipaddr='10.0.0.2', prefix_length=16)
@@ -408,20 +434,6 @@ class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
                                 #ip_tos=3,
                                 ip_ttl=63)
 
-        print "Create Mirror ACL to mirror i2e from 1->4"
-        acl = self.client.switcht_api_acl_list_create(0, 0)
-        # create kvp to match destination IP
-        kvp = []
-        kvp.append(switcht_acl_ip_key_value_pair_t(1, int("0a0a0a01", 16), int("ffffffff", 16)))
-        action = 9
-        action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(clone_spec = 85))
-        ace = self.client.switcht_api_acl_ip_rule_create(0, acl, 10, 1, kvp, action, action_param)
-        self.client.switcht_api_acl_reference(0, acl, if1)
-
-        # create a mirror session
-        self.client.switcht_mirror_session_create(0, 85, 1, 4, 0, 0, 0, 0)
-
-        # egress interface if4
         iu4 = interface_union(port_lag_handle = 4)
         i_info4 = switcht_interface_info_t(device=0, type=4, u=iu4, mac='00:44:44:44:44:44', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if4 = self.client.switcht_api_interface_create(0, i_info4)
@@ -461,8 +473,25 @@ class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
                                                   ip_addr=src_ip)
         neighbor2 = self.client.switcht_api_neighbor_entry_add(0, neighbor_entry2)
 
-        self.client.switcht_mirror_nhop_create(0, 85, nhop1);
+        # create a mirror session
+        minfo1 = switcht_mirror_info_t(session_id=85, direction=1,
+                                      egress_port=4, mirror_type=3,
+                                      session_type=0,
+                                      cos=0, max_pkt_len=0,
+                                      ttl=0, enable=1, nhop_handle=nhop1)
+        mirror1 = self.client.switcht_api_mirror_session_create(0, minfo1)
 
+        print "Create Mirror ACL to mirror i2e from 1->4"
+        acl = self.client.switcht_api_acl_list_create(0, 0)
+        # create kvp to match destination IP
+        kvp = []
+        kvp.append(switcht_acl_ip_key_value_pair_t(1, int("0a0a0a01", 16), int("ffffffff", 16)))
+        action = 9
+        action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(mirror_handle=mirror1))
+        ace = self.client.switcht_api_acl_ip_rule_create(0, acl, 10, 1, kvp, action, action_param)
+        self.client.switcht_api_acl_reference(0, acl, if1)
+
+        # egress interface if4
         self.dataplane.send(1, str(pkt))
         # verify mirrored packet
         exp_mirrored_pkt = ipv4_erspan_pkt(eth_dst='00:44:44:44:44:44',
@@ -472,21 +501,20 @@ class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
                                            ip_id=0,
                                            ip_ttl=64,
                                            version=2,
-                                           mirror_id=85,
+                                           mirror_id=(mirror1 & 0x3FFFFFFF),
                                            inner_frame=pkt);
         # verify mirrored and original pkts
         time.sleep(1)
-        verify_erspan_III_packet(self, exp_mirrored_pkt, 4)
-        verify_packet(self, exp_pkt, 2)
+        verify_erspan_III_packet(self, exp_mirrored_pkt, swports[4])
+        verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
 
         # delete the mirror sesion
         print "Delete Egress Mirror Session and test packet again"
-        self.client.switcht_mirror_nhop_delete(0, 85);
-        self.client.switcht_mirror_session_delete(0, 85)
+        self.client.switcht_api_mirror_session_delete(0, mirror1)
         # clean-up test, make sure pkt is not mirrored after session is deleted
         self.dataplane.send(1, str(pkt))
-        verify_packet(self, exp_pkt, 2)
+        verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
         # ip_acl cleanup
         self.client.switcht_api_acl_remove(0, acl, if1)

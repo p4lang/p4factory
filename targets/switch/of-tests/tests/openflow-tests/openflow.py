@@ -143,7 +143,8 @@ def setup_default_table_configurations(client, sess_hdl, dev_tgt):
                             action_ipv4_urpf_mode=0,
                             action_ipv6_urpf_mode=0,
                             action_stp_group=0,
-                            action_stats_idx=0)
+                            action_stats_idx=0,
+                            action_learning_enabled=0)
     
     mbr_hdl = client.bd_action_profile_add_member_with_set_bd(
                             sess_hdl, dev_tgt,

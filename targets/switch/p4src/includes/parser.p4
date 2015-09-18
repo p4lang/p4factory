@@ -59,10 +59,6 @@ parser start {
         ETHERTYPE_IPV4 : parse_ipv4;                       \
         ETHERTYPE_IPV6 : parse_ipv6;                       \
         ETHERTYPE_ARP : parse_arp_rarp;                    \
-        ETHERTYPE_RARP : parse_arp_rarp;                   \
-        ETHERTYPE_ROCE : parse_roce;                       \
-        ETHERTYPE_FCOE : parse_fcoe;                       \
-        ETHERTYPE_VNTAG : parse_vntag;                     \
         ETHERTYPE_LLDP  : parse_set_prio_high;             \
         ETHERTYPE_LACP  : parse_set_prio_high;             \
         default: ingress
