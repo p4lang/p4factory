@@ -246,6 +246,9 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
 
 class MirrorSessionTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         self.client.switcht_api_init(0)
         print "create mirror sessions"
         minfo1 = switcht_mirror_info_t(session_id=1, direction=1,
@@ -275,6 +278,9 @@ class MirrorSessionTest(api_base_tests.ThriftInterfaceDataPlane):
 
 class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Test e2e Mirror packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
@@ -386,6 +392,9 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
 
 class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Test i2e Erspan Mirror packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)

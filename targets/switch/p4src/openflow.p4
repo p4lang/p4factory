@@ -96,7 +96,7 @@ action nop () {
 }
 
 action terminate_cpu_packet() {
-    modify_field(standard_metadata.egress_port,fabric_header.dstPortOrGroup);
+    modify_field(standard_metadata.egress_spec,fabric_header.dstPortOrGroup);
     modify_field(ethernet.etherType, fabric_payload_header.etherType);
 
     remove_header(fabric_header);
