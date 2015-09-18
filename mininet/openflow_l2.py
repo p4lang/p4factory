@@ -35,11 +35,11 @@ import sys
 import time
 
 lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch',
-                                        'build', 'thrift'))
+                                        'of-tests', 'pd_thrift'))
 sys.path.append(lib_path)
 
-from switch_api.ttypes import  *
-from switch_api import switch_api_rpc
+from switch_api_thrift.ttypes import  *
+from switch_api_thrift import switch_api_rpc
 
 from thrift.transport import TSocket
 from thrift.transport import TTransport
