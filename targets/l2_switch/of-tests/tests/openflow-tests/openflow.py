@@ -5,14 +5,6 @@ Openflow tests on an l2 table
 import sys
 import os
 
-sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'l2_switch', 'openflow_mapping')) 
-sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'l2_switch', 'build', 'thrift')) 
-sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'l2_switch', 'of-tests', 'tests',
-                             'openflow-tests')) 
-
 import logging
 from oftest import config
 import oftest.base_tests as base_tests
@@ -24,6 +16,9 @@ from oftest.parse import parse_mac
 import openflow_base_tests
 
 from utils import *
+
+sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
+                             'targets', 'l2_switch', 'build', 'thrift')) 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
 
@@ -31,6 +26,8 @@ import sys
 import os
 import time
 
+sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
+                             'targets', 'l2_switch', 'openflow_mapping')) 
 from l2 import *
 
 ### TODO: generate expected packets
