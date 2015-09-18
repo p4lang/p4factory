@@ -14,18 +14,12 @@ import ofp
 from oftest.testutils import *
 from oftest.parse import parse_mac
 
-sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'switch', 'of-tests', 'tests',
-                             'openflow-tests')) 
 import openflow_base_tests
 
 from utils import *
 
-sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'switch', 'build', 'thrift')) 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
-
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
                              'targets', 'switch', 'openflow_mapping')) 
