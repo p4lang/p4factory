@@ -197,12 +197,13 @@ endif
 bm-p4ofagent : BM_PARAMS += --plugin of
 bm-p4ofagent : BM_PARAMS += --openflow-mapping-dir $(TARGET_ROOT)/openflow_mapping
 bm-p4ofagent : BM_PARAMS += --openflow-mapping-mod l2
+bm-p4ofagent : BM_PARAMS += -DOPENFLOW_ENABLE
 bm-p4ofagent : export LIB_P4OFAGENT_ENABLE=1
 bm-switchapi : export LIB_SWITCHAPI_ENABLE=1
 bm-p4ofagent : GLOBAL_CFLAGS += -DENABLE_PLUGIN_OPENFLOW
 bm-p4ofagent : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE
 bm-p4ofagent : GLOBAL_CFLAGS += -I$(SUBMODULE_P4OFAGENT)
-bm-p4ofagent : $(BM_LIB) $(SWITCHAPI_LIB) $(P4OFAGENT_LIB) ${GEN_THRIFT_PY_MODULE}
+bm-p4ofagent : $(BM_LIB) $(SWITCHAPI_LIB) $(P4OFAGENT_LIB) switchapi_THRIFT
 bm-p4ofagent : ${bm-p4ofagent_BINARY} 
 	cp ${bm-p4ofagent_BINARY} behavioral-model
 
