@@ -51,7 +51,7 @@ table validate_outer_ipv4_packet {
     reads {
         ipv4.version : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
-        ipv4_metadata.lkp_ipv4_sa mask 0xFF000000 : ternary;
+        ipv4_metadata.lkp_ipv4_sa : ternary;
     }
     actions {
         set_valid_outer_ipv4_packet;

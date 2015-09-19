@@ -233,14 +233,14 @@ action set_malformed_packet(drop_reason) {
 
 table validate_packet {
     reads {
-        l2_metadata.lkp_mac_sa mask 0x010000000000 : ternary;
+        l2_metadata.lkp_mac_sa : ternary;
         l2_metadata.lkp_mac_da : ternary;
         l3_metadata.lkp_ip_type : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
         l3_metadata.lkp_ip_version : ternary;
-        ipv4_metadata.lkp_ipv4_sa mask 0xFF000000 : ternary;
+        ipv4_metadata.lkp_ipv4_sa : ternary;
 #ifndef IPV6_DISABLE
-        ipv6_metadata.lkp_ipv6_sa mask 0xFFFF0000000000000000000000000000 : ternary;
+        ipv6_metadata.lkp_ipv6_sa : ternary;
 #endif /* IPV6_DISABLE */
     }
     actions {

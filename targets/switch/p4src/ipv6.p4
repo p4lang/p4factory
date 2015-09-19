@@ -57,7 +57,7 @@ table validate_outer_ipv6_packet {
     reads {
         ipv6.version : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
-        ipv6_metadata.lkp_ipv6_sa mask 0xFFFF0000000000000000000000000000 : ternary;
+        ipv6_metadata.lkp_ipv6_sa : ternary;
     }
     actions {
         set_valid_outer_ipv6_packet;
