@@ -233,14 +233,26 @@ action set_malformed_packet(drop_reason) {
 
 table validate_packet {
     reads {
+#ifndef __TARGET_BMV2__
+        l2_metadata.lkp_mac_sa mask 0x010000000000 : ternary;
+#else
         l2_metadata.lkp_mac_sa : ternary;
+#endif
         l2_metadata.lkp_mac_da : ternary;
         l3_metadata.lkp_ip_type : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
         l3_metadata.lkp_ip_version : ternary;
+#ifndef __TARGET_BMV2__
+        ipv4_metadata.lkp_ipv4_sa mask 0xFF000000 : ternary;
+#else
         ipv4_metadata.lkp_ipv4_sa : ternary;
+#endif
 #ifndef IPV6_DISABLE
+#ifndef __TARGET_BMV2__
+        ipv6_metadata.lkp_ipv6_sa mask 0xFFFF0000000000000000000000000000 : ternary;
+#else
         ipv6_metadata.lkp_ipv6_sa : ternary;
+#endif
 #endif /* IPV6_DISABLE */
     }
     actions {

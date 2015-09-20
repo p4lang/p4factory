@@ -57,7 +57,11 @@ table validate_outer_ipv6_packet {
     reads {
         ipv6.version : ternary;
         l3_metadata.lkp_ip_ttl : ternary;
+#ifndef __TARGET_BMV2__
+        ipv6_metadata.lkp_ipv6_sa mask 0xFFFF0000000000000000000000000000 : ternary;
+#else
         ipv6_metadata.lkp_ipv6_sa : ternary;
+#endif
     }
     actions {
         set_valid_outer_ipv6_packet;
