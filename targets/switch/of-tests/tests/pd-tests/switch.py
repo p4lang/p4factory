@@ -134,6 +134,15 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
         client.ingress_bd_stats_set_default_action_update_ingress_bd_stats(
                                      sess_hdl, dev_tgt)
 
+    mbr_hdl = client.fabric_lag_action_profile_add_member_with_nop(
+        sess_hdl, dev_tgt
+    )
+    client.fabric_lag_set_default_entry(
+        sess_hdl, dev_tgt,
+        mbr_hdl
+    )
+    client.int_insert_set_default_action_int_reset(sess_hdl, dev_tgt)
+
 def populate_init_entries(client, sess_hdl, dev_tgt):
     ret = []
     match_spec = dc_mac_rewrite_match_spec_t(
@@ -204,6 +213,7 @@ def populate_init_entries(client, sess_hdl, dev_tgt):
         ret.append(client.outer_rmac_table_add_with_outer_rmac_hit(
                             sess_hdl, dev_tgt,
                             match_spec))
+
     return ret
 
 def delete_init_entries(client, sess_hdl, dev, ret_list):

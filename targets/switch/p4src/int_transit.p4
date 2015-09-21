@@ -432,7 +432,7 @@ table int_insert {
 control process_int_insertion {
 #ifdef INT_ENABLE
     apply(int_insert) {
-        hit {
+        int_transit {
             /*
              * int_transit computes, insert_cnt = max_hop_cnt - total_hop_cnt
              * (cannot be -ve, not checked)
