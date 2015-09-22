@@ -42,6 +42,8 @@ switch_inited=0
 port_list = []
 table_attr_list = []
 
+is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
+
 def verify_packet_list_any(test, pkt_list,  ofport_list):
     logging.debug("Checking for packet on given ports")
     (rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=1)
@@ -1993,6 +1995,9 @@ class IngressLocalMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
 
 class IngressERSpanMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print
         switch_init(self.client)
         vlan_id = 10

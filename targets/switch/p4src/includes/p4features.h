@@ -18,8 +18,6 @@ limitations under the License.
 #define EGRESS_FILTER
 #define INT_TRANSIT_ENABLE
 
-#define OPENFLOW_ENABLE
-
 // Defines for switchapi library
 #ifdef URPF_DISABLE
 #define P4_URPF_DISABLE
