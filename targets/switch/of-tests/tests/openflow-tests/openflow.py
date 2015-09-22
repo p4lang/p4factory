@@ -458,8 +458,8 @@ class TableStatsGet(openflow_base_tests.OFTestInterface):
         self.controller.message_send(req)
         do_barrier(self.controller)
 
-        assert reply.entries[0].lookup_count == 17 + initial_lookup_count
-        assert reply.entries[0].matched_count == 10 + initial_matched_count
+        assert reply.entries[0].lookup_count == num_miss_packets + num_hit_packets + initial_lookup_count
+        assert reply.entries[0].matched_count == num_hit_packets + initial_matched_count
 
 class PacketIn(openflow_base_tests.OFTestInterface):
     """
