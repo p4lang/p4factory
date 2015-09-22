@@ -79,6 +79,8 @@ def run_cfg():
   h4.cmd("iperf -s &")
 
   # TODO: start iperf clients
+  h1.cmd("iperf -c 10.2.1.4 -t 3000 > /dev/null &")
+  h3.cmd("iperf -c 10.2.1.2 -t 3000 > /dev/null &")
 
   CLI(net)
 

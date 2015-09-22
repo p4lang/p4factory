@@ -1187,46 +1187,43 @@ static void vxlan_igmp_leave(struct work_struct *work)
 	dev_put(vxlan->dev);
 }
 
-#ifdef INT_DEBUG
 /* Helper function to print 100 bytes of memory */
 static void print_mem(void *_start)
 {
-    __u8 *start = (__u8*)_start;
-    int i;
-    for (i = 0; i < 25; i++) {
-        printk(KERN_INFO "[VXLAN-GPE] %p : %02X %02X %02X %02X\n", start, 
-               start[0], start[1], start[2], start[3]);
-        start += 4;
-    }
+  __u8 *start = (__u8*)_start;
+  int i;
+  for (i = 0; i < 25; i++) {
+    printk(KERN_INFO "[VXLAN-GPE] %p : %02X %02X %02X %02X\n", start, start[0], start[1], start[2], start[3]);
+    start += 4;
+  }
 }
-#endif
 
 /* Read and strip out the INT headers and metadata values */
 static int read_int_headers(struct sk_buff *skb)
 {
-    struct vxlanhdr *vxh;
-    struct int_shim_hdr *int_sh;
-    struct int_md_hdr *int_md;
-    int int_hdrs_size;
-    int num_md_vals;
+  struct vxlanhdr *vxh;
+  struct int_shim_hdr *int_sh;
+  struct int_md_hdr *int_md;
+  int int_hdrs_size;
+  int num_md_vals;
 
-    vxh = (struct vxlanhdr *)(udp_hdr(skb) + 1);
+  vxh = (struct vxlanhdr *)(udp_hdr(skb) + 1);
 
-    /* Attempt to read INT data only if next protocol (as indicated in VXLAN-GPE header) is INT */
-    if ((vxh->vx_flags & htonl(VXLAN_NEXT_PROTO_MSK)) != htonl(VXLAN_NEXT_PROTO_INT)) {
-        return 0;
-    }
+  /* Attempt to read INT data only if next protocol (as indicated in VXLAN-GPE header) is INT */
+  if ((vxh->vx_flags & htonl(VXLAN_NEXT_PROTO_MSK)) != htonl(VXLAN_NEXT_PROTO_INT)) {
+    return 0;
+  }
 
-    int_sh = (struct int_shim_hdr *)(vxh + 1);
-    int_md = (struct int_md_hdr *)(int_sh + 1);
+  int_sh = (struct int_shim_hdr *)(vxh + 1);
+  int_md = (struct int_md_hdr *)(int_sh + 1);
 
-    num_md_vals = int_md->ins_cnt * int_md->total_hop_cnt;
+  num_md_vals = int_md->ins_cnt * int_md->total_hop_cnt;
 
-    int_hdrs_size = sizeof(struct int_shim_hdr) + sizeof(struct int_md_hdr) + (num_md_vals * 4);
+  int_hdrs_size = sizeof(struct int_shim_hdr) + sizeof(struct int_md_hdr) + (num_md_vals * 4);
 
-    __skb_pull(skb, int_hdrs_size);
+  __skb_pull(skb, int_hdrs_size);
 
-    return int_hdrs_size;
+  return int_hdrs_size;
 }
 
 /* Callback from net/ipv4/udp.c to receive packets */
@@ -1242,15 +1239,19 @@ static int vxlan_udp_encap_recv(struct sock *sk, struct sk_buff *skb)
 	/* Return packets with reserved bits set */
 	vxh = (struct vxlanhdr *)(udp_hdr(skb) + 1);
 
-    /* Read and strip out the INT headers and metadata values */
+  /* Read and strip out the INT headers and metadata values */
 	if (read_int_headers(skb) < 0) {
 		printk(KERN_ERR "[VXLAN-GPE] Error while reading INT headers\n");
 		goto error;
 	}
 
-    if ((htonl(vxh->vx_flags) & ~(VXLAN_FLAGS | VXLAN_HF_GPE)) || 
-         (vxh->vx_vni & htonl(0xff))) {
-	    netdev_dbg(skb->dev, "invalid vxlan flags=%#x vni=%#x\n",
+	/* Clear the GPE flag and next proto bits in order to pass the checks below */
+	//vxh->vx_flags &= htonl(~VXLAN_HF_GPE);
+	//vxh->vx_flags &= htonl(~VXLAN_NEXT_PROTO_INT);
+
+	if ( (!(vxh->vx_flags & VXLAN_HF_GPE)) && 
+       ((vxh->vx_flags != htonl(VXLAN_FLAGS) || (vxh->vx_vni & htonl(0xff)))) ) {
+		netdev_dbg(skb->dev, "invalid vxlan flags=%#x vni=%#x\n",
 			   ntohl(vxh->vx_flags), ntohl(vxh->vx_vni));
 		goto error;
 	}
@@ -1791,6 +1792,9 @@ int vxlan_xmit_skb(struct vxlan_sock *vs,
 		vxh->vx_flags &= htonl(VXLAN_NEXT_PROTO_CLR);
 		vxh->vx_flags |= htonl(VXLAN_NEXT_PROTO_INT);
 	}
+
+  //printk(KERN_INFO "[VXLAN-GPE] =============== attach_int: %d\n", attach_int);
+  //print_mem(vxh);
 
 	skb_set_inner_protocol(skb, htons(ETH_P_TEB));
 

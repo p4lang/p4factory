@@ -7874,7 +7874,6 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 inner_frame=pkt)
         self.dataplane.send(3, str(vxlan_pkt))
         verify_packets(self, pkt, [swports[2]])
-
         print "Inner MAC DA zeros, drop"
         pkt = simple_tcp_packet(eth_dst='00:00:00:00:00:00',
                                 eth_src='00:22:22:22:22:22',

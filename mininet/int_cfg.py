@@ -1,7 +1,20 @@
 #!/usr/bin/python
+# Copyright 2015-present Barefoot Networks, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from mininet.net import Mininet, VERSION
-from mininet.log import setLogLevel, info
+from mininet.log import setLogLevel, info, error
 from mininet.cli import CLI
 from distutils.version import StrictVersion
 from p4_mininet import P4DockerSwitch
@@ -220,7 +233,6 @@ class NetworkManager():
     i = 21
     for hn in self.host_cfgs:
       h = self.net.get(hn) 
-      print("host: %s, pid: %d" % (hn, h.shell.pid))
       vm_eth_intf = 'vm-eth%s' % i
       vm_eth_intf_ip = '192.168.1.%d' % i
       h_eth_intf  = '%s-vm-eth%d' % (h.name, i)
@@ -243,6 +255,7 @@ class NetworkManager():
     runOnNativeHost("ifconfig testbr1 up")
 
     runOnNativeHost("../apps/int/monitor/monitor.py > tmp_monitor 2>&1 &")
+    runOnNativeHost("../apps/int/monitor/client_msg_handler.py > tmp_client_msg_handler 2>&1 &")
 
   def startHostPreprocessors(self):
     for c in self.host_cfgs.values():
@@ -277,7 +290,7 @@ class NetworkManager():
         for c2 in self.host_cfgs.values():
           if (c2.name != c1.name and c2.vxlan_cfg != None):
             vc = c2.vxlan_cfg
-            h.cmd ( "ping %s &" % (vc.ip) )
+            h.cmd ( "ping %s > /dev/null &" % (vc.ip) )
             print h.name + " pinging " + vc.ip
 
 def runOnNativeHost(cmd):
@@ -285,3 +298,15 @@ def runOnNativeHost(cmd):
   ret = os.system(cmd)
   if not ret == 0:
       error('[ERROR] Command failed. \'', cmd, '\'')
+
+def open_connection(port):
+    transport = TSocket.TSocket('localhost', port)
+    transport = TTransport.TBufferedTransport(transport)
+    protocol = TBinaryProtocol.TBinaryProtocol(transport)
+
+    client = bfn_api_rpc.Client(protocol)
+    transport.open()
+    return transport, client
+
+def close_connection(transport):
+    transport.close()

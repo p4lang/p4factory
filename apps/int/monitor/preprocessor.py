@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 # Copyright 2015-present Barefoot Networks, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,25 +47,29 @@ sock.connect(monitor_addr)
 #===========================================
 
 def handle_packet(pkt, self_ip):
-    r = pkt['Raw'].load
-    vxh_1 = socket.ntohl(unpack("I", r[0:4])[0])
-    if vxh_1 == 0x0C000005: # INT data is present
-        (ins_cnt, max_cnt, tot_cnt) = unpack("B B B", r[13:16])
-        num_md_bytes = tot_cnt * ins_cnt * 4 # Number of bytes of INT metadata values
-        eth_hdr_offset = INT_HDRS_TOT_SIZE_B + num_md_bytes
-        ip_hdr_offset = eth_hdr_offset + ETH_HDR_SIZE_B
-        udp_hdr_offset = ip_hdr_offset + IP_HDR_SIZE_B
+    try:
+        r = pkt['Raw'].load
+        vxh_1 = socket.ntohl(unpack("I", r[0:4])[0])
+        if vxh_1 == 0x0C000005: # INT data is present
+            (ins_cnt, max_cnt, tot_cnt) = unpack("B B B", r[13:16])
+            num_md_bytes = tot_cnt * ins_cnt * 4 # Number of bytes of INT metadata values
+            eth_hdr_offset = INT_HDRS_TOT_SIZE_B + num_md_bytes
+            ip_hdr_offset = eth_hdr_offset + ETH_HDR_SIZE_B
+            udp_hdr_offset = ip_hdr_offset + IP_HDR_SIZE_B
 
-        if (pkt['IP'].dst == self_ip):
-            d = bytearray()
-            d.extend(r[ip_hdr_offset + 12 : ip_hdr_offset + 20])
-            d.extend(r[udp_hdr_offset : udp_hdr_offset + 4])
-            d.extend(r[4:7])
-            d.extend(r[ip_hdr_offset + 9 : ip_hdr_offset + 10])
-            d.extend(r[12:16])
-            d.extend(r[20:20 + num_md_bytes])
+            if (pkt['IP'].dst == self_ip):
+                d = bytearray()
+                d.extend(r[ip_hdr_offset + 12 : ip_hdr_offset + 20])
+                d.extend(r[udp_hdr_offset : udp_hdr_offset + 4])
+                d.extend(r[4:7])
+                d.extend(r[ip_hdr_offset + 9 : ip_hdr_offset + 10])
+                d.extend(r[12:16])
+                d.extend(r[20:20 + num_md_bytes])
 
-            sock.sendall(d)
+                sock.sendall(d)
+    except Exception as ex:
+        print("[WARNGIN] Exception caught")
+        print(ex)
 
 # For debug purposes
 def print_bytearray(arr, nbytes):
@@ -88,7 +91,8 @@ if __name__ == '__main__':
     print("Starting preprocessor")
     print("Filtering packets with destination ip '%s'" % self_ip)
 
+    cmd = "dst " + self_ip + " and udp and port 4790 "
     sniff(
-        filter = "udp and port 4790",
+        filter = cmd,
         prn = lambda x: handle_packet(x, self_ip)
     )

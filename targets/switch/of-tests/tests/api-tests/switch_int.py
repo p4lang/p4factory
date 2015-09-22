@@ -39,10 +39,15 @@ import pdb
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
+is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
+
 device=0
 
 class int_transitTest_switchid(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Test INT transit device - add switch_id"
         self.client.switcht_api_init(device)
 
@@ -139,6 +144,9 @@ class int_transitTest_switchid(api_base_tests.ThriftInterfaceDataPlane):
 
 class int_transitTest_hop2(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Test INT transit device - add switch_id on hop2"
         self.client.switcht_api_init(device)
 
@@ -248,6 +256,9 @@ class int_transitTest_hop2(api_base_tests.ThriftInterfaceDataPlane):
 
 class int_transitTest_Ebit(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print "Test INT transit device - E bit"
         self.client.switcht_api_init(device)
 
