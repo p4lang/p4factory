@@ -1,4 +1,20 @@
 /*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/*
  * Multicast processing
  */
 
@@ -201,22 +217,46 @@ control process_multicast_flooding {
 /* Multicast replication processing                                          */
 /*****************************************************************************/
 #ifndef MULTICAST_DISABLE
-action outer_replica_from_rid(bd, nexthop_index) {
+action outer_replica_from_rid(bd, tunnel_index, tunnel_type) {
+    modify_field(egress_metadata.bd, bd);
+    modify_field(multicast_metadata.replica, TRUE);
+    modify_field(multicast_metadata.inner_replica, FALSE);
+    modify_field(egress_metadata.routed, l3_metadata.routed);
+    bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.bd);
+    modify_field(tunnel_metadata.tunnel_index, tunnel_index);
+    modify_field(tunnel_metadata.egress_tunnel_type, tunnel_type);
+}
+
+action outer_replica_from_rid_with_nexthop(bd, nexthop_index, tunnel_index, tunnel_type) {
     modify_field(egress_metadata.bd, bd);
     modify_field(multicast_metadata.replica, TRUE);
     modify_field(multicast_metadata.inner_replica, FALSE);
     modify_field(egress_metadata.routed, l3_metadata.outer_routed);
     modify_field(l3_metadata.nexthop_index, nexthop_index);
     bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.bd);
+    modify_field(tunnel_metadata.tunnel_index, tunnel_index);
+    modify_field(tunnel_metadata.egress_tunnel_type, tunnel_type);
 }
 
-action inner_replica_from_rid(bd, nexthop_index) {
+action inner_replica_from_rid(bd, tunnel_index, tunnel_type) {
+    modify_field(egress_metadata.bd, bd);
+    modify_field(multicast_metadata.replica, TRUE);
+    modify_field(multicast_metadata.inner_replica, TRUE);
+    modify_field(egress_metadata.routed, l3_metadata.routed);
+    bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.bd);
+    modify_field(tunnel_metadata.tunnel_index, tunnel_index);
+    modify_field(tunnel_metadata.egress_tunnel_type, tunnel_type);
+}
+
+action inner_replica_from_rid_with_nexthop(bd, nexthop_index, tunnel_index, tunnel_type) {
     modify_field(egress_metadata.bd, bd);
     modify_field(multicast_metadata.replica, TRUE);
     modify_field(multicast_metadata.inner_replica, TRUE);
     modify_field(egress_metadata.routed, l3_metadata.routed);
     modify_field(l3_metadata.nexthop_index, nexthop_index);
     bit_xor(egress_metadata.same_bd_check, bd, ingress_metadata.bd);
+    modify_field(tunnel_metadata.tunnel_index, tunnel_index);
+    modify_field(tunnel_metadata.egress_tunnel_type, tunnel_type);
 }
 
 table rid {
@@ -226,7 +266,9 @@ table rid {
     actions {
         nop;
         outer_replica_from_rid;
+        outer_replica_from_rid_with_nexthop;
         inner_replica_from_rid;
+        inner_replica_from_rid_with_nexthop;
     }
     size : RID_TABLE_SIZE;
 }

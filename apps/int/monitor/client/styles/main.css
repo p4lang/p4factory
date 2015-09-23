@@ -1,0 +1,56 @@
+
+html {
+    height: 100%;
+}
+
+body {
+    height: 100%;
+}
+
+.background {
+    stroke: white;
+    stroke-width: 1px;
+    fill: #DDD;
+}
+
+.node {
+    stroke: black;
+    stroke-width: 1.5px;
+    cursor: move;
+}
+
+.dataflow-kernel {
+    stroke: black;
+}
+
+.link {
+    fill: none;
+    stroke: black;
+    stroke-width: 1.5px;
+    opacity: 0.7;
+    marker-end: url(#end-arrow);
+}
+
+.label {
+    fill: black;
+    font-family: Verdana;
+    font-size: 25px;
+    text-anchor: middle;
+    cursor: move;
+}
+
+#chart-packets-sw1 .layer-1 {
+  fill: #1f77b4;
+}
+
+#chart-packets-sw2 .layer-1 {
+  fill: #ff7f0e;
+}
+
+#chart-packets-sw3 .layer-1 {
+  fill: #2ca02c;
+}
+
+#chart-packets-sw4 .layer-1 {
+  fill: #d62728;
+}

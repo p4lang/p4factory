@@ -1,4 +1,20 @@
 /*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/*
  * Layer-3 processing
  */
 
@@ -9,6 +25,7 @@
 header_type l3_metadata_t {
     fields {
         lkp_ip_type : 2;
+        lkp_ip_version : 4;
         lkp_ip_proto : 8;
         lkp_ip_tc : 8;
         lkp_ip_ttl : 8;
@@ -16,10 +33,6 @@ header_type l3_metadata_t {
         lkp_l4_dport : 16;
         lkp_inner_l4_sport : 16;
         lkp_inner_l4_dport : 16;
-        lkp_icmp_type : 8;
-        lkp_icmp_code : 8;
-        lkp_inner_icmp_type : 8;
-        lkp_inner_icmp_code : 8;
 
         vrf : VRF_BIT_WIDTH;                   /* VRF */
         rmac_group : 10;                       /* Rmac group, for rmac indirection */
@@ -35,6 +48,7 @@ header_type l3_metadata_t {
         nexthop_index : 16;                    /* nexthop/rewrite index */
         routed : 1;                            /* is packet routed? */
         outer_routed : 1;                      /* is outer packet routed? */
+        mtu_index : 8;                         /* index into mtu table */
     }
 }
 
@@ -160,13 +174,13 @@ table mac_rewrite {
         nop;
         rewrite_ipv4_unicast_mac;
         rewrite_ipv4_multicast_mac;
-#ifndef IPV6_DISABLED
+#ifndef IPV6_DISABLE
         rewrite_ipv6_unicast_mac;
         rewrite_ipv6_multicast_mac;
-#endif /* IPV6_DISABLED */
-#ifndef MPLS_DISABLED
+#endif /* IPV6_DISABLE */
+#ifndef MPLS_DISABLE
         rewrite_mpls_mac;
-#endif /* MPLS_DISABLED */
+#endif /* MPLS_DISABLE */
     }
     size : MAC_REWRITE_TABLE_SIZE;
 }
@@ -175,37 +189,4 @@ control process_mac_rewrite {
     if (egress_metadata.routed == TRUE) {
         apply(mac_rewrite);
     }
-}
-
-
-#if !defined(L3_DISABLE) && !defined(MTU_DISABLE)
-/*****************************************************************************/
-/* Egress MTU check                                                          */
-/*****************************************************************************/
-action mtu_check_pass() {
-}
-
-action mtu_check_fail() {
-    modify_field(egress_metadata.drop_reason, 1);
-}
-
-table mtu {
-    reads {
-        egress_metadata.bd : exact;
-        ethernet.etherType : exact;
-        //standard_metadata.packet_length : range;
-    }
-    actions {
-        nop;
-        mtu_check_pass;
-        mtu_check_fail;
-    }
-    size : IP_MTU_TABLE_SIZE;
-}
-#endif /* L3_DISABLE && MTU_DISABLE */
-
-control process_mtu {
-#if !defined(L3_DISABLE) && !defined(MTU_DISABLE)
-    apply(mtu);
-#endif /* L3_DISABLE && MTU_DISABLE */
 }

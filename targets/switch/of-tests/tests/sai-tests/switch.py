@@ -42,6 +42,9 @@ switch_inited=0
 port_list = []
 table_attr_list = []
 
+
+is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
+
 def verify_packet_list_any(test, pkt_list,  ofport_list):
     logging.debug("Checking for packet on given ports")
     (rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=1)
@@ -57,6 +60,19 @@ def verify_packet_list_any(test, pkt_list,  ofport_list):
         i = i + 1
     test.assertTrue(match_found == 1, "Packet not received on expected port")
     return match_index
+
+def verify_packet_list(test, pkt_list,  ofport_list):
+    logging.debug("Checking for packet on given ports")
+
+    match_found = 0
+    for ofport in ofport_list:
+        (rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=2)
+        test.assertTrue(rcv_pkt != None, "No packet received")
+        index = ofport_list.index(rcv_port)
+        pkt = pkt_list[index]
+        if (str(rcv_pkt) == str(pkt)):
+            match_found += 1
+    test.assertTrue(match_found == len(pkt_list), "Packet not received on expected port")
 
 def switch_init(client):
     global switch_inited
@@ -96,6 +112,14 @@ def sai_thrift_create_fdb(client, vlan_id, mac, port, mac_action):
 def sai_thrift_delete_fdb(client, vlan_id, mac, port):
     fdb_entry = sai_thrift_fdb_entry_t(mac_address=mac, vlan_id=vlan_id)
     client.sai_thrift_delete_fdb_entry(thrift_fdb_entry=fdb_entry)
+
+def sai_thrift_flush_fdb_by_vlan(client, vlan_id):
+    fdb_attribute1_value = sai_thrift_attribute_value_t(u16=vlan_id)
+    fdb_attribute1 = sai_thrift_attribute_t(id=1, value=fdb_attribute1_value)
+    fdb_attribute2_value = sai_thrift_attribute_value_t(u8=1)
+    fdb_attribute2 = sai_thrift_attribute_t(id=2, value=fdb_attribute2_value)
+    fdb_attr_list = [fdb_attribute1, fdb_attribute2]
+    client.sai_thrift_flush_fdb_entries(thrift_attr_list=fdb_attr_list)
 
 def sai_thrift_create_virtual_router(client, v4_enabled, v6_enabled):
     #v4 enabled
@@ -267,6 +291,138 @@ def sai_thrift_create_hostif(client, rif_or_port_id, intf_name):
     hif_id = client.sai_thrift_create_hostif(attr_list)
     return hif_id
 
+def sai_thrift_create_ip_acl_table(client, addr_family, ip_src, ip_dst, ip_proto):
+    acl_attr_list = []
+    if ip_src != None:
+        attribute1_value = sai_thrift_attribute_value_t(booldata=1)
+        attribute1 = sai_thrift_attribute_t(id=0x1004, value=attribute1_value)
+        acl_attr_list.append(attribute1)
+    if ip_dst != None:
+        attribute2_value = sai_thrift_attribute_value_t(booldata=1)
+        attribute2 = sai_thrift_attribute_t(id=0x1005, value=attribute2_value)
+        acl_attr_list.append(attribute2)
+    if ip_proto != None:
+        attribute3_value = sai_thrift_attribute_value_t(booldata=1)
+        attribute3 = sai_thrift_attribute_t(id=0x1013, value=attribute3_value)
+        acl_attr_list.append(attribute3)
+    acl_table_id = client.sai_thrift_create_acl_table(acl_attr_list)
+    return acl_table_id
+
+def sai_thrift_create_ip_acl_entry(client, acl_table_id,
+                                   addr_family,
+                                   ip_src, ip_src_mask,
+                                   ip_dst, ip_dst_mask,
+                                   ip_proto, port_list,
+                                   action, ingress_mirror):
+    acl_attr_list = []
+
+    #OID
+    attribute1_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(oid=acl_table_id)))
+    attribute1 = sai_thrift_attribute_t(id=0, value=attribute1_value)
+    acl_attr_list.append(attribute1)
+
+    #Priority
+    attribute2_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(u32=10)))
+    attribute2 = sai_thrift_attribute_t(id=1, value=attribute2_value)
+    acl_attr_list.append(attribute2)
+
+    #Ip source
+    if ip_src != None:
+        attribute3_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(ip4=ip_src), mask =sai_thrift_acl_mask_t(ip4=ip_src_mask)))
+        attribute3 = sai_thrift_attribute_t(id=0x1004, value=attribute3_value)
+        acl_attr_list.append(attribute3)
+
+    #Input ports
+    if port_list != None:
+        acl_port_list = sai_thrift_object_list_t(count=len(port_list), object_id_list=port_list)
+        attribute4_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(objlist=acl_port_list)))
+        attribute4 = sai_thrift_attribute_t(id=0x1006, value=attribute4_value)
+        acl_attr_list.append(attribute4)
+
+    #Packet action
+    if action == 1:
+        #Drop
+        attribute5_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(u8=0)))
+        attribute5 = sai_thrift_attribute_t(id=0x2001, value=attribute5_value)
+        acl_attr_list.append(attribute5)
+    elif action == 2:
+        #Ingress mirroring
+        attribute6_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(oid=ingress_mirror)))
+        attribute6 = sai_thrift_attribute_t(id=0x2004, value=attribute6_value)
+        acl_attr_list.append(attribute6)
+
+    acl_entry_id = client.sai_thrift_create_acl_entry(acl_attr_list)
+    return acl_entry_id
+
+def sai_thrift_create_mirror_session(client, mirror_type, port,
+                                     vlan, vlan_priority, vlan_tpid,
+                                     src_mac, dst_mac,
+                                     addr_family, src_ip, dst_ip,
+                                     encap_type, protocol, ttl, tos):
+    mirror_attr_list = []
+
+    #Mirror type
+    attribute1_value = sai_thrift_attribute_value_t(u8=mirror_type)
+    attribute1 = sai_thrift_attribute_t(id=0, value=attribute1_value)
+    mirror_attr_list.append(attribute1)
+
+    #Monitor port
+    attribute2_value = sai_thrift_attribute_value_t(oid=port)
+    attribute2 = sai_thrift_attribute_t(id=1, value=attribute2_value)
+    mirror_attr_list.append(attribute2)
+
+    if mirror_type == 1:
+        attribute4_value = sai_thrift_attribute_value_t(u16=vlan)
+        attribute4 = sai_thrift_attribute_t(id=4, value=attribute4_value)
+        mirror_attr_list.append(attribute4)
+    elif mirror_type == 2:
+        #vlan tpid
+        attribute3_value = sai_thrift_attribute_value_t(u16=vlan_tpid)
+        attribute3 = sai_thrift_attribute_t(id=3, value=attribute3_value)
+        mirror_attr_list.append(attribute3)
+
+        #vlan
+        attribute4_value = sai_thrift_attribute_value_t(u16=vlan)
+        attribute4 = sai_thrift_attribute_t(id=4, value=attribute4_value)
+        mirror_attr_list.append(attribute4)
+
+        #vlan priority
+        attribute5_value = sai_thrift_attribute_value_t(u16=vlan_priority)
+        attribute4 = sai_thrift_attribute_t(id=5, value=attribute5_value)
+        mirror_attr_list.append(attribute5)
+    elif mirror_type == 3:
+        #encap type
+        attribute3_value = sai_thrift_attribute_value_t(u8=encap_type)
+        attribute3 = sai_thrift_attribute_t(id=6, value=attribute3_value)
+        mirror_attr_list.append(attribute3)
+
+        #source ip
+        addr = sai_thrift_ip_t(ip4=src_ip)
+        src_ip_addr = sai_thrift_ip_address_t(addr_family=addr_family, addr=addr)
+        attribute4_value = sai_thrift_attribute_value_t(ipaddr=src_ip_addr)
+        attribute4 = sai_thrift_attribute_t(id=10, value=attribute4_value)
+        mirror_attr_list.append(attribute4)
+
+        #dst ip
+        addr = sai_thrift_ip_t(ip4=dst_ip)
+        dst_ip_addr = sai_thrift_ip_address_t(addr_family=addr_family, addr=addr)
+        attribute5_value = sai_thrift_attribute_value_t(ipaddr=dst_ip_addr)
+        attribute5 = sai_thrift_attribute_t(id=11, value=attribute5_value)
+        mirror_attr_list.append(attribute5)
+
+        #source mac
+        attribute6_value = sai_thrift_attribute_value_t(mac=src_mac)
+        attribute6 = sai_thrift_attribute_t(id=12, value=attribute6_value)
+        mirror_attr_list.append(attribute6)
+
+        #dst mac
+        attribute7_value = sai_thrift_attribute_value_t(mac=dst_mac)
+        attribute7 = sai_thrift_attribute_t(id=13, value=attribute7_value)
+        mirror_attr_list.append(attribute7)
+
+    mirror_id = client.sai_thrift_create_mirror_session(mirror_attr_list)
+    return mirror_id
+
 class L2AccessToAccessVlanTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -334,9 +490,9 @@ class L2TrunkToTrunkVlanTest(sai_base_test.ThriftInterfaceDataPlane):
                                 eth_src='00:22:22:22:22:22',
                                 ip_dst='10.0.0.1',
                                 ip_id=102,
-                                ip_ttl=64,
                                 dl_vlan_enable=True,
-                                vlan_vid=10)
+                                vlan_vid=10,
+                                ip_ttl=64)
 
         try:
             self.dataplane.send(2, str(pkt))
@@ -1065,7 +1221,7 @@ class L3IPv6EcmpLpmTest(sai_base_test.ThriftInterfaceDataPlane):
             count = [0, 0, 0, 0]
             dst_ip = socket.inet_pton(socket.AF_INET6, '6000:1:1:0:0:0:0:1')
             dst_ip_arr = list(dst_ip)
-            max_itrs = 100
+            max_itrs = 200
             sport = 0x1234
             dport = 0x50
             for i in range(0, max_itrs):
@@ -1123,8 +1279,9 @@ class L3IPv6EcmpLpmTest(sai_base_test.ThriftInterfaceDataPlane):
                 sport += 15
                 dport += 20
 
+            print "Count = %s" % str(count)
             for i in range(0, 4):
-                self.assertTrue((count[i] >= ((max_itrs / 4) * 0.9)),
+                self.assertTrue((count[i] >= ((max_itrs / 4) * 0.75)),
                         "Not all paths are equally balanced")
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, nhop_ip1, dmac1)
@@ -1183,6 +1340,7 @@ class L2FloodTest(sai_base_test.ThriftInterfaceDataPlane):
             self.dataplane.send(3, str(pkt))
             verify_packets(self, exp_pkt, [1, 2])
         finally:
+            sai_thrift_flush_fdb_by_vlan(self.client, vlan_id)
             self.client.sai_thrift_remove_ports_from_vlan(vlan_id, [vlan_port1, vlan_port2, vlan_port3])
             self.client.sai_thrift_delete_vlan(vlan_id)
 
@@ -1266,11 +1424,12 @@ class L2LagTest(sai_base_test.ThriftInterfaceDataPlane):
             verify_packets(self, exp_pkt, [5])
         finally:
 
-            self.client.sai_thrift_remove_ports_from_lag(lag_id1, [port1, port2, port3, port4])
             sai_thrift_delete_fdb(self.client, vlan_id, mac1, lag_id1)
             sai_thrift_delete_fdb(self.client, vlan_id, mac2, port5)
 
             self.client.sai_thrift_remove_ports_from_vlan(vlan_id, [vlan_port1, vlan_port2])
+            self.client.sai_thrift_remove_ports_from_lag(lag_id1, [port1, port2, port3, port4])
+
             self.client.sai_thrift_remove_lag(lag_id1)
             self.client.sai_thrift_delete_vlan(vlan_id)
 
@@ -1508,6 +1667,9 @@ class L3EcmpLagTest(sai_base_test.ThriftInterfaceDataPlane):
 
 class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print
         print "Sending packet port 1 -> port 2 (192.168.0.1 -> 10.10.10.1 [id = 101])"
         switch_init(self.client)
@@ -1550,33 +1712,18 @@ class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
 #
 #         finally:
         if True:
-
             # setup ACL to block based on Source IP
-            attr_value = sai_thrift_attribute_value_t(u8=0)
-            attr = sai_thrift_attribute_t(id=0x1004, value=attr_value)
-            table_attr_list =  [attr]
-            table_id = self.client.sai_thrift_create_acl_table(table_attr_list)
-
-            attr_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(oid=table_id)))
-            attr = sai_thrift_attribute_t(id=0, value=attr_value)
-            attr1_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(u32=10)))
-            attr1 = sai_thrift_attribute_t(id=1, value=attr1_value)
-            # IPV4_SOURCE
-            attr2_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(ip4="192.168.0.1"), mask =sai_thrift_acl_mask_t(ip4="255.255.255.255")))
-            attr2 = sai_thrift_attribute_t(id=0x1004, value=attr2_value)
-            port1 = port_list[1]
-            port2 = port_list[2]
+            action_1 = 1 #Drop
             ports = [port1, port2]
-            acl_port_list = sai_thrift_object_list_t(count=len(ports), object_id_list=ports)
-            # INPUT_PORTS
-            attr3_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data = sai_thrift_acl_data_t(objlist=acl_port_list)))
-            attr3 = sai_thrift_attribute_t(id=0x1006, value=attr3_value)
-            # Drop
-            attr4_value = sai_thrift_attribute_value_t(u8=0)
-            attr4 = sai_thrift_attribute_t(id=0x2001, value=attr4_value)
-
-            entry_attr_list =  [attr, attr1, attr2, attr3, attr4]
-            entry_id = self.client.sai_thrift_create_acl_entry(entry_attr_list)
+            ip_src = "192.168.0.1"
+            ip_src_mask = "255.255.255.0"
+            acl_table_id = sai_thrift_create_ip_acl_table(self.client, addr_family, ip_src, None, None)
+            acl_entry_id = sai_thrift_create_ip_acl_entry(self.client, acl_table_id,
+                                                          addr_family,
+                                                          ip_src, ip_src_mask,
+                                                          None, None, None,
+                                                          ports,
+                                                          action_1, None)
 
             # send the same packet
             failed = 0
@@ -1597,8 +1744,8 @@ class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
 
 
             # delete ACL
-            self.client.sai_thrift_delete_acl_entry(entry_id)
-            self.client.sai_thrift_delete_acl_table(table_id)
+            self.client.sai_thrift_delete_acl_entry(acl_entry_id)
+            self.client.sai_thrift_delete_acl_table(acl_table_id)
 
             # cleanup
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -1610,7 +1757,7 @@ class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
 
             self.client.sai_thrift_remove_virtual_router(vr_id)
 
-class L3SVIIPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
+class L3VIIPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
         print
         print "Sending packet port 1 -> port 2 (192.168.0.1 -> 10.10.10.1 [id = 101])"
@@ -1620,6 +1767,7 @@ class L3SVIIPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
         v4_enabled = 1
         v6_enabled = 1
         vlan_id = 10
+        mac_action = 1
 
         self.client.sai_thrift_create_vlan(vlan_id)
         vlan_port1 = sai_thrift_vlan_port_t(port_id=port1, tagging_mode=0)
@@ -1636,6 +1784,7 @@ class L3SVIIPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
         ip_addr1 = '10.10.10.1'
         ip_mask1 = '255.255.255.255'
         dmac1 = '00:0a:00:00:00:01'
+        sai_thrift_create_fdb(self.client, vlan_id, dmac1, port1, mac_action)
         nhop1 = sai_thrift_create_nhop(self.client, addr_family, ip_addr1, rif_id1)
         sai_thrift_create_route(self.client, vr_id, addr_family, ip_addr1, ip_mask1, nhop1)
         sai_thrift_create_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -1682,6 +1831,7 @@ class L3SVIIPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
             self.dataplane.send(2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
+            sai_thrift_delete_fdb(self.client, vlan_id, dmac1, port1)
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id2, ip_addr2, dmac2)
             sai_thrift_remove_route(self.client, vr_id, addr_family, ip_addr1, ip_mask1, nhop1)
@@ -1746,4 +1896,204 @@ class L3IPv4MacRewriteTest(sai_base_test.ThriftInterfaceDataPlane):
             self.client.sai_thrift_remove_router_interface(rif_id2)
             self.client.sai_thrift_remove_virtual_router(vr_id)
 
+class IngressLocalMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
+    def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
+        print
+        switch_init(self.client)
+        vlan_id = 10
+        port1 = port_list[1]
+        port2 = port_list[2]
+        port3 = port_list[3]
+        v4_enabled = 1
+        v6_enabled = 1
+        mac1 = '00:11:11:11:11:11'
+        mac2 = '00:22:22:22:22:22'
+        mac_action = 1
 
+        self.client.sai_thrift_create_vlan(vlan_id)
+
+        vlan_port1 = sai_thrift_vlan_port_t(port_id=port1, tagging_mode=0)
+        vlan_port2 = sai_thrift_vlan_port_t(port_id=port2, tagging_mode=1)
+        self.client.sai_thrift_add_ports_to_vlan(vlan_id, [vlan_port1, vlan_port2])
+
+        sai_thrift_create_fdb(self.client, vlan_id, mac1, port1, mac_action)
+        sai_thrift_create_fdb(self.client, vlan_id, mac2, port2, mac_action)
+
+        action = 2 #Ingress Mirror
+        ports = [port1, port2]
+        addr_family = 0
+        ip_src = "192.168.0.1"
+        ip_src_mask = "255.255.255.255"
+
+        mirror_type = 1
+        mirror_id = sai_thrift_create_mirror_session(self.client, mirror_type, port3,
+                                                     0, 0, 0,
+                                                     None, None,
+                                                     0, None, None,
+                                                     0, 0, 0, 0)
+
+        acl_table_id = sai_thrift_create_ip_acl_table(self.client, addr_family, ip_src, None, None)
+        acl_entry_id = sai_thrift_create_ip_acl_entry(self.client, acl_table_id,
+                                                      addr_family,
+                                                      ip_src, ip_src_mask,
+                                                      None, None, None,
+                                                      ports,
+                                                      action, mirror_id)
+
+        try:
+            pkt = simple_tcp_packet(eth_dst=mac2,
+                                eth_src=mac1,
+                                ip_dst='10.0.0.1',
+                                ip_src='192.168.0.1',
+                                ip_id=102,
+                                ip_ttl=64)
+            exp_pkt = simple_tcp_packet(eth_dst=mac2,
+                                eth_src=mac1,
+                                ip_dst='10.0.0.1',
+                                ip_src='192.168.0.1',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                ip_id=102,
+                                ip_ttl=64,
+                                pktlen=104)
+
+            print "Sending packet port 1 -> port 2 and port 3 (local mirror)"
+            self.dataplane.send(1, str(pkt))
+            verify_packet_list(self, [exp_pkt, pkt], [2, 3])
+
+            time.sleep(1)
+
+            pkt = simple_tcp_packet(eth_dst=mac1,
+                                eth_src=mac2,
+                                ip_dst='10.0.0.1',
+                                ip_src='192.168.0.1',
+                                vlan_vid=10,
+                                dl_vlan_enable=True,
+                                ip_id=102,
+                                ip_ttl=64,
+                                pktlen=104)
+            exp_pkt = simple_tcp_packet(eth_dst=mac1,
+                                eth_src=mac2,
+                                ip_dst='10.0.0.1',
+                                ip_src='192.168.0.1',
+                                ip_id=102,
+                                ip_ttl=64,
+                                pktlen=100)
+
+            print "Sending packet port 2 -> port 1 and port 3 (local mirror)"
+            self.dataplane.send(2, str(pkt))
+            verify_packet_list(self, [exp_pkt, pkt], [1, 3])
+
+        finally:
+            self.client.sai_thrift_delete_acl_entry(acl_entry_id)
+            self.client.sai_thrift_delete_acl_table(acl_table_id)
+
+            self.client.sai_thrift_remove_mirror_session(mirror_id)
+
+            sai_thrift_delete_fdb(self.client, vlan_id, mac1, port1)
+            sai_thrift_delete_fdb(self.client, vlan_id, mac2, port2)
+
+            self.client.sai_thrift_remove_ports_from_vlan(vlan_id, [vlan_port1, vlan_port2])
+            self.client.sai_thrift_delete_vlan(vlan_id)
+
+class IngressERSpanMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
+    def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
+        print
+        switch_init(self.client)
+        vlan_id = 10
+        port1 = port_list[1]
+        port2 = port_list[2]
+        port3 = port_list[3]
+        v4_enabled = 1
+        v6_enabled = 1
+        mac1 = '00:11:11:11:11:11'
+        mac2 = '00:22:22:22:22:22'
+        mac_action = 1
+
+        self.client.sai_thrift_create_vlan(vlan_id)
+
+        vlan_port1 = sai_thrift_vlan_port_t(port_id=port1, tagging_mode=0)
+        vlan_port2 = sai_thrift_vlan_port_t(port_id=port2, tagging_mode=1)
+        self.client.sai_thrift_add_ports_to_vlan(vlan_id, [vlan_port1, vlan_port2])
+
+        sai_thrift_create_fdb(self.client, vlan_id, mac1, port1, mac_action)
+        sai_thrift_create_fdb(self.client, vlan_id, mac2, port2, mac_action)
+
+        action = 2 #Ingress Mirror
+        ports = [port1, port2]
+        ip_src = "192.168.0.1"
+        ip_src_mask = "255.255.255.255"
+
+        mirror_type = 3
+        addr_family = 0
+        tunnel_src_ip = "1.1.1.1"
+        tunnel_dst_ip = "1.1.1.2"
+        tunnel_src_mac = "00:77:66:55:44:33"
+        tunnel_dst_mac = "00:33:33:33:33:33"
+        encap_type = 0
+        protocol = 47
+        mirror_id = sai_thrift_create_mirror_session(self.client, mirror_type, port3,
+                                                     0, 0, 0,
+                                                     tunnel_src_mac, tunnel_dst_mac,
+                                                     addr_family, tunnel_src_ip, tunnel_dst_ip,
+                                                     encap_type, protocol, 0, 0)
+
+        acl_table_id = sai_thrift_create_ip_acl_table(self.client, addr_family, ip_src, None, None)
+        acl_entry_id = sai_thrift_create_ip_acl_entry(self.client, acl_table_id,
+                                                      addr_family,
+                                                      ip_src, ip_src_mask,
+                                                      None, None, None,
+                                                      ports,
+                                                      action, mirror_id)
+
+        try:
+            pkt = simple_tcp_packet(eth_dst=mac2,
+                                eth_src=mac1,
+                                ip_dst='10.0.0.1',
+                                ip_src='192.168.0.1',
+                                ip_id=102,
+                                ip_ttl=64)
+            exp_pkt = simple_tcp_packet(eth_dst=mac2,
+                                eth_src=mac1,
+                                ip_dst='10.0.0.1',
+                                ip_src='192.168.0.1',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                ip_id=102,
+                                ip_ttl=64,
+                                pktlen=104)
+            exp_mirrored_pkt = ipv4_erspan_pkt(eth_dst=tunnel_dst_mac,
+                                           eth_src=tunnel_src_mac,
+                                           ip_src=tunnel_src_ip,
+                                           ip_dst=tunnel_dst_ip,
+                                           ip_id=0,
+                                           ip_ttl=64,
+                                           version=2,
+                                           mirror_id=(mirror_id & 0x3FFFFFFF),
+                                           inner_frame=pkt);
+
+            print "Sending packet port 1 -> port 2 and port 3 (erspan mirror)"
+            self.dataplane.send(1, str(pkt))
+            verify_erspan_III_packet(self, exp_mirrored_pkt, 3)
+            verify_packets(self, exp_pkt, [2])
+            verify_no_other_packets(self)
+
+            time.sleep(1)
+
+        finally:
+            self.client.sai_thrift_delete_acl_entry(acl_entry_id)
+            self.client.sai_thrift_delete_acl_table(acl_table_id)
+
+            self.client.sai_thrift_remove_mirror_session(mirror_id)
+
+            sai_thrift_delete_fdb(self.client, vlan_id, mac1, port1)
+            sai_thrift_delete_fdb(self.client, vlan_id, mac2, port2)
+
+            self.client.sai_thrift_remove_ports_from_vlan(vlan_id, [vlan_port1, vlan_port2])
+            self.client.sai_thrift_delete_vlan(vlan_id)

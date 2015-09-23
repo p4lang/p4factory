@@ -37,7 +37,7 @@ if __name__ == "__main__":
         args += ["--interface", "7@veth15"]
 
     args += ["--pd-thrift-path", pd_dir]
-    args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve", "--enable-nvgre", "--enable-mpls"]
+    args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve", "--enable-nvgre", "--enable-mpls", "--enable-xnt"]
     args += sys.argv[1:]
 
     child = Popen([oft_path] + args)

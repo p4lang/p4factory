@@ -1,5 +1,5 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc.
+Copyright 2013-present Barefoot Networks, Inc. 
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,25 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef BASIC_PROFILE
-#define MIN_PROFILE
-#define MULTICAST_DISABLE
-#define STORM_CONTROL_DISABLE
-#define IPSG_DISABLE
-#define ACL_DISABLE
-#define QOS_DISABLE
-#define MTU_DISABLE
-#endif
-
 #define FABRIC_ENABLE
 #define EGRESS_FILTER
+#define INT_TRANSIT_ENABLE
 
 // Defines for switchapi library
 #ifdef URPF_DISABLE
 #define P4_URPF_DISABLE
 #endif
-
-//#define OPENFLOW_ENABLE
 
 #ifdef IPV6_DISABLE
 #define P4_IPV6_DISABLE
@@ -66,10 +55,6 @@ limitations under the License.
 #define P4_QOS_DISABLE
 #endif
 
-#ifdef MTU_DISABLE
-#define P4_MTU_DISABLE
-#endif
-
 #ifdef STP_DISABLE
 #define P4_STP_DISABLE
 #endif
@@ -92,4 +77,10 @@ limitations under the License.
 
 #ifdef EGRESS_FILTER
 #define P4_EGRESS_FILTER
+#endif
+
+#ifdef INT_TRANSIT_ENABLE
+#define P4_INT_TRANSIT_ENABLE
+#define INT_ENABLE
+#define P4_INT_ENABLE
 #endif

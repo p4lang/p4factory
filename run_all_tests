@@ -247,9 +247,11 @@ def pd_tests():
     one_test("switch", test_subdir="pd-tests")
 
 def bmv2_pd_tests():
+    os.environ["BMV2_TEST"] = "1"
     bmv2_one_test("basic_routing")
     bmv2_one_test("l2_switch", test_subdir="pd-tests", do_make_clean=False)
     bmv2_one_test("switch", test_subdir="pd-tests", do_make_clean=False)
+    del os.environ["BMV2_TEST"]
 
 def switchapi_test():
     one_test("switch", test_subdir="api-tests",
@@ -272,9 +274,11 @@ def sai_p4_test():
              do_make_clean = True)
 
 def bmv2_switchsai_test():
+    os.environ["BMV2_TEST"] = "1"
     bmv2_one_test("switch", test_subdir="sai-tests",
                   do_make_clean = False, make_tgt = "bm-switchsai",
                   drivers_exe = "drivers-switchsai")
+    del os.environ["BMV2_TEST"]
 
 def openflow_test():
     one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
