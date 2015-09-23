@@ -17,7 +17,7 @@ Quickstart
 ========
 To install all the Ubuntu 14.04 dependencies, run
 
-    ./install.sh
+    ./install_deps.sh
 
 Before running the simulator, you need to create veth interfaces that the
 simulator can connect to. To create them, you need to run:
