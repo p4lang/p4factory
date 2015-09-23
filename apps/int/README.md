@@ -45,15 +45,23 @@ Restarting the reference app
 ============================
 
 * In order to restart the app
-    * Close the web client
-    * Stop the mininet script int_ref_topology.py
+    * Stop the mininet script 'int_ref_topology.py'
     * Run the following cleanup script
       * cd p4factory/mininet
       * sudo ./int_cleanup.sh
     * Now start the app once again as described in the previous section
 
-Mininet topology used in the reference app
-===========================================
+Architecture of the reference app
+=================================
+
+The app is composed of 3 major components:
+
+1. **Test network:** Based on mininet (more details in the next section)
+2. **Monitor:** Process that receives INT data from all the mininet hosts, aggregates the data and sends the computed results (eg: path changes within a flow, hop latencies at individual switches, etc.) to a web client
+3. **Web client:** Receives moinitoring information from the monitor and visualizes it.
+
+Test network configuration
+==========================
 
 We use mininet to set up a test network for the app. The network is composed of 4 hosts, 2 ToR switches and 2 spine switches. The switches are connected in a leaf-spine architecture. The following diagram illustrates the topology in greater detail.
 
@@ -62,8 +70,8 @@ We use mininet to set up a test network for the app. The network is composed of 
 Each mininet host has 3 major interfaces:
 
 1. eth0 : Connected to one of the ToR switches
-2. veth0 : A VTEP that connects to the VXLAN on the 10.2.1.0/24 subnet.
-3. hn-vm-ethn: Connects to the monitor process, which runs on the underlying machine. The monitor process aggregates INT data from each of the mininet hosts, aggregates the data and sends the results to a web-client, which then visualizes it.
+2. veth0 : A VTEP that connects to a VXLAN (on the 10.2.1.0/24 subnet)
+3. hn-vm-ethn: Connects to the monitor process
 
 Routing configuration of the switches
 -------------------------------------
@@ -79,16 +87,16 @@ The mininet script automatically invokes full-mesh ping sessions among all the f
 End-host networking stack
 ==========================
 
-As described in the previous section, each mininet host has a VTEP. The VXLAN-GPE driver enables INT on all IP unicast packets sent from a host through its VTEP. Within the INT metadata header, the instruction mask bits for switchID, hop latency and queue occupancy are set. Hence, each switch along the path of the packet would append these 3 bits of information to the packet. 
+As described in the previous section, each mininet host has a VTEP. The VXLAN-GPE driver enables INT on all IP unicast packets sent from a host through its VTEP. Within the INT metadata header, the instruction mask bits for switchID, hop latency and queue occupancy are set. Hence, each switch along the path of the packet would append these 3 bits of information to it.
 
-Each host runs an instance of a preprocessor process, which captures all the VXLAN-GPE packets that arrive at the host. The preprocessor strips out the INT headers and metadata values and sends them to the monitor process.
+Each host runs an instance of a preprocessor process, which captures all the VXLAN-GPE packets sent to the host. The preprocessor strips out the INT headers and metadata values from each packet and sends them to the monitor process.
 
 !['Host networking stack'](resources/host_network_stack.png)
 
 Web client UI
 =============
 
-The web client connects to the monitor process via a websocket, which is a protocol that provides full-duplex communication channels over a single TCP connection. The monitor notifies the client when a (i) new flow is detected in the network or (ii) a path change is detected in an existing flow. Additionally, the monitor periodically (every 10ms) sends the max latency encountered by each switch within that interval, to the client.
+The web client connects to the monitor process via a websocket (a protocol that provides full-duplex communication channels over a single TCP connection). The monitor notifies the client when either a new flow is detected in the network or a path change is detected in an existing flow. Additionally, the monitor periodically (every 10ms) sends the max latency encountered by each switch within that interval, to the client.
 
 The UI has the following components: 
 
