@@ -87,7 +87,7 @@ ifndef drivers-switchapi_BINARY
 	$(error Output binary not defined in drivers-switchapi_BINARY)
 endif
 
-SWITCHAPI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../of-tests/pd_thrift/switch_api_thrift
+SWITCHAPI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../tests/pd_thrift/switch_api_thrift
 THRIFT_INPUT_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
 THRIFT_DEP_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
 THRIFT_SERVICE_NAMES := switch_api_rpc
@@ -105,7 +105,7 @@ drivers-switchapi : export LIB_SWITCHAPI_ENABLE=1
 drivers-switchapi : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1 -g
 drivers-switchapi : $(SWITCHAPI_LIB)
 drivers-switchapi : ${drivers-switchapi_BINARY} switchapi_THRIFT
-	cp -r $(BMV2_THRIFT_PY_DIR)/* $(TARGET_ROOT)/../of-tests/pd_thrift/
+	cp -r $(BMV2_THRIFT_PY_DIR)/* $(TARGET_ROOT)/../tests/pd_thrift/
 
 ###################################
 #BUILD SWITCH SAI
@@ -127,7 +127,7 @@ ifndef drivers-switchsai_BINARY
 	$(error Output binary not defined in drivers-switchsai_BINARY)
 endif
 
-SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../of-tests/pd_thrift/switch_sai_thrift
+SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../tests/pd_thrift/switch_sai_thrift
 THRIFT_INPUT_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_DEP_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_SERVICE_NAMES := switch_sai_rpc

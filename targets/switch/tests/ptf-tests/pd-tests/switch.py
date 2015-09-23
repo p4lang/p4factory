@@ -23,15 +23,12 @@ import logging
 import unittest
 import random
 
-import oftest.dataplane as dataplane
-import oftest.pd_base_tests as pd_base_tests
+import pd_base_tests
 
-from oftest.testutils import *
-from oftest import config
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 import os
-
-from utils import *
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
@@ -863,7 +860,7 @@ class L2Test(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=101,
                                 ip_ttl=64,
                                 ip_ihl=5)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         try:
             verify_packets(self, pkt, [2])
         except:
@@ -958,9 +955,8 @@ class L3Ipv4Test(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=101,
                                 ip_ttl=63,
                                 ip_ihl=5)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         time.sleep(1)
-
         verify_packets(self, exp_pkt, [2])
 
         delete_ipv4_route(self.client, sess_hdl, device, 32, route_hdl2)
@@ -1057,7 +1053,7 @@ class L3Ipv6Test(pd_base_tests.ThriftInterfaceDataPlane):
                                 ipv6_dst='3000::1',
                                 ipv6_src='2000::1',
                                 ipv6_hlim=63)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packets(self, exp_pkt, [2])
 
         delete_ipv6_route(self.client, sess_hdl, device, 128, route_hdl2)
@@ -1193,13 +1189,12 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         time.sleep(1)
         try:
             verify_packets(self, vxlan_pkt, [2])
         except:
             print 'FAILED'
-
 
         print "Sending packet port 2 -> port 1 - Vxlan tunnel decap"
         print "Inner packet (192.168.10.2 -> 192.168.20.1 [id = 101])"
@@ -1221,7 +1216,7 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        self.dataplane.send(2, str(vxlan_pkt))
+        send_packet(self, 2, str(vxlan_pkt))
         verify_packets(self, pkt, [1])
 
 
@@ -1373,7 +1368,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt2)
 
-        self.dataplane.send(1, str(pkt1))
+        send_packet(self, 1, str(pkt1))
         try:
             verify_packets(self, vxlan_pkt, [2])
         except:
@@ -1406,7 +1401,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='10.168.11.1',
                                 ip_id=101,
                                 ip_ttl=63)
-        self.dataplane.send(2, str(vxlan_pkt))
+        send_packet(self, 2, str(vxlan_pkt))
         try:
             verify_packets(self, pkt2, [1])
         except:
@@ -1502,7 +1497,7 @@ class L2LearningTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='10.168.11.1',
                                 ip_id=101,
                                 ip_ttl=64)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         time.sleep(learn_timeout + 1)
         digests = self.client.mac_learn_digest_get_digest(sess_hdl)
         assert len(digests.msg) == 1
@@ -1586,7 +1581,7 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=101,
                                 ip_ttl=64)
 
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packets(self, pkt, [port2, port3, port4])
         time.sleep(1)
         self.mc.mc_dissociate_node(mc_sess_hdl, dev_tgt.dev_id, mgrp_hdl, node_hdl)

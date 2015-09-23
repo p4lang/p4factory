@@ -55,15 +55,15 @@ You can then go up one directory in a third terminal and run the tests.
 
 To run the pd thrift testcases,
 
-    sudo ./run_tests.py --test-dir of-tests/tests/pd-tests switch
+    sudo ./run_tests.py --test-dir tests/ptf-tests/pd-tests switch
 
 To run the api thrift testcases. Because 3 of the unit tests are not working yet
 with the new behavioral-model (*MirrorAclTest_e2e*, *MirrorAclTest_i2e_erspan*,
 *MirrorAclTest_i2e*), you need to set the environment variable `BMV2_TEST` to
 `1` before running the test script. These 3 tests will then be skipped.
 
-    sudo BMV2_TEST=1 ./run_tests.py --test-dir of-tests/tests/api-tests switch
+    sudo BMV2_TEST=1 ./run_tests.py --test-dir tests/ptf-tests/api-tests switch
 
 To run the SAI thrift testcases,
 
-    sudo ./run_tests.py --test-dir of-tests/tests/sai-tests switch
+    sudo ./run_tests.py --test-dir tests/ptf-tests/sai-tests switch

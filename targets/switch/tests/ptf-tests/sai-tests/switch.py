@@ -25,16 +25,16 @@ import logging
 import unittest
 import random
 
-import oftest.dataplane as dataplane
 import sai_base_test
 
-from oftest.testutils import *
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 import os
 
-from utils import *
-
 from switch_sai_thrift.ttypes import  *
+
+from erspan_III import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -47,7 +47,7 @@ is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
 
 def verify_packet_list_any(test, pkt_list,  ofport_list):
     logging.debug("Checking for packet on given ports")
-    (rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=1)
+    (_, rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=1)
     test.assertTrue(rcv_pkt != None, "No packet received")
 
     i = 0
@@ -66,7 +66,7 @@ def verify_packet_list(test, pkt_list,  ofport_list):
 
     match_found = 0
     for ofport in ofport_list:
-        (rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=2)
+        (_, rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=2)
         test.assertTrue(rcv_pkt != None, "No packet received")
         index = ofport_list.index(rcv_port)
         pkt = pkt_list[index]
@@ -450,7 +450,7 @@ class L2AccessToAccessVlanTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_ttl=64)
 
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, pkt, [1])
         finally:
             sai_thrift_delete_fdb(self.client, vlan_id, mac1, port1)
@@ -495,7 +495,7 @@ class L2TrunkToTrunkVlanTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_ttl=64)
 
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_delete_fdb(self.client, vlan_id, mac1, port1)
@@ -538,7 +538,7 @@ class L2AccessToTrunkVlanTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_ttl=64,
                                 pktlen=104)
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_delete_fdb(self.client, vlan_id, mac1, port1)
@@ -581,7 +581,7 @@ class L2TrunkToAccessVlanTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_ttl=64,
                                 pktlen=96)
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_delete_fdb(self.client, vlan_id, mac1, port1)
@@ -626,7 +626,7 @@ class L2StpTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_dst='10.0.0.1',
                                 ip_id=113,
                                 ip_ttl=64)
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
 
             self.client.sai_thrift_set_stp_port_state(stp_id, port2, 2)
@@ -641,7 +641,7 @@ class L2StpTest(sai_base_test.ThriftInterfaceDataPlane):
                                     ip_dst='10.0.0.1',
                                     ip_id=113,
                                     ip_ttl=64)
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [])
         finally:
             sai_thrift_delete_fdb(self.client, vlan_id, mac1, port1)
@@ -692,7 +692,7 @@ class L3IPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 ip_ttl=63)
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -744,7 +744,7 @@ class L3IPv4LpmTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 ip_ttl=63)
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, nhop_ip1, dmac1)
@@ -793,7 +793,7 @@ class L3IPv6HostTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ipv6_src='2000::1',
                                 ipv6_hlim=63)
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -844,7 +844,7 @@ class L3IPv6LpmTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ipv6_src='2000::1',
                                 ipv6_hlim=63)
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, nhop_ip1, dmac1)
@@ -913,7 +913,7 @@ class L3IPv4EcmpHostTest(sai_base_test.ThriftInterfaceDataPlane):
                                 #ip_tos=3,
                                 ip_ttl=63)
 
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packet_list_any(self, [exp_pkt1, exp_pkt2], [1, 2])
 
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -939,7 +939,7 @@ class L3IPv4EcmpHostTest(sai_base_test.ThriftInterfaceDataPlane):
                                     ip_id=106,
                                     #ip_tos=3,
                                     ip_ttl=63)
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packet_list_any(self, [exp_pkt1, exp_pkt2], [1, 2])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -1012,7 +1012,7 @@ class L3IPv6EcmpHostTest(sai_base_test.ThriftInterfaceDataPlane):
                                     tcp_sport=0x1234,
                                     ipv6_hlim=63)
 
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packet_list_any(self, [exp_pkt1, exp_pkt2], [1, 2])
 
             pkt = simple_tcpv6_packet(
@@ -1038,7 +1038,7 @@ class L3IPv6EcmpHostTest(sai_base_test.ThriftInterfaceDataPlane):
                                     tcp_sport=0x1248,
                                     ipv6_hlim=63)
 
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packet_list_any(self, [exp_pkt1, exp_pkt2], [1, 2])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -1140,7 +1140,7 @@ class L3IPv4EcmpLpmTest(sai_base_test.ThriftInterfaceDataPlane):
                         ip_id=106,
                         ip_ttl=63)
 
-                self.dataplane.send(5, str(pkt))
+                send_packet(self, 5, str(pkt))
                 rcv_idx = verify_packet_list_any(self,
                               [exp_pkt1, exp_pkt2, exp_pkt3, exp_pkt4],
                               [1, 2, 3, 4])
@@ -1269,7 +1269,7 @@ class L3IPv6EcmpLpmTest(sai_base_test.ThriftInterfaceDataPlane):
                         tcp_dport=dport,
                         ipv6_hlim=63)
 
-                self.dataplane.send(5, str(pkt))
+                send_packet(self, 5, str(pkt))
                 rcv_idx = verify_packet_list_any(self,
                               [exp_pkt1, exp_pkt2, exp_pkt3, exp_pkt4],
                               [1, 2, 3, 4])
@@ -1333,11 +1333,11 @@ class L2FloodTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_id=107,
                                 ip_ttl=64)
         try:
-            self.dataplane.send(1, str(pkt))
+            send_packet(self, 1, str(pkt))
             verify_packets(self, exp_pkt, [2, 3])
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1, 3])
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packets(self, exp_pkt, [1, 2])
         finally:
             sai_thrift_flush_fdb_by_vlan(self.client, vlan_id)
@@ -1388,7 +1388,7 @@ class L2LagTest(sai_base_test.ThriftInterfaceDataPlane):
                                             ip_id=109,
                                             ip_ttl=64)
 
-                self.dataplane.send(5, str(pkt))
+                send_packet(self, 5, str(pkt))
                 rcv_idx = verify_packet_list_any(self,
                               [exp_pkt, exp_pkt, exp_pkt, exp_pkt],
                               [1, 2, 3, 4])
@@ -1411,16 +1411,16 @@ class L2LagTest(sai_base_test.ThriftInterfaceDataPlane):
                                     ip_id=109,
                                     ip_ttl=64)
             print "Sending packet port 1 (lag member) -> port 1"
-            self.dataplane.send(1, str(pkt))
+            send_packet(self, 1, str(pkt))
             verify_packets(self, exp_pkt, [5])
             print "Sending packet port 2 (lag member) -> port 1"
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [5])
             print "Sending packet port 3 (lag member) -> port 1"
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packets(self, exp_pkt, [5])
             print "Sending packet port 4 (lag member) -> port 1"
-            self.dataplane.send(4, str(pkt))
+            send_packet(self, 4, str(pkt))
             verify_packets(self, exp_pkt, [5])
         finally:
 
@@ -1474,7 +1474,7 @@ class L3IPv4LagTest(sai_base_test.ThriftInterfaceDataPlane):
                                     ip_src='192.168.0.1',
                                     ip_id=110,
                                     ip_ttl=63)
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packets_any(self, exp_pkt, [1, 2])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -1527,7 +1527,7 @@ class L3IPv6LagTest(sai_base_test.ThriftInterfaceDataPlane):
                                     ipv6_dst='4001::1',
                                     ipv6_src='5001::1',
                                     ipv6_hlim=63)
-            self.dataplane.send(3, str(pkt))
+            send_packet(self, 3, str(pkt))
             verify_packets_any(self, exp_pkt, [1, 2])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -1617,7 +1617,7 @@ class L3EcmpLagTest(sai_base_test.ThriftInterfaceDataPlane):
                         ip_id=106,
                         ip_ttl=63)
 
-                self.dataplane.send(7, str(pkt))
+                send_packet(self, 7, str(pkt))
                 rcv_idx = verify_packet_list_any(self,
                               [exp_pkt1, exp_pkt1, exp_pkt1,
                                   exp_pkt2, exp_pkt2, exp_pkt3],
@@ -1707,7 +1707,7 @@ class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 ip_ttl=63)
 #         try:
-#             self.dataplane.send(2, str(pkt))
+#             send_packet(self, 2, str(pkt))
 #             verify_packets(self, exp_pkt, [1])
 #
 #         finally:
@@ -1727,7 +1727,7 @@ class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
 
             # send the same packet
             failed = 0
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
 
             # ensure packet is dropped
             # check for absence of packet here!
@@ -1811,7 +1811,7 @@ class L3VIIPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_src='10.10.10.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            self.dataplane.send(1, str(pkt))
+            send_packet(self, 1, str(pkt))
             verify_packets(self, exp_pkt, [2])
 
             # send the test packet(s)
@@ -1828,7 +1828,7 @@ class L3VIIPv4HostTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_src='11.11.11.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_delete_fdb(self.client, vlan_id, dmac1, port1)
@@ -1886,7 +1886,7 @@ class L3IPv4MacRewriteTest(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 ip_ttl=63)
         try:
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packets(self, exp_pkt, [1])
         finally:
             sai_thrift_remove_neighbor(self.client, addr_family, rif_id1, ip_addr1, dmac1)
@@ -1961,7 +1961,7 @@ class IngressLocalMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
                                 pktlen=104)
 
             print "Sending packet port 1 -> port 2 and port 3 (local mirror)"
-            self.dataplane.send(1, str(pkt))
+            send_packet(self, 1, str(pkt))
             verify_packet_list(self, [exp_pkt, pkt], [2, 3])
 
             time.sleep(1)
@@ -1984,7 +1984,7 @@ class IngressLocalMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
                                 pktlen=100)
 
             print "Sending packet port 2 -> port 1 and port 3 (local mirror)"
-            self.dataplane.send(2, str(pkt))
+            send_packet(self, 2, str(pkt))
             verify_packet_list(self, [exp_pkt, pkt], [1, 3])
 
         finally:
@@ -2079,7 +2079,7 @@ class IngressERSpanMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
                                            inner_frame=pkt);
 
             print "Sending packet port 1 -> port 2 and port 3 (erspan mirror)"
-            self.dataplane.send(1, str(pkt))
+            send_packet(self, 1, str(pkt))
             verify_erspan_III_packet(self, exp_mirrored_pkt, 3)
             verify_packets(self, exp_pkt, [2])
             verify_no_other_packets(self)

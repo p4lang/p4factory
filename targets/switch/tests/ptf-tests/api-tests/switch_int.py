@@ -25,17 +25,17 @@ import logging
 import unittest
 import random
 
-import oftest.dataplane as dataplane
+import ptf.dataplane as dataplane
 import api_base_tests
 
-from oftest.testutils import *
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 import os
 
-from utils import *
-
 from switch_api_thrift.ttypes import  *
-import pdb
+
+from xnt import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -119,7 +119,7 @@ class int_transitTest_switchid(api_base_tests.ThriftInterfaceDataPlane):
                                 int_inst_mask=0x8000, #only swid, 1 byte
                                 int_inst_cnt=1,
                                 inner_frame=pkt)
-        self.dataplane.send(1, str(vxlan_int_pkt))
+        send_packet(self, 1, str(vxlan_int_pkt))
 
         exp_pkt = vxlan_gpe_int_packet_add_hop_info(Packet=exp_pkt,
                                      val=0x11111111, bos=True, incr_cnt=1)
@@ -234,7 +234,7 @@ class int_transitTest_hop2(api_base_tests.ThriftInterfaceDataPlane):
         exp_pkt = vxlan_gpe_int_packet_add_hop_info(Packet=exp_pkt,
                                      val=0x11111111, bos=False, incr_cnt=1)
 
-        self.dataplane.send(1, str(vxlan_int_pkt))
+        send_packet(self, 1, str(vxlan_int_pkt))
         verify_packets(self, exp_pkt, [2])
         verify_no_other_packets(self)
 
@@ -365,7 +365,7 @@ class int_transitTest_Ebit(api_base_tests.ThriftInterfaceDataPlane):
         exp_pkt[INT_META_HDR].max_hop_cnt = exp_pkt[INT_META_HDR].total_hop_cnt
         exp_pkt[INT_META_HDR].e = 1;
 
-        self.dataplane.send(1, str(vxlan_int_pkt))
+        send_packet(self, 1, str(vxlan_int_pkt))
         verify_packets(self, exp_pkt, [2])
         verify_no_other_packets(self)
 

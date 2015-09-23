@@ -12,18 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import oftest.dataplane as dataplane
-import oftest.pd_base_tests as pd_base_tests
+import ptf.dataplane as dataplane
+import pd_base_tests
 
-from oftest.testutils import *
-
-from utils import *
-
-sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'l2_switch', 'of-tests', 'tests',
-                             'openflow-tests')) 
-
-from openflow import repopulate_openflow_defaults
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
@@ -31,10 +24,6 @@ from res_pd_rpc.ttypes import *
 
 def setup_default_table_configurations(client, sess_hdl, dev_tgt):
     client.clean_all(sess_hdl, dev_tgt)
-    try:
-        repopulate_openflow_defaults(client, sess_hdl, dev_tgt)
-    except AttributeError:
-        print "Not repopulating OF tables, not generated."
 
     result = client.smac_set_default_action_mac_learn(sess_hdl, dev_tgt)
     assert result == 0
@@ -77,6 +66,6 @@ class SimpleReplicationTest(pd_base_tests.ThriftInterfaceDataPlane):
         pkt = simple_ip_packet(ip_dst='10.0.0.2',
                                ip_id=101,
                                ip_ttl=64)
-        self.dataplane.send(2, str(pkt))
+        send_packet(self, 2, str(pkt))
         exp_pkt = pkt
         verify_packets(self, exp_pkt, [1, 3]) # port 2 should have been pruned

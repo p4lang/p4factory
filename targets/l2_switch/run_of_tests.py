@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--test-dir", required=False,
                     default=os.path.join("tests", "of-tests"),
                     help="directory containing the tests (default tests/of-tests/)")
-args = parser.parse_args()
+args, unknown_args = parser.parse_known_args()
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
 pd_dir = os.path.join(root_dir, 'tests/pd_thrift')
@@ -31,7 +31,8 @@ pd_dir = os.path.join(root_dir, 'tests/pd_thrift')
 oft_path = os.path.join(root_dir, '..', '..', 'submodules', 'oft-infra', 'oft')
 
 if __name__ == "__main__":
-    new_args =  ["-S 127.0.0.1", "-V1.3"]
+    new_args = unknown_args
+    new_args +=  ["-S 127.0.0.1", "-V1.3"]
     new_args += ["--test-dir", args.test_dir]
     new_args += ["--interface", "9@veth1"]
     new_args += ["--interface", "2@veth5"]
@@ -43,7 +44,6 @@ if __name__ == "__main__":
 
     new_args += ["--pd-thrift-path", pd_dir]
     new_args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve"]
-    new_args += sys.argv[1:]
 
     child = Popen([oft_path] + new_args)
     child.wait()
