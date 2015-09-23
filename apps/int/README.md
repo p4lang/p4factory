@@ -1,13 +1,19 @@
 Overview
 ========
 
-This is a reference app meant to be a proof-of-concept implementation of In-band Network Telemetry (INT) [For a complete description of the INT spec, refer to [[TODO]]]. The preprocessor, monitor and UI components (described below) have been provided merely to showcase a simple use case of the huge amount of network-monitoring information collected via INT. This app demonstrates the use of INT over VXLAN-GPE.
-
+This is a reference application meant to be a proof-of-concept implementation
+of In-band Network Telemetry (INT) [http://TODO].
+This reference application has three components - preprocessor, monitor and
+user interface (described below). This application demonstrates a simple
+network monitoring use case based on the network information collected using INT
+protocol.
+In this example, the test network uses INT over VxLAN-GPE.
 
 Setting up the environment
 ===========================
 
-* Ensure that the following dependencies are met before running the INT reference app
+* Ensure that the following dependencies are met before running 
+    the INT reference app
   * Install linux kernel 3.19
     * On Ubuntu, the kernel can be upgraded to 3.19 by running the following command:
       * sudo apt-get install linux-generic-lts-vivid
@@ -27,8 +33,8 @@ Setting up the environment
   * sudo ./install_driver.sh
   * Ensure that the driver has been installed successfully using one of the following checks
     * lsmod | grep vxlan - this should list vxlan as one of the loaded modules
-    * dmesg | grep 
-      * If the driver was installed successfully, this should list the following message: "[VXLAN-GPE] Loading VXLAN-GPE driver"
+    * dmesg | grep "VXLAN-GPE"
+      * This should list the following message: "[VXLAN-GPE] Loading VXLAN-GPE driver"
 
 Running the reference app
 =========================
