@@ -415,6 +415,12 @@ class TableStatsGet(openflow_base_tests.OFTestInterface):
 
     def runTest(self):
         setup(self)
+
+        req = table_stats_req()
+        (reply, pkt) = self.controller.transact(req)
+        initial_matched_count = reply.entries[0].matched_count
+        initial_lookup_count = reply.entries[0].lookup_count
+
         ports = sorted(config["port_map"].keys())
         out_port = ports[0]
 
@@ -444,18 +450,17 @@ class TableStatsGet(openflow_base_tests.OFTestInterface):
         for _ in xrange(num_miss_packets):
             self.dataplane.send(ports[0], miss_pkt)
 
-        req = table_stats_req()
-        self.controller.message_send(req)
-        do_barrier(self.controller)
+        time.sleep(3)
 
-        entry = ofp.common.table_stats_entry(lookup_count=num_miss_packets + num_hit_packets,
-                                       matched_count=num_hit_packets)
-        reply = table_stats_reply(entries=[entry])
-        verify_packets(self, reply, [6653])
+        req = table_stats_req()
+        (reply, pkt) = self.controller.transact(req)
 
         req = flow_delete(cookie=45, table_id=0)
         self.controller.message_send(req)
         do_barrier(self.controller)
+
+        assert reply.entries[0].lookup_count == num_miss_packets + num_hit_packets + initial_lookup_count
+        assert reply.entries[0].matched_count == num_hit_packets + initial_matched_count
 
 class PacketIn(openflow_base_tests.OFTestInterface):
     """

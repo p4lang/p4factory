@@ -33,17 +33,7 @@ from p4_mininet import P4Switch, P4Host
 import os
 import sys
 import time
-
-lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch',
-                                        'build', 'thrift'))
-sys.path.append(lib_path)
-
-from switch_api.ttypes import  *
-from switch_api import switch_api_rpc
-
-from thrift.transport import TSocket
-from thrift.transport import TTransport
-from thrift.protocol import TBinaryProtocol
+from subprocess import Popen
 
 import argparse
 
@@ -53,43 +43,82 @@ parser.add_argument('--controller-ip', help='IPv4 address of openflow controller
 
 parser_args = parser.parse_args()
 
-device=0
+import importlib
+from thrift.transport import TSocket
+from thrift.transport import TTransport
+from thrift.protocol import TBinaryProtocol
+from thrift.protocol import TMultiplexedProtocol
 
-def open_switchapi_connection():
-    transport = TSocket.TSocket('localhost', 9091)
+root_dir = os.path.dirname(os.path.realpath(__file__))
+pd_dir = os.path.join(root_dir, '../targets/switch/of-tests/pd_thrift')
+oft_infra_dir = os.path.join(root_dir, '..', 'submodules', 'oft-infra')
+
+sys.path.append(pd_dir)
+sys.path.append(oft_infra_dir)
+
+from p4_pd_rpc.ttypes import *
+from res_pd_rpc.ttypes import *
+from utils import *
+
+def setup_bd(client, conn_mgr):
+    """
+    Instantiates port_vlan_mapping table entry setting bd == 0
+    for untagged packets on ifindex 1.
+    """
+    sess_hdl = conn_mgr.client_init(16)
+    dev_tgt = DevTarget_t(0, hex_to_i16(0xffff))
+    ifindices = [1, 2]
+
+    for ifindex in ifindices:
+        action_spec = dc_set_bd_action_spec_t(
+                                action_bd=0,
+                                action_vrf=0,
+                                action_rmac_group=0,
+                                action_ipv4_unicast_enabled=True,
+                                action_ipv6_unicast_enabled=True,
+                                action_bd_label=0,
+                                action_igmp_snooping_enabled=0,
+                                action_mld_snooping_enabled=0,
+                                action_ipv4_urpf_mode=0,
+                                action_ipv6_urpf_mode=0,
+                                action_stp_group=0,
+                                action_stats_idx=0)
+        
+        mbr_hdl = client.bd_action_profile_add_member_with_set_bd(
+                                sess_hdl, dev_tgt,
+                                action_spec)
+        match_spec = dc_port_vlan_mapping_match_spec_t(
+                                ingress_metadata_ifindex=ifindex,
+                                vlan_tag__0__valid=0,
+                                vlan_tag__0__vid=0,
+                                vlan_tag__1__valid=0,
+                                vlan_tag__1__vid=0)
+        client.port_vlan_mapping_add_entry(
+                                sess_hdl, dev_tgt,
+                                match_spec, mbr_hdl)
+
+def configure_switch():
+    p4_name = "dc"
+    p4_client_module = importlib.import_module(".".join(["p4_pd_rpc", p4_name]))
+    mc_client_module = importlib.import_module(".".join(["mc_pd_rpc", "mc"]))
+    conn_mgr_client_module = importlib.import_module(".".join(["conn_mgr_pd_rpc", "conn_mgr"]))
+
+    transport = TSocket.TSocket('localhost', 9090)
     transport = TTransport.TBufferedTransport(transport)
-    protocol = TBinaryProtocol.TBinaryProtocol(transport)
+    bprotocol = TBinaryProtocol.TBinaryProtocol(transport)
 
-    client = switch_api_rpc.Client(protocol)
+    mc_protocol = TMultiplexedProtocol.TMultiplexedProtocol(bprotocol, "mc")
+    conn_mgr_protocol = TMultiplexedProtocol.TMultiplexedProtocol(bprotocol, "conn_mgr")
+    p4_protocol = TMultiplexedProtocol.TMultiplexedProtocol(bprotocol, p4_name)
+
+    client = p4_client_module.Client(p4_protocol)
+    mc = mc_client_module.Client(mc_protocol)
+    conn_mgr = conn_mgr_client_module.Client(conn_mgr_protocol)
     transport.open()
-    return transport, client
 
-def close_switchapi_connection(transport):
+    setup_bd(client, conn_mgr)
+
     transport.close()
-
-def cfg_switch():
-    transport, client = open_switchapi_connection()
-
-    client.switcht_api_init(device)
-    vlan = client.switcht_api_vlan_create(device, 10)
-
-    ifunion1 = interface_union(port_lag_handle = 0)
-    ifinfo1 = switcht_interface_info_t(device=0, type=2,
-                     u=ifunion1, mac='00:77:66:55:44:33', label=0)
-    vlan_if1 = client.switcht_api_interface_create(device, ifinfo1)
-    vlan_port1 = switcht_vlan_port_t(handle=vlan_if1, tagging_mode=0)
-    client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
-
-    ifunion2 = interface_union(port_lag_handle = 1)
-    ifinfo2 = switcht_interface_info_t(device=0, type=2,
-                     u=ifunion2, mac='00:77:66:55:44:34', label=0)
-    vlan_if2 = client.switcht_api_interface_create(device, ifinfo2)
-    vlan_port2 = switcht_vlan_port_t(handle=vlan_if2, tagging_mode=0)
-    client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
-
-    client.switcht_api_vlan_learning_enabled_set(vlan, 0)
-
-    close_switchapi_connection(transport)
 
 class OpenflowEnabledP4Switch(P4Switch):
     """
@@ -143,7 +172,7 @@ def main():
     h2.setDefaultRoute("dev eth0 via 10.0.1.1")
     h2.describe()
 
-    cfg_switch()
+    configure_switch()
 
     time.sleep(1)
 

@@ -126,11 +126,13 @@ action openflow_miss(reason, table_id) {
 action packet_out_eth_flood() {
     modify_field(intrinsic_metadata.mcast_grp, fabric_header.dstPortOrGroup);
     terminate_cpu_packet();
+    modify_field(openflow_metadata.ofvalid, TRUE);
 }
 
 action packet_out_unicast() {
     modify_field(standard_metadata.egress_spec, fabric_header.dstPortOrGroup);
     terminate_cpu_packet();
+    modify_field(openflow_metadata.ofvalid, TRUE);
 }
 
 table packet_out {
