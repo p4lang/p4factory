@@ -17,6 +17,8 @@ Setting up the environment
   * Install linux kernel 3.19
     * On Ubuntu, the kernel can be upgraded to 3.19 by running the following command:
       * sudo apt-get install linux-generic-lts-vivid
+  * Install docker
+    * curl -sSL https://get.docker.com/ | sh
   * Install other dependencies
     * sudo apt-get install python3
     * sudo apt-get install python3-pip
@@ -24,8 +26,11 @@ Setting up the environment
     * sudo pip3 install scapy-python3
     
 * Build a docker image for the switch
+  * cd p4factory
+  * sudo ./install_deps.sh
   * cd p4factory/targets/switch
   * make docker-image
+  * make switchapi_THRIFT
 
 * Build and install the VXLAN-GPE driver provided in the repo
   * cd p4factory/apps/int/vxlan-gpe
