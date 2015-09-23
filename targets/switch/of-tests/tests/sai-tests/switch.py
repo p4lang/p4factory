@@ -42,6 +42,7 @@ switch_inited=0
 port_list = []
 table_attr_list = []
 
+
 is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
 
 def verify_packet_list_any(test, pkt_list,  ofport_list):
@@ -1666,6 +1667,9 @@ class L3EcmpLagTest(sai_base_test.ThriftInterfaceDataPlane):
 
 class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print
         print "Sending packet port 1 -> port 2 (192.168.0.1 -> 10.10.10.1 [id = 101])"
         switch_init(self.client)
@@ -1708,9 +1712,8 @@ class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
 #
 #         finally:
         if True:
-
             # setup ACL to block based on Source IP
-            action = 1 #Drop
+            action_1 = 1 #Drop
             ports = [port1, port2]
             ip_src = "192.168.0.1"
             ip_src_mask = "255.255.255.0"
@@ -1719,8 +1722,8 @@ class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
                                                           addr_family,
                                                           ip_src, ip_src_mask,
                                                           None, None, None,
-                                                          port_list,
-                                                          action, None)
+                                                          ports,
+                                                          action_1, None)
 
             # send the same packet
             failed = 0
@@ -1895,6 +1898,9 @@ class L3IPv4MacRewriteTest(sai_base_test.ThriftInterfaceDataPlane):
 
 class IngressLocalMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
+        if is_bmv2:
+            print "BMV2_TEST == 1 => test skipped"
+            return
         print
         switch_init(self.client)
         vlan_id = 10
