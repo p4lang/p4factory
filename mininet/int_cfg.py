@@ -19,7 +19,6 @@ from mininet.cli import CLI
 from distutils.version import StrictVersion
 from p4_mininet import P4DockerSwitch
 from p4_mininet import P4Host
-from int_sw_cfg import *
 from mininet.link import TCLink
 
 import os
@@ -27,12 +26,11 @@ import sys
 import time
 lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch', 'of-tests', 'pd_thrift'))
 sys.path.append(lib_path)
+import switch_api_thrift.switch_api_rpc as api_rpc
 from switch_api_thrift.ttypes import  *
-
 from thrift.transport import TSocket
 from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
-import pdb
 
 class HostConfig():
   def __init__(self, name, mac, ip, prefix_len, cls = P4Host, vxlan_cfg = None):
@@ -304,7 +302,7 @@ def open_connection(port):
     transport = TTransport.TBufferedTransport(transport)
     protocol = TBinaryProtocol.TBinaryProtocol(transport)
 
-    client = bfn_api_rpc.Client(protocol)
+    client = api_rpc.Client(protocol)
     transport.open()
     return transport, client
 
