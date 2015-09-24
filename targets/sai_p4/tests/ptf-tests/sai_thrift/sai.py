@@ -11,14 +11,13 @@ import logging
 import unittest
 import random
 
-import oftest.dataplane as dataplane
+import ptf.dataplane as dataplane
 import sai_base_test
 
-from oftest.testutils import *
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 import os
-
-from utils import *
 
 from p4_sai_rpc.ttypes import  *
 
@@ -96,7 +95,7 @@ class L2Test(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_id=101,
                                 ip_ttl=64)
         try:
-            self.dataplane.send(1, str(pkt))
+            send_packet(self, 1, str(pkt))
             verify_packets(self, exp_pkt, [2])
         finally:
             print 'done'
@@ -156,7 +155,7 @@ class L3Test(sai_base_test.ThriftInterfaceDataPlane):
                                 ip_id=101,
                                 ip_ttl=63)
         try:
-            self.dataplane.send(1, str(pkt))
+            send_packet(self, 1, str(pkt))
             verify_packets(self, exp_pkt, [3])
         finally:
             print 'done'

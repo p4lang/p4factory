@@ -25,17 +25,17 @@ import logging
 import unittest
 import random
 
-import oftest.dataplane as dataplane
+import ptf.dataplane as dataplane
 import api_base_tests
 
-from oftest.testutils import *
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 import os
 
-from utils import *
-
 from switch_api_thrift.ttypes import  *
-import pdb
+
+from erspan_III import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -83,7 +83,7 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=64)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
 
         exp_pkt = simple_tcp_packet(
                                 eth_dst='00:11:22:33:44:55',
@@ -106,7 +106,7 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
         action_param = switcht_acl_action_params_t(redirect = switcht_acl_action_redirect(handle = 0))
         ace = self.client.switcht_api_acl_ip_rule_create(0, acl, 10, 1, kvp, action, action_param)
         self.client.switcht_api_acl_reference(0, acl, if1)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
 
         # check for absence of packet here!
         try:
@@ -179,7 +179,7 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=64)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
 
         exp_pkt = simple_tcp_packet(
                                 eth_dst='00:11:22:33:44:55',
@@ -212,7 +212,7 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_acl_reference(0, acl, if1)
 
         # send the test packet(s)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packet(self, exp_pkt, swports[2])
         # verify mirrored packet
         verify_packet(self, pkt, swports[4])
@@ -222,7 +222,7 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
         print "Delete Mirror ACL"
         self.client.switcht_api_mirror_session_delete(0, mirror1)
         # clean-up test, make sure pkt is not mirrored after session is deleted
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
         # ip_acl cleanup
@@ -347,7 +347,7 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
         action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(mirror_handle=mirror1))
         ace = self.client.switcht_api_acl_egr_port_rule_create(0, acl, 11, 1, kvp, action, action_param)
         self.client.switcht_api_acl_reference(0, acl, if2)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packet(self, exp_pkt, swports[2])
         # verify mirrored packet
         verify_packet(self, exp_pkt, swports[4])
@@ -361,14 +361,14 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
                                       cos=0, max_pkt_len=0,
                                       ttl=0, enable=1, nhop_handle=0)
         self.client.switcht_api_mirror_session_update(0, mirror1, minfo1)
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packet(self, exp_pkt, swports[2])
         verify_packet(self, exp_pkt, swports[3])
         verify_no_other_packets(self)
         print "Delete Mirror Session"
         self.client.switcht_api_mirror_session_delete(0, mirror1)
         # clean-up test, make sure pkt is not mirrored after session is deleted
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
         # ip_acl cleanup
@@ -501,7 +501,7 @@ class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_acl_reference(0, acl, if1)
 
         # egress interface if4
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         # verify mirrored packet
         exp_mirrored_pkt = ipv4_erspan_pkt(eth_dst='00:44:44:44:44:44',
                                            eth_src='00:77:66:55:44:33',
@@ -522,7 +522,7 @@ class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
         print "Delete Egress Mirror Session and test packet again"
         self.client.switcht_api_mirror_session_delete(0, mirror1)
         # clean-up test, make sure pkt is not mirrored after session is deleted
-        self.dataplane.send(1, str(pkt))
+        send_packet(self, 1, str(pkt))
         verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
         # ip_acl cleanup

@@ -21,25 +21,30 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--test-dir", required=False,
-                    default=os.path.join("tests", "ptf-tests", "sai_thrift"),
-                    help="directory containing the tests (default tests/ptf-tests/)")
+                    default=os.path.join("tests", "of-tests"),
+                    help="directory containing the tests (default tests/of-tests/)")
 args, unknown_args = parser.parse_known_args()
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
-pd_dir = os.path.join(root_dir, 'tests', 'pd_thrift')
-testutils_dir = os.path.join(root_dir, '..', '..', 'testutils')
+pd_dir = os.path.join(root_dir, 'tests/pd_thrift')
 
-ptf_path = os.path.join(root_dir, '..', '..', 'submodules', 'ptf', 'ptf')
-
-max_ports = 9
+oft_path = os.path.join(root_dir, '..', '..', 'submodules', 'oft-infra', 'oft')
 
 if __name__ == "__main__":
     new_args = unknown_args
-    new_args += ["--pypath", pd_dir]
-    new_args += ["--pypath", testutils_dir]
+    new_args += ["-S 127.0.0.1", "-V1.3"]
     new_args += ["--test-dir", args.test_dir]
-    for port in xrange(max_ports):
-        new_args += ["--interface", "%d@veth%d" % (port, 2 * port + 1)]
-    child = Popen([ptf_path] + new_args)
+    new_args += ["--interface", "0@veth1"]
+    new_args += ["--interface", "2@veth5"]
+    new_args += ["--interface", "3@veth7"]
+    new_args += ["--interface", "4@veth9"]
+    new_args += ["--interface", "5@veth11"]
+    new_args += ["--interface", "6@veth13"]
+    new_args += ["--interface", "7@veth15"]
+
+    new_args += ["--pd-thrift-path", pd_dir]
+    new_args += ["--enable-erspan", "--enable-vxlan", "--enable-geneve", "--enable-nvgre", "--enable-mpls"]
+
+    child = Popen([oft_path] + new_args)
     child.wait()
     sys.exit(child.returncode)

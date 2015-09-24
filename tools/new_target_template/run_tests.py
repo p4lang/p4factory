@@ -19,7 +19,7 @@ import os
 from subprocess import Popen
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
-pd_dir = os.path.join(root_dir, 'of-tests/pd_thrift')
+pd_dir = os.path.join(root_dir, 'tests/pd_thrift')
 
 oft_path = os.path.join(root_dir, '..', '..', 'submodules', 'oft-infra', 'oft')
 

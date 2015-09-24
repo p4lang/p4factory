@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import oftest.dataplane as dataplane
-import oftest.pd_base_tests as pd_base_tests
+import ptf.dataplane as dataplane
+import pd_base_tests
 
-from oftest.testutils import *
-
-from utils import *
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
@@ -95,7 +94,7 @@ class TwoBdLpmTest(pd_base_tests.ThriftInterfaceDataPlane):
                                    ip_dst='10.0.0.2',
                                    ip_id=101,
                                    ip_ttl=63)
-        self.dataplane.send(2, str(pkt))
+        send_packet(self, 2, str(pkt))
         verify_packets(self, exp_pkt, [3])
 
         pkt = simple_ip_packet(ip_dst='192.168.1.2',
@@ -106,5 +105,5 @@ class TwoBdLpmTest(pd_base_tests.ThriftInterfaceDataPlane):
                                    ip_dst='192.168.1.2',
                                    ip_id=101,
                                    ip_ttl=63)
-        self.dataplane.send(4, str(pkt))
+        send_packet(self, 4, str(pkt))
         verify_packets(self, exp_pkt, [1])

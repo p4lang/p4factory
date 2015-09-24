@@ -41,7 +41,7 @@ the following:
 To run a simple test, run this in a different terminal:
 
     cd p4factory/targets/basic_routing/
-    sudo python run_tests.py --test-dir of-tests/tests/
+    sudo python run_tests.py --test-dir tests/ptf-tests/
 
 Building and Running a Target
 ========
@@ -192,7 +192,7 @@ following:
 
 You can then run the tests in a third terminal, by going up one directory:
 
-    sudo python run_tests.py --test-dir of-tests/tests/
+    sudo python run_tests.py --test-dir tests/ptf-tests/
 
 The switch.p4 target already supports bmv2. For more information take a look at
 the [bmv2 README](targets/switch/bmv2/README.md).

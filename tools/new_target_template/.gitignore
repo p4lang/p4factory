@@ -4,4 +4,4 @@
 /__PROJECT_NAME__.mk
 /*.pcap
 /__PROJECT_NAME__
-/of-tests/pd_thrift
+/tests/pd_thrift
