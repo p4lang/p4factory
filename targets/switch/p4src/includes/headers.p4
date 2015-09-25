@@ -540,7 +540,7 @@ header_type int_header_t {
     fields {
         ver                     : 2;
         rep                     : 2;
-        o                       : 1;    /* orig */
+        c                       : 1;
         e                       : 1;
         rsvd1                   : 5;
         ins_cnt                 : 5;

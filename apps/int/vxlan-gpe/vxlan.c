@@ -158,7 +158,7 @@ struct int_md_hdr {
 #ifdef __LITTLE_ENDIAN_BITFIELD
   __u8 reserved_flags1:2,
     e:1,
-    o:1,
+    c:1,
     rep:2,
     ver:2;
   __u8 ins_cnt:5,
@@ -166,7 +166,7 @@ struct int_md_hdr {
 #elif defined(__BIG_ENDIAN_BITFIELD) 
   __u8 ver:2,
     rep:2,
-    o:1,
+    c:1,
     e:1,
     reserved_flags1:2;
   __u8 reserved_flags2:3,
@@ -1187,17 +1187,6 @@ static void vxlan_igmp_leave(struct work_struct *work)
 	dev_put(vxlan->dev);
 }
 
-/* Helper function to print 100 bytes of memory */
-static void print_mem(void *_start)
-{
-  __u8 *start = (__u8*)_start;
-  int i;
-  for (i = 0; i < 25; i++) {
-    printk(KERN_INFO "[VXLAN-GPE] %p : %02X %02X %02X %02X\n", start, start[0], start[1], start[2], start[3]);
-    start += 4;
-  }
-}
-
 /* Read and strip out the INT headers and metadata values */
 static int read_int_headers(struct sk_buff *skb)
 {
@@ -1792,9 +1781,6 @@ int vxlan_xmit_skb(struct vxlan_sock *vs,
 		vxh->vx_flags &= htonl(VXLAN_NEXT_PROTO_CLR);
 		vxh->vx_flags |= htonl(VXLAN_NEXT_PROTO_INT);
 	}
-
-  //printk(KERN_INFO "[VXLAN-GPE] =============== attach_int: %d\n", attach_int);
-  //print_mem(vxh);
 
 	skb_set_inner_protocol(skb, htons(ETH_P_TEB));
 
