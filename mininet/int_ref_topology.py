@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from int_cfg import *
 
 def run_cfg():
@@ -100,4 +101,7 @@ def run_cfg():
   mgr.cleanup()
   net.stop()
 
+
+# cleanup from previous run
+os.system('./int_cleanup.sh > /dev/null 2>&1')
 run_cfg()

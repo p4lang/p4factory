@@ -24,7 +24,7 @@ from mininet.link import TCLink
 import os
 import sys
 import time
-lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch', 'of-tests', 'pd_thrift'))
+lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch', 'tests', 'pd_thrift'))
 sys.path.append(lib_path)
 import switch_api_thrift.switch_api_rpc as api_rpc
 from switch_api_thrift.ttypes import  *
