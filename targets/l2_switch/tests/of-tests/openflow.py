@@ -15,10 +15,15 @@ from oftest.parse import parse_mac
 
 import openflow_base_tests
 
+sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
+                             'testutils')) 
+
 from utils import *
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
                              'targets', 'l2_switch', 'build', 'thrift')) 
+
+print sys.path
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
 
