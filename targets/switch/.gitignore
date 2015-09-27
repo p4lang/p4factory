@@ -1,4 +1,4 @@
 /build
 behavioral-model
 /*.pcap
-/of-tests/pd_thrift
+/tests/pd_thrift

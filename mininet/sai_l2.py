@@ -32,7 +32,7 @@ from p4_mininet import P4DockerSwitch
 import os
 import sys
 import time
-lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch', 'of-tests',
+lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch', 'tests',
                                         'pd_thrift'))
 sys.path.append(lib_path)
 import switch_sai_thrift.switch_sai_rpc as switch_sai_rpc

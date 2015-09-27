@@ -34,9 +34,9 @@ except ImportError:
 parser = argparse.ArgumentParser(description='test arguments')
 parser.add_argument('--jobs', '-j', type=int, required=False,
                     help='Number of jobs when running make')
-parser.add_argument('--no-bmv2', action='store_true', default = False,
+parser.add_argument('--no-bmv2', action='store_true', default=False,
                     help='Disable BMv2 tests')
-parser.add_argument('--travis', action='store_true', default = False,
+parser.add_argument('--travis', action='store_true', default=False,
                     help='Skip some tests because of travis time limit')
 
 args = parser.parse_args()
@@ -71,7 +71,7 @@ def killall(name):
     print ' '.join(cmd)
     subprocess.call(cmd)
 
-def my_print(msg, color = None):
+def my_print(msg, color=None):
     if _termcolor_available:
         print T.colored(msg, color)
     else:
@@ -83,8 +83,9 @@ def print_success(test_name):
 def print_failure(test_name):
     my_print(test_name + " : " + "FAILED", "red")
 
-def one_test(target, test_subdir = "", do_make_clean = True,
-             make_tgt = None, make_args="", extra_args=""):
+def one_test(target, test_script="./run_tests.py",
+             test_subdir="ptf-tests", do_make_clean=True,
+             make_tgt=None, make_args="", extra_args=""):
     cleanup()
     target_dir = os.path.join(_THIS_DIR, "targets", target)
     save_cwd = os.getcwd()
@@ -92,7 +93,7 @@ def one_test(target, test_subdir = "", do_make_clean = True,
 
     test_name = target
     if test_subdir != "":
-        test_name += "--" + test_subdir
+        test_name += "--" + test_subdir.replace('/', '_')
 
     my_uniteresting_user_uid = int(os.environ['SUDO_UID'])
 
@@ -126,8 +127,8 @@ def one_test(target, test_subdir = "", do_make_clean = True,
 
     time.sleep(5)
 
-    test_dir = os.path.join("of-tests/tests", test_subdir)
-    cmd = ['sudo', './run_tests.py','--test-dir', test_dir]
+    test_dir = os.path.join("tests", test_subdir)
+    cmd = ['sudo', test_script, '--test-dir', test_dir]
     if extra_args:
         cmd.append(extra_args)
     print ' '.join(cmd)
@@ -164,8 +165,9 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
 
     return decorator
 
-def bmv2_one_test(target, test_subdir = "", do_make_clean = True,
-                  make_tgt = None, drivers_exe = "drivers"):
+def bmv2_one_test(target, test_script="./run_tests.py",
+                  test_subdir="ptf-tests", do_make_clean=True,
+                  make_tgt=None, drivers_exe="drivers"):
     bmv2_cleanup()
     target_dir = os.path.join(_THIS_DIR, "targets", target, "bmv2")
     save_cwd = os.getcwd()
@@ -173,7 +175,7 @@ def bmv2_one_test(target, test_subdir = "", do_make_clean = True,
 
     test_name = "bmv2--" + target
     if test_subdir != "":
-        test_name += "--" + test_subdir
+        test_name += "--" + test_subdir.replace('/', '_')
 
     user = os.environ['SUDO_USER']
 
@@ -216,8 +218,8 @@ def bmv2_one_test(target, test_subdir = "", do_make_clean = True,
     # I consider it is a success. I need to take care of this.
     @timeout(600)
     def run_that_test():
-        test_dir = os.path.join("of-tests/tests", test_subdir)
-        cmd = ['./run_tests.py','--test-dir', test_dir]
+        test_dir = os.path.join("tests", test_subdir)
+        cmd = [test_script, '--test-dir', test_dir]
         print ' '.join(cmd)
         return subprocess.call(cmd)
 
@@ -243,47 +245,55 @@ def pd_tests():
     for target in _PD_TARGETS:
         one_test(target)
 
-    one_test("l2_switch", test_subdir="pd-tests")
-    one_test("switch", test_subdir="pd-tests")
+    one_test("l2_switch")
+    one_test("switch", test_subdir=os.path.join("ptf-tests", "pd-tests"))
 
 def bmv2_pd_tests():
+    os.environ["BMV2_TEST"] = "1"
     bmv2_one_test("basic_routing")
-    bmv2_one_test("l2_switch", test_subdir="pd-tests", do_make_clean=False)
-    bmv2_one_test("switch", test_subdir="pd-tests", do_make_clean=False)
+    bmv2_one_test("l2_switch", do_make_clean=False)
+    bmv2_one_test("switch", test_subdir=os.path.join("ptf-tests", "pd-tests"),
+                  do_make_clean=False)
+    del os.environ["BMV2_TEST"]
 
 def switchapi_test():
-    one_test("switch", test_subdir="api-tests",
-             do_make_clean = False, make_tgt = "bm-switchapi")
+    one_test("switch", test_subdir=os.path.join("ptf-tests", "api-tests"),
+             do_make_clean=False, make_tgt="bm-switchapi")
 
 def bmv2_switchapi_test():
     if args.travis: return
-    os.environ["BMV2_TEST"] = "1"
-    bmv2_one_test("switch", test_subdir="api-tests",
-                  do_make_clean = False, make_tgt = "bm-switchapi",
-                  drivers_exe = "drivers-switchapi")
+    os.environ["BMV2_TEST"]="1"
+    bmv2_one_test("switch", test_subdir=os.path.join("ptf-tests", "api-tests"),
+                  do_make_clean=False, make_tgt="bm-switchapi",
+                  drivers_exe="drivers-switchapi")
     del os.environ["BMV2_TEST"]
 
 def switchsai_test():
-    one_test("switch", test_subdir="sai-tests",
-             do_make_clean = False, make_tgt = "bm-switchsai")
+    one_test("switch", test_subdir=os.path.join("ptf-tests", "sai-tests"),
+             do_make_clean=False, make_tgt="bm-switchsai")
 
 def sai_p4_test():
-    one_test("sai_p4", test_subdir="sai_thrift",
-             do_make_clean = True)
+    one_test("sai_p4", test_subdir=os.path.join("ptf-tests", "sai_thrift"),
+             do_make_clean=True)
 
 def bmv2_switchsai_test():
-    bmv2_one_test("switch", test_subdir="sai-tests",
-                  do_make_clean = False, make_tgt = "bm-switchsai",
-                  drivers_exe = "drivers-switchsai")
+    os.environ["BMV2_TEST"] = "1"
+    bmv2_one_test("switch", test_subdir=os.path.join("ptf-tests", "sai-tests"),
+                  do_make_clean=False, make_tgt="bm-switchsai",
+                  drivers_exe="drivers-switchsai")
+    del os.environ["BMV2_TEST"]
 
 def openflow_test():
-    one_test("l2_switch", test_subdir="openflow-tests", make_tgt="bm-p4ofagent",
+    one_test("l2_switch",
+             test_script="./run_of_tests.py", test_subdir="of-tests",
+             make_tgt="bm-p4ofagent",
              make_args="PLUGIN_OPENFLOW=1")
     # I have to make clean here, otherwise it fails...
     # and takes too long for travis
     if args.travis: return
-    one_test("switch", make_args="PLUGIN_OPENFLOW=1", extra_args="--openflow",
-             test_subdir="openflow-tests", make_tgt = "bm-p4ofagent")
+    one_test("switch", make_args="PLUGIN_OPENFLOW=1",
+             test_script="./run_of_tests.py", test_subdir="of-tests",
+             make_tgt="bm-p4ofagent")
 
 def check_ifaces():
     ifconfig_out = subprocess.check_output(['ifconfig'])

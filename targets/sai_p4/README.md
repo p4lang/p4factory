@@ -23,9 +23,9 @@ Run
 
 3. Run tests
    In another shell run the tests using SAI thrift IPC to test
-   sudo ./run_tests.py --test-dir of-tests/tests/sai_thrift sai.L3Test
+   sudo ./run_tests.py --test-dir tests/ptf-tests/sai_thrift sai.L3Test
    or
-   sudo ./run_tests.py --test-dir of-tests/tests/sai_thrift sai.L2Test
+   sudo ./run_tests.py --test-dir tests/ptf-tests/sai_thrift sai.L2Test
 
 4. To terminate behavioral-model
    Type Control+'C' in the shell running the behavioral-model

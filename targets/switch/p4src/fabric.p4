@@ -1,4 +1,20 @@
 /*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/*
  * Fabric processing for multi-device system
  */
 
@@ -21,7 +37,6 @@ metadata fabric_metadata_t fabric_metadata;
 /*****************************************************************************/
 /* Fabric header - destination lookup                                        */
 /*****************************************************************************/
-#ifdef FABRIC_ENABLE
 action terminate_cpu_packet() {
     modify_field(standard_metadata.egress_spec,
                  fabric_header.dstPortOrGroup);
@@ -33,6 +48,7 @@ action terminate_cpu_packet() {
     remove_header(fabric_payload_header);
 }
 
+#ifdef FABRIC_ENABLE
 action terminate_fabric_unicast_packet() {
     modify_field(standard_metadata.egress_spec,
                  fabric_header.dstPortOrGroup);
@@ -84,28 +100,32 @@ action switch_fabric_multicast_packet() {
     modify_field(intrinsic_metadata.mcast_grp, fabric_header.dstPortOrGroup);
 }
 #endif /* MULTICAST_DISABLE */
+#endif /* FABRIC_ENABLE */
 
 table fabric_ingress_dst_lkp {
+#ifdef FABRIC_ENABLE
     reads {
         fabric_header.dstDevice : exact;
     }
+#endif /* FABRIC_ENABLE */
     actions {
-        nop;
         terminate_cpu_packet;
+#ifdef FABRIC_ENABLE
+        nop;
         switch_fabric_unicast_packet;
         terminate_fabric_unicast_packet;
 #ifndef MULTICAST_DISABLE
         switch_fabric_multicast_packet;
         terminate_fabric_multicast_packet;
 #endif /* MULTICAST_DISABLE */
+#endif /* FABRIC_ENABLE */
     }
 }
-#endif /* FABRIC_ENABLE */
-
 
 /*****************************************************************************/
 /* Fabric header - source lookup                                             */
 /*****************************************************************************/
+#ifdef FABRIC_ENABLE
 action set_ingress_ifindex_properties() {
 }
 
@@ -119,6 +139,7 @@ table fabric_ingress_src_lkp {
     }
     size : 1024;
 }
+#endif /* FABRIC_ENABLE */
 
 
 /*****************************************************************************/
@@ -171,6 +192,7 @@ field_list_calculation fabric_lag_hash {
 
 action_selector fabric_lag_selector {
     selection_key : fabric_lag_hash;
+    selection_mode : fair;
 }
 
 action_profile fabric_lag_action_profile {
@@ -219,11 +241,11 @@ action cpu_rx_rewrite() {
     modify_field(ethernet.etherType, ETHERTYPE_BF_FABRIC);
 }
 
-#ifdef FABRIC_ENABLE
 action fabric_rewrite(tunnel_index) {
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
 }
 
+#ifdef FABRIC_ENABLE
 action fabric_unicast_rewrite() {
     add_header(fabric_header);
     modify_field(fabric_header.headerVersion, 0);

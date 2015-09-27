@@ -33,7 +33,7 @@ ifndef drivers_BINARY
 	$(error Output binary not defined in drivers_BINARY)
 endif
 
-THRIFT_PY_OUTPUT_DIR := $(TARGET_ROOT)/../of-tests/pd_thrift/
+THRIFT_PY_OUTPUT_DIR := $(TARGET_ROOT)/../tests/pd_thrift/
 MAKE_DIR := ${THRIFT_PY_OUTPUT_DIR}
 include ${MAKEFILES_DIR}/makedir.mk
 

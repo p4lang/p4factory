@@ -88,7 +88,7 @@ endif
 $(BMI_OBJS_C) : MODULE_INFO := BMI
 
 P4_INCLUDES_DIR := $(TARGET_ROOT)/p4src/includes
-BM_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/of-tests/pd_thrift
+BM_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/tests/pd_thrift
 MAKE_DIR := ${BM_THRIFT_PY_OUTPUT_DIR}
 include ${MAKEFILES_DIR}/makedir.mk
 

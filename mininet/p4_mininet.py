@@ -123,12 +123,15 @@ class P4Switch(Switch):
 class P4DockerSwitch(Switch):
     """P4 virtual switch running in a docker conatiner"""
     def __init__( self, name, target_name = 'p4dockerswitch',
-                  thrift_port = None,
+                  thrift_port = None, target_dir = 'switch',
                   sai_port = None,
+                  swapi_port = None,
                   pcap_dump = False,
                   verbose = False,
                   start_program = '/p4factory/tools/start.sh',
                   config_fs = None,
+                  pps = 0,
+                  qdepth = 0,
                   **kwargs ):
 
         self.verbose = verbose
@@ -136,8 +139,12 @@ class P4DockerSwitch(Switch):
         self.start_program = start_program
         self.config_fs = config_fs
         self.target_name = target_name
+        self.target_dir = target_dir
         self.thrift_port = thrift_port
         self.sai_port = sai_port
+        self.swapi_port = swapi_port
+        self.pps = pps
+        self.qdepth = qdepth
         Switch.__init__( self, name, **kwargs )
         self.inNamespace = True
 
@@ -200,6 +207,10 @@ class P4DockerSwitch(Switch):
         for intf in self.intfs.values():
             if not intf.IP():
                 args.extend( ['-i', intf.name] )
+        args.extend( ['--pps', self.pps] )
+        args.extend( ['--qdepth', self.qdepth] )
+        # Enable it for verbose logs from model
+        #args.append( '-t' )
         args.append( '--no-veth' )
         args.append( '>& /tmp/model.log &' )
         args.append( '\" >> /p4factory/tools/bm_start.sh' )
@@ -222,6 +233,8 @@ class P4DockerSwitch(Switch):
             args.extend( ['-p', '%d:22000' % self.thrift_port] )
         if self.sai_port is not None:
             args.extend( ['-p', '%d:9092' % self.sai_port] )
+        if self.swapi_port is not None:
+            args.extend( ['-p', '%d:9091' % self.swapi_port] )
         args.extend( ['-e', 'DISPLAY'] )
         args.extend( ['-v', '/tmp/.X11-unix:/tmp/.X11-unix'] )
         if self.config_fs is not None:

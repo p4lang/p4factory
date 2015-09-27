@@ -1,4 +1,20 @@
 /*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/*
  * Openflow Processing
  */
 
@@ -102,20 +118,11 @@ action openflow_apply(bmap, index, group_id) {
 //    modify_field(egress_metadata.bypass, TRUE);
 }
 
-action openflow_miss(reason) { //, table_id) {
-    add_header (fabric_payload_header);
-    modify_field(fabric_payload_header.etherType, ethernet.etherType);
+action openflow_miss(reason, table_id) {
+    modify_field(fabric_metadata.reason_code, reason);
 
-    add_header (fabric_header_cpu);
-    modify_field(fabric_header_cpu.reasonCode, reason);
-
-    add_header (fabric_header);
-    modify_field(fabric_header.dstPortOrGroup, CPU_PORT_ID);
-    modify_field(fabric_header.ingressIfindex, standard_metadata.ingress_port);
-
-//    shift_left(fabric_metadata.reason_code, fabric_metadata.reason_code, 16);
-//    bit_or(fabric_metadata.reason_code, fabric_metadata.reason_code, table_id);
-//    modify_field(fabric_header_cpu.reserved, table_id);
+    shift_left(fabric_metadata.reason_code, fabric_metadata.reason_code, 8);
+    bit_or(fabric_metadata.reason_code, fabric_metadata.reason_code, table_id);
 
     modify_field(standard_metadata.egress_spec, CPU_PORT_ID);
 }
@@ -127,11 +134,13 @@ action openflow_miss(reason) { //, table_id) {
 action packet_out_eth_flood() {
     modify_field(intrinsic_metadata.mcast_grp, fabric_header.dstPortOrGroup);
     terminate_cpu_packet();
+    modify_field(openflow_metadata.ofvalid, TRUE);
 }
 
 action packet_out_unicast() {
     modify_field(standard_metadata.egress_spec, fabric_header.dstPortOrGroup);
     terminate_cpu_packet();
+    modify_field(openflow_metadata.ofvalid, TRUE);
 }
 
 table packet_out {

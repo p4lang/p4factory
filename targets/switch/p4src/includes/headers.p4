@@ -1,3 +1,19 @@
+/*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -125,8 +141,7 @@ header_type ipv6_t {
 
 header_type icmp_t {
     fields {
-        type_ : 8;
-        code : 8;
+        typeCode : 16;
         hdrChecksum : 16;
     }
 }
@@ -250,6 +265,16 @@ header_type vxlan_t {
     }
 }
 
+header_type vxlan_gpe_t {
+    fields {
+        flags : 8;
+        reserved : 16;
+        next_proto : 8;
+        vni : 24;
+        reserved2 : 8;
+    }
+}
+
 header_type nsh_t {
     fields {
         oam : 1;
@@ -268,6 +293,15 @@ header_type nsh_context_t {
         network_shared : 32;
         service_platform : 32;
         service_shared : 32;
+    }
+}
+
+header_type vxlan_gpe_int_header_t {
+    fields {
+        int_type    : 8;
+        rsvd        : 8;
+        len         : 8;
+        next_proto  : 8;
     }
 }
 
@@ -498,5 +532,82 @@ header_type fabric_header_cpu_t {
 header_type fabric_payload_header_t {
     fields {
         etherType : 16;
+    }
+}
+
+/* INT headers */
+header_type int_header_t {
+    fields {
+        ver                     : 2;
+        rep                     : 2;
+        c                       : 1;
+        e                       : 1;
+        rsvd1                   : 5;
+        ins_cnt                 : 5;
+        max_hop_cnt             : 8;
+        total_hop_cnt           : 8;
+        instruction_mask_0003   : 4;   /* split the bits for lookup */
+        instruction_mask_0407   : 4;
+        instruction_mask_0811   : 4;
+        instruction_mask_1215   : 4;
+        rsvd2                   : 16;
+    }
+}
+
+/* INT meta-value headers - different header for each value type */
+header_type int_switch_id_header_t {
+    fields {
+        bos                 : 1;
+        switch_id           : 31;
+    }
+}
+header_type int_ingress_port_id_header_t {
+    fields {
+        bos                 : 1;
+        ingress_port_id     : 31;
+    }
+}
+header_type int_hop_latency_header_t {
+    fields {
+        bos                 : 1;
+        hop_latency         : 31;
+    }
+}
+header_type int_q_occupancy_header_t {
+    fields {
+        bos                 : 1;
+        q_occupancy         : 31;
+    }
+}
+header_type int_ingress_tstamp_header_t {
+    fields {
+        bos                 : 1;
+        ingress_tstamp      : 31;
+    }
+}
+header_type int_egress_port_id_header_t {
+    fields {
+        bos                 : 1;
+        egress_port_id      : 31;
+    }
+}
+header_type int_q_congestion_header_t {
+    fields {
+        bos                 : 1;
+        q_congestion        : 31;
+    }
+}
+header_type int_egress_port_tx_utilization_header_t {
+    fields {
+        bos                         : 1;
+        egress_port_tx_utilization  : 31;
+    }
+}
+
+/* generic int value (info) header for extraction */
+header_type int_value_t {
+    fields {
+        bos         : 1;
+        val         : 31;
     }
 }

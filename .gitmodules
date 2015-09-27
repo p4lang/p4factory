@@ -25,3 +25,6 @@
 [submodule "submodules/p4ofagent"]
 	path = submodules/p4ofagent
 	url = https://github.com/p4lang/p4ofagent
+[submodule "submodules/ptf"]
+	path = submodules/ptf
+	url = https://github.com/p4lang/ptf.git
