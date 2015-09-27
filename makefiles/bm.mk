@@ -97,7 +97,7 @@ ifndef GEN_THRIFT_PY_MODULE
   $(error p4c-bm does not define thrift-generated Python files in GEN_THRIFT_PY_MODULE)
 endif
 ifndef PD_PUBLIC_HEADERS_DIR
-  $(error p4c-bm does not define PD headers in PD_PUBLIC_HEADERS_DIR
+  $(error p4c-bm does not define PD headers in PD_PUBLIC_HEADERS_DIR)
 endif
 
 GLOBAL_INCLUDES += -I $(PUBLIC_INC_PATH)
