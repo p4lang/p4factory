@@ -7703,7 +7703,6 @@ class L3VINhopGleanTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
-@disabled
 class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
     def setUp(self):
         print
