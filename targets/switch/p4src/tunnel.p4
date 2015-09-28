@@ -239,8 +239,7 @@ action terminate_tunnel_inner_ethernet_ipv6(bd, vrf,
     modify_field(l3_metadata.lkp_ip_type, IPTYPE_IPV6);
     modify_field(ipv6_metadata.lkp_ipv6_sa, inner_ipv6.srcAddr);
     modify_field(ipv6_metadata.lkp_ipv6_da, inner_ipv6.dstAddr);
-    //modify_field(l3_metadata.lkp_ip_version, inner_ipv6.version);
-    modify_field(l3_metadata.lkp_ip_version, 6);
+    modify_field(l3_metadata.lkp_ip_version, inner_ipv6.version);
     modify_field(l3_metadata.lkp_ip_proto, inner_ipv6.nextHdr);
     modify_field(l3_metadata.lkp_ip_ttl, inner_ipv6.hopLimit);
     modify_field(l3_metadata.lkp_ip_tc, inner_ipv6.trafficClass);
@@ -264,8 +263,7 @@ action terminate_tunnel_inner_ipv6(vrf, rmac_group,
     modify_field(l3_metadata.lkp_ip_type, IPTYPE_IPV6);
     modify_field(ipv6_metadata.lkp_ipv6_sa, inner_ipv6.srcAddr);
     modify_field(ipv6_metadata.lkp_ipv6_da, inner_ipv6.dstAddr);
-    //modify_field(l3_metadata.lkp_ip_version, inner_ipv6.version);
-    modify_field(l3_metadata.lkp_ip_version, 6);
+    modify_field(l3_metadata.lkp_ip_version, inner_ipv6.version);
     modify_field(l3_metadata.lkp_ip_proto, inner_ipv6.nextHdr);
     modify_field(l3_metadata.lkp_ip_ttl, inner_ipv6.hopLimit);
     modify_field(l3_metadata.lkp_ip_tc, inner_ipv6.trafficClass);
@@ -428,8 +426,7 @@ action terminate_ipv6_over_mpls(vrf, tunnel_type) {
     modify_field(l3_metadata.lkp_ip_type, IPTYPE_IPV6);
     modify_field(ipv6_metadata.lkp_ipv6_sa, inner_ipv6.srcAddr);
     modify_field(ipv6_metadata.lkp_ipv6_da, inner_ipv6.dstAddr);
-    //modify_field(l3_metadata.lkp_ip_version, inner_ipv6.version);
-    modify_field(l3_metadata.lkp_ip_version, 6);
+    modify_field(l3_metadata.lkp_ip_version, inner_ipv6.version);
     modify_field(l3_metadata.lkp_ip_proto, inner_ipv6.nextHdr);
     modify_field(l3_metadata.lkp_ip_tc, inner_ipv6.trafficClass);
     modify_field(l3_metadata.lkp_ip_ttl, inner_ipv6.hopLimit);
