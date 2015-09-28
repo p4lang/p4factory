@@ -2,7 +2,7 @@ Overview
 ========
 First:  you are well advised to read the entire file before starting.  ;-)
 
-This is a reference implementation of the Inband Network Telemetry (from now called just "INT") specification, which allows programmable switches to embed telemetry information directly into data packets.  The application has three components - a preprocessor, a monitor and a user interface (details below).  This app collects the packet latency at each device in the simulated topology and plots the output in the user interface visualizer. 
+This is a reference implementation of the Inband Network Telemetry (from now called just "INT") [specification](http://p4.org/wp-content/uploads/fixed/INT/INT-current-spec.pdf), which allows programmable switches to embed telemetry information directly into data packets.  The application has three components - a preprocessor, a monitor and a user interface (details below).  This app collects the packet latency at each device in the simulated topology and plots the output in the user interface visualizer. 
 
 This example uses the "INT over VxLAN-GPE" header format.
 
@@ -115,7 +115,7 @@ VxLAN-GPE Driver
 ----------------
 The linux VXLAN driver has been modified to use UDP port 4790 and use the VxLAN-GPE 
 header format.  It inserts/removes the INT shim header and INT metadata headers at 
-INT source and INT sink respectively.  (Details of this operation are in [[TODO the spec]]
+INT source and INT sink respectively.  (Details of this operation are in [the spec](http://p4.org/wp-content/uploads/fixed/INT/INT-current-spec.pdf).
 
 INT Sources
 ----------
