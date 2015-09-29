@@ -16,7 +16,13 @@ from oftest.parse import parse_mac
 
 import openflow_base_tests
 
+sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
+                             'testutils')) 
+
 from utils import *
+
+sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
+                             'targets', 'switch', 'tests', 'pd_thrift')) 
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
@@ -244,7 +250,7 @@ class NWTTL(openflow_base_tests.OFTestInterface):
         self.controller.message_send(req)
         do_barrier(self.controller)
         self.dataplane.send(ports[0], pkt)
-        verify_packets(self, exp_pkt, [out_port])
+        verify_packet(self, exp_pkt, out_port)
 
         req = flow_delete(cookie=42, table_id=0)
         self.controller.message_send(req)
