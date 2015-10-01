@@ -157,6 +157,7 @@ function updateTimeSeriesGraphs() {
   appState.net.switches.forEach(function(sw) {
     redrawTimeSeriesGraph(sw.name);
   });
+  updateXAxisLabels();
 }
 
 function updateYLabels() {
