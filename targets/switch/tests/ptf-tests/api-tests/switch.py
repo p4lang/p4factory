@@ -32,6 +32,7 @@ from ptf.testutils import *
 from ptf.thriftutils import *
 
 import os
+#import pdb
 
 from switch_api_thrift.ttypes import  *
 
@@ -1131,23 +1132,35 @@ class L3IPv4LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
         rmac = self.client.switcht_api_router_mac_group_create(device)
         self.client.switcht_api_router_mac_add(device, rmac, '00:77:66:55:44:33')
 
-        iu1 = interface_union(port_lag_handle = swports[1])
+        iu1 = interface_union(port_lag_handle = swports[0])
         i_info1 = switcht_interface_info_t(device=0, type=4, u=iu1, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if1 = self.client.switcht_api_interface_create(device, i_info1)
         i_ip1 = switcht_ip_addr_t(addr_type=0, ipaddr='192.168.0.2', prefix_length=16)
         self.client.switcht_api_l3_interface_address_add(device, if1, vrf, i_ip1)
 
-        iu2 = interface_union(port_lag_handle = swports[2])
+        iu2 = interface_union(port_lag_handle = swports[1])
         i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if2 = self.client.switcht_api_interface_create(device, i_info2)
         i_ip2 = switcht_ip_addr_t(addr_type=0, ipaddr='10.0.0.2', prefix_length=16)
         self.client.switcht_api_l3_interface_address_add(device, if2, vrf, i_ip2)
 
-        iu3 = interface_union(port_lag_handle = swports[3])
+        iu3 = interface_union(port_lag_handle = swports[2])
         i_info3 = switcht_interface_info_t(device=0, type=4, u=iu3, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if3 = self.client.switcht_api_interface_create(device, i_info3)
         i_ip3 = switcht_ip_addr_t(addr_type=0, ipaddr='11.0.0.2', prefix_length=16)
         self.client.switcht_api_l3_interface_address_add(device, if3, vrf, i_ip3)
+
+        iu4 = interface_union(port_lag_handle = swports[3])
+        i_info4 = switcht_interface_info_t(device=0, type=4, u=iu4, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
+        if4 = self.client.switcht_api_interface_create(device, i_info4)
+        i_ip4 = switcht_ip_addr_t(addr_type=0, ipaddr='12.0.0.2', prefix_length=16)
+        self.client.switcht_api_l3_interface_address_add(device, if4, vrf, i_ip4)
+
+        iu5 = interface_union(port_lag_handle = swports[4])
+        i_info5 = switcht_interface_info_t(device=0, type=4, u=iu5, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
+        if5 = self.client.switcht_api_interface_create(device, i_info5)
+        i_ip5 = switcht_ip_addr_t(addr_type=0, ipaddr='13.0.0.2', prefix_length=16)
+        self.client.switcht_api_l3_interface_address_add(device, if5, vrf, i_ip5)
 
         nhop_key1 = switcht_nhop_key_t(intf_handle=if2, ip_addr_valid=0)
         nhop1 = self.client.switcht_api_nhop_create(device, nhop_key1)
@@ -1161,15 +1174,15 @@ class L3IPv4LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
         neighbor_entry2 = switcht_neighbor_info_t(nhop_handle=nhop2, interface_handle=if3, mac_addr='00:11:22:33:44:56', ip_addr=n_ip2, rw_type=1)
         neighbor2 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry2)
 
-        nhop_key3 = switcht_nhop_key_t(intf_handle=if2, ip_addr_valid=0)
+        nhop_key3 = switcht_nhop_key_t(intf_handle=if4, ip_addr_valid=0)
         nhop3 = self.client.switcht_api_nhop_create(device, nhop_key3)
-        n_ip3 = switcht_ip_addr_t(addr_type=0, ipaddr='10.0.0.101', prefix_length=32)
+        n_ip3 = switcht_ip_addr_t(addr_type=0, ipaddr='12.0.0.101', prefix_length=32)
         neighbor_entry3 = switcht_neighbor_info_t(nhop_handle=nhop3, interface_handle=if2, mac_addr='00:11:22:33:44:57', ip_addr=n_ip3, rw_type=1)
         neighbor3 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry3)
 
-        nhop_key4 = switcht_nhop_key_t(intf_handle=if3, ip_addr_valid=0)
+        nhop_key4 = switcht_nhop_key_t(intf_handle=if5, ip_addr_valid=0)
         nhop4 = self.client.switcht_api_nhop_create(device, nhop_key4)
-        n_ip4 = switcht_ip_addr_t(addr_type=0, ipaddr='11.0.0.101', prefix_length=32)
+        n_ip4 = switcht_ip_addr_t(addr_type=0, ipaddr='13.0.0.101', prefix_length=32)
         neighbor_entry4 = switcht_neighbor_info_t(nhop_handle=nhop4, interface_handle=if3, mac_addr='00:11:22:33:44:58', ip_addr=n_ip4, rw_type=1)
         neighbor4 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry4)
 
@@ -1230,10 +1243,10 @@ class L3IPv4LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
                         tcp_sport=src_port,
                         tcp_dport=dst_port)
 
-                send_packet(self, 1, str(pkt))
+                send_packet(self, swports[0], str(pkt))
                 rcv_idx = verify_packet_list_any(self,
                               [exp_pkt1, exp_pkt2, exp_pkt3, exp_pkt4],
-                              [swports[2], swports[3], swports[2], swports[3]])
+                              [swports[1], swports[2], swports[3], swports[4]])
                 count[rcv_idx] += 1
                 dst_ip += 1
 
@@ -1262,10 +1275,14 @@ class L3IPv4LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_l3_interface_address_delete(device, if1, vrf, i_ip1)
             self.client.switcht_api_l3_interface_address_delete(device, if2, vrf, i_ip2)
             self.client.switcht_api_l3_interface_address_delete(device, if3, vrf, i_ip3)
+            self.client.switcht_api_l3_interface_address_delete(device, if4, vrf, i_ip4)
+            self.client.switcht_api_l3_interface_address_delete(device, if5, vrf, i_ip5)
 
             self.client.switcht_api_interface_delete(device, if1)
             self.client.switcht_api_interface_delete(device, if2)
             self.client.switcht_api_interface_delete(device, if3)
+            self.client.switcht_api_interface_delete(device, if4)
+            self.client.switcht_api_interface_delete(device, if5)
 
             self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
             self.client.switcht_api_router_mac_group_delete(device, rmac)
@@ -7379,8 +7396,8 @@ class L3VIIPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_lag_member_delete(device, lag_handle=lag12, side=0, port=swports[2])
             self.client.switcht_api_interface_delete(device, if12)
 
-            self.client.switcht_api_lag_member_delete(device, lag_handle=lag12, side=0, port=swports[3])
-            self.client.switcht_api_lag_member_delete(device, lag_handle=lag12, side=0, port=swports[4])
+            self.client.switcht_api_lag_member_delete(device, lag_handle=lag34, side=0, port=swports[3])
+            self.client.switcht_api_lag_member_delete(device, lag_handle=lag34, side=0, port=swports[4])
             self.client.switcht_api_interface_delete(device, if34)
 
             self.client.switcht_api_lag_delete(device, lag12)
@@ -8201,6 +8218,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
         print
 
     def tearDown(self):
+        self.client.switcht_api_mac_table_entries_delete_all(device)
         self.client.switcht_api_neighbor_entry_remove(device, self.neighbor1)
         self.client.switcht_api_nhop_delete(device, self.nhop1)
         self.client.switcht_api_neighbor_entry_remove(device, self.neighbor2)
