@@ -11,7 +11,7 @@ libpng-dev libssl-dev libtool libyaml-0-2 libbz2-dev mininet openssl pkg-config 
 python-dpkt python-jsonpickle python-imaging-tk python-matplotlib python-nose python-numpy \
 python-pandas python-pip python-pygraph python-pygraphviz python-scipy \
 python-setuptools python-sympy python-yaml redis-server thrift-compiler \
-wireshark
+wireshark libgmp-dev
 
 sudo pip install --upgrade thrift
 sudo pip install tenjin

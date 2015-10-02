@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import oftest.dataplane as dataplane
-import oftest.pd_base_tests as pd_base_tests
+import ptf.dataplane as dataplane
+import pd_base_tests
 
-from oftest.testutils import *
-
-from utils import *
+from ptf.testutils import *
+from ptf.thriftutils import *
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *

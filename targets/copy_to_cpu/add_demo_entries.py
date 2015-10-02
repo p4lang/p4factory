@@ -19,8 +19,8 @@ import os
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(_THIS_DIR, "tests", "pd_thrift"))
 
-sys.path.append(os.path.join(_THIS_DIR, "..", "..",
-                             "submodules", "oft-infra"))
+sys.path.append(os.path.join(_THIS_DIR, "..", "..", "testutils"))
+
 from utils import *
 
 from thrift.transport import TSocket
