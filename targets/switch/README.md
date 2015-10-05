@@ -125,9 +125,12 @@ To run switchlink testcases,
 The switchlink testcases have been verified with docker version 1.7.0 and
 Mininet version 2.2.1 running on Ubuntu 14.04.
 
+Running Openflow Testcases
+--------------------------
+
 To run the Openflow testcases,
 
-    sudo ./run_tests.py --openflow --test-dir tests/of-tests
+    sudo ./run_of_tests.py --test-dir tests/of-tests
 
 Trying it with bmv2
 ========
