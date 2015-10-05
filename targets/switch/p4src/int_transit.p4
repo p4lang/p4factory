@@ -45,41 +45,35 @@ metadata int_metadata_i2e_t int_metadata_i2e;
 /* Instr Bit 0 */
 action int_set_header_0() { /* switch_id */
     add_header(int_switch_id_header);
-    modify_field(int_switch_id_header.bos, 0);
     modify_field(int_switch_id_header.switch_id, int_metadata.switch_id);
 }
 /* Instr Bit 1 */
 action int_set_header_1() { /* ingress_port_id */
     add_header(int_ingress_port_id_header);
-    modify_field(int_ingress_port_id_header.bos, 0);
     modify_field(int_ingress_port_id_header.ingress_port_id, 
                     ingress_metadata.ifindex);
 }
 /* Instr Bit 2 */
 action int_set_header_2() { /* hop_latency */
     add_header(int_hop_latency_header);
-    modify_field(int_hop_latency_header.bos, 0);
     modify_field(int_hop_latency_header.hop_latency,
                                        intrinsic_metadata.deq_timedelta);
 }
 /* Instr Bit 3 */
 action int_set_header_3() { /* q_occupancy */
     add_header(int_q_occupancy_header);
-    modify_field(int_q_occupancy_header.bos, 0);
     modify_field(int_q_occupancy_header.q_occupancy,
                     intrinsic_metadata.enq_qdepth); 
 }
 /* Instr Bit 4 */
 action int_set_header_4() { /* ingress_tstamp */
     add_header(int_ingress_tstamp_header);
-    modify_field(int_ingress_tstamp_header.bos, 0);
     modify_field(int_ingress_tstamp_header.ingress_tstamp, 
                                             i2e_metadata.ingress_tstamp);
 }
 /* Instr Bit 5 */
 action int_set_header_5() { /* egress_port_id */
     add_header(int_egress_port_id_header);
-    modify_field(int_egress_port_id_header.bos, 0);
     modify_field(int_egress_port_id_header.egress_port_id,
                     standard_metadata.egress_port);
 }
@@ -88,14 +82,12 @@ action int_set_header_5() { /* egress_port_id */
 action int_set_header_6() { /* q_congestion */
     add_header(int_q_congestion_header);
     /* un-supported */
-    modify_field(int_q_congestion_header.bos, 0);
     modify_field(int_q_congestion_header.q_congestion, 0x7FFFFFFF);
 }
 /* Instr Bit 7 */
 action int_set_header_7() { /* egress_port_tx_utilization */
     add_header(int_egress_port_tx_utilization_header);
     /* un-supported */
-    modify_field(int_egress_port_tx_utilization_header.bos, 0);
     modify_field(int_egress_port_tx_utilization_header.egress_port_tx_utilization, 0x7FFFFFFF);
 }
 
