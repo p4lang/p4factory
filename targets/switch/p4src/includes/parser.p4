@@ -208,8 +208,13 @@ parser parse_pw {
 #define IP_PROTOCOLS_IPHL_GRE          0x52f
 
 /* Vxlan header decoding for INT */
+#ifndef __TARGET_BMV2__
 /* flags.p == 1 && next_proto == 5 */
 #define VXLAN_GPE_NEXT_PROTO_INT        0x0805 mask 0x08ff
+#else
+#define VXLAN_GPE_NEXT_PROTO_INT        0x05 mask 0xff
+#endif
+
 
 header ipv4_t ipv4;
 
@@ -564,7 +569,12 @@ parser parse_vxlan_gpe {
     set_metadata(tunnel_metadata.ingress_tunnel_type,
                  INGRESS_TUNNEL_TYPE_VXLAN_GPE);
     set_metadata(tunnel_metadata.tunnel_vni, latest.vni);
-    return select (vxlan_gpe.flags, vxlan_gpe.next_proto) {
+#ifndef __TARGET_BMV2__
+    return select (vxlan_gpe.flags, vxlan_gpe.next_proto)
+#else
+    return select (vxlan_gpe.next_proto)
+#endif
+    {
         VXLAN_GPE_NEXT_PROTO_INT : parse_gpe_int_header;
         default : parse_inner_ethernet;
     }
