@@ -211,9 +211,9 @@ class ThriftClient(object):
   def get_table_names(self):
     table_names = []
     for function in dir(self.p4_client_module):
-      regex = '^%s(?P<table_name>\S+)%s' % (self.get_spec_prefix(), ThriftClient.MATCH_SPEC_T)
+      regex = '^(?P<table_name>\S+)%s' % (ThriftClient.SET_DEFAULT_ACTION)
       m = re.search(regex, function)
-      if m is not None:
+      if m is not None and m.group("table_name") not in table_names:
         table_names.append(m.group("table_name"))
     return table_names
 
