@@ -25,6 +25,7 @@ limitations under the License.
 /* METADATA */
 header_type ingress_metadata_t {
     fields {
+        ingress_port : 9;                      /* input physical port */
         ifindex : IFINDEX_BIT_WIDTH;           /* input interface index */
         egress_ifindex : IFINDEX_BIT_WIDTH;    /* egress interface index */
         port_type : 2;                         /* ingress port type */
@@ -76,6 +77,7 @@ metadata egress_metadata_t egress_metadata;
 #include "egress_filter.p4"
 #include "mirror.p4"
 #include "int_transit.p4"
+#include "hashes.p4"
 
 action nop() {
 }
@@ -157,13 +159,26 @@ control ingress {
 #ifndef TUNNEL_DISABLE
         }
 #endif /* TUNNEL_DISABLE */
+    } else {
+#ifdef OPENFLOW_ENABLE
+        apply(packet_out) {
+            nop {
+#endif /* OPENFLOW_ENABLE */
+                /* ingress fabric processing */
+                process_ingress_fabric();
+#ifdef OPENFLOW_ENABLE
+            }
+        }
+#endif /* OPENFLOW_ENABLE */
+    }
+
+    /* compute hashes based on packet type */
+    process_hashes();
+
+    if (ingress_metadata.port_type == PORT_TYPE_NORMAL) {
 		/* update statistics */
         process_ingress_bd_stats();
-
-#ifdef OPENFLOW_ENABLE
-        /* openflow processing for ingress */
-        process_ofpat_ingress();
-#endif /* OPENFLOW_ENABLE */
+        process_ingress_acl_stats();
 
         /* decide final forwarding choice */
         process_fwd_results();
@@ -179,34 +194,20 @@ control ingress {
             process_lag();
         }
 
+#ifdef OPENFLOW_ENABLE
+        /* openflow processing for ingress */
+        process_ofpat_ingress();
+#endif /* OPENFLOW_ENABLE */
+
         /* generate learn notify digest if permitted */
         process_mac_learning();
-
-    } else {
-#ifdef OPENFLOW_ENABLE
-        apply(packet_out) {
-            nop {
-#endif /* OPENFLOW_ENABLE */
-                /* ingress fabric processing */
-                process_ingress_fabric();
-#ifdef OPENFLOW_ENABLE
-            }
-        }
-#endif /* OPENFLOW_ENABLE */
     }
 
-    if ((ingress_metadata.port_type == PORT_TYPE_NORMAL) or
-        (ingress_metadata.port_type == PORT_TYPE_FABRIC)) {
+    /* resolve fabric port to destination device */
+    process_fabric_lag();
 
-        /* resolve fabric port to destination device */
-        process_fabric_lag();
-
-        /* compute hashes for multicast packets */
-        process_multicast_hashes();
-
-        /* system acls */
-        process_system_acl();
-    }
+    /* system acls */
+    process_system_acl();
 }
 
 control egress {
@@ -270,10 +271,10 @@ control egress {
             /* egress filter */
             process_egress_filter();
         }
+
+        /* apply egress acl */
+        process_egress_acl();
 #ifdef OPENFLOW_ENABLE
     }
 #endif /* OPENFLOW_ENABLE */
-
-    /* apply egress acl */
-    process_egress_acl();
 }

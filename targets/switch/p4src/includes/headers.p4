@@ -73,23 +73,6 @@ header_type vlan_tag_t {
     }
 }
 
-header_type vlan_tag_3b_t {
-    fields {
-        pcp : 3;
-        cfi : 1;
-        vid : 4;
-        etherType : 16;
-    }
-}
-header_type vlan_tag_5b_t {
-    fields {
-        pcp : 3;
-        cfi : 1;
-        vid : 20;
-        etherType : 16;
-    }
-}
-
 header_type ieee802_1ah_t {
     fields {
         pcp : 3;
@@ -196,7 +179,7 @@ header_type gre_t {
 header_type nvgre_t {
     fields {
         tni : 24;
-        reserved : 8;
+        flow_id : 8;
     }
 }
 
@@ -482,9 +465,6 @@ header_type fabric_header_t {
 
         dstDevice : 8;
         dstPortOrGroup : 16;
-
-        ingressIfindex : 16;
-        ingressBd : 16;
     }
 }
 
@@ -505,6 +485,10 @@ header_type fabric_header_multicast_t {
         outerRouted : 1;
         tunnelTerminate : 1;
         ingressTunnelType : 5;
+
+        ingressIfindex : 16;
+        ingressBd : 16;
+
         mcastGrp : 16;
     }
 }
@@ -525,6 +509,9 @@ header_type fabric_header_cpu_t {
         reserved : 2;
 
         ingressPort: 16;
+        ingressIfindex : 16;
+        ingressBd : 16;
+
         reasonCode : 16;
     }
 }

@@ -97,20 +97,40 @@ control process_fwd_results {
 /*****************************************************************************/
 /* ECMP lookup                                                               */
 /*****************************************************************************/
+/*
+ * If dest mac is not know, then unicast packet needs to be flooded in
+ * egress BD
+ */
+action set_ecmp_nexthop_details_for_post_routed_flood(bd, uuc_mc_index,
+                                                      nhop_index) {
+    modify_field(intrinsic_metadata.mcast_grp, uuc_mc_index);
+    modify_field(l3_metadata.nexthop_index, nhop_index);
+    modify_field(ingress_metadata.egress_ifindex, 0);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
+#ifdef FABRIC_ENABLE
+    modify_field(fabric_metadata.dst_device, FABRIC_DEVICE_MULTICAST);
+#endif /* FABRIC_ENABLE */
+}
+
+action set_ecmp_nexthop_details(ifindex, bd, nhop_index, tunnel) {
+    modify_field(ingress_metadata.egress_ifindex, ifindex);
+    modify_field(l3_metadata.nexthop_index, nhop_index);
+    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
+    bit_xor(l2_metadata.same_if_check, l2_metadata.same_if_check, ifindex);
+    bit_xor(tunnel_metadata.tunnel_if_check,
+            tunnel_metadata.tunnel_terminate, tunnel);
+}
+
 field_list l3_hash_fields {
-    ipv4_metadata.lkp_ipv4_sa;
-    ipv4_metadata.lkp_ipv4_da;
-    l3_metadata.lkp_ip_proto;
-    l3_metadata.lkp_l4_sport;
-    l3_metadata.lkp_l4_dport;
+    hash_metadata.hash1;
 }
 
 field_list_calculation ecmp_hash {
     input {
         l3_hash_fields;
     }
-    algorithm : crc16;
-    output_width : ECMP_BIT_WIDTH;
+    algorithm : identity;
+    output_width : 14; //ECMP_BIT_WIDTH;
 }
 
 action_selector ecmp_selector {
@@ -136,23 +156,6 @@ table ecmp_group {
     size : ECMP_GROUP_TABLE_SIZE;
 }
 
-action set_nexthop_details(ifindex, bd, tunnel) {
-    modify_field(ingress_metadata.egress_ifindex, ifindex);
-    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
-    bit_xor(l2_metadata.same_if_check, l2_metadata.same_if_check, ifindex);
-    bit_xor(tunnel_metadata.tunnel_if_check,
-            tunnel_metadata.tunnel_terminate, tunnel);
-}
-
-action set_ecmp_nexthop_details(ifindex, bd, nhop_index, tunnel) {
-    modify_field(ingress_metadata.egress_ifindex, ifindex);
-    modify_field(l3_metadata.nexthop_index, nhop_index);
-    bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
-    bit_xor(l2_metadata.same_if_check, l2_metadata.same_if_check, ifindex);
-    bit_xor(tunnel_metadata.tunnel_if_check,
-            tunnel_metadata.tunnel_terminate, tunnel);
-}
-
 
 /*****************************************************************************/
 /* Nexthop lookup                                                            */
@@ -170,15 +173,12 @@ action set_nexthop_details_for_post_routed_flood(bd, uuc_mc_index) {
 #endif /* FABRIC_ENABLE */
 }
 
-action set_ecmp_nexthop_details_for_post_routed_flood(bd, uuc_mc_index,
-                                                      nhop_index) {
-    modify_field(intrinsic_metadata.mcast_grp, uuc_mc_index);
-    modify_field(l3_metadata.nexthop_index, nhop_index);
-    modify_field(ingress_metadata.egress_ifindex, 0);
+action set_nexthop_details(ifindex, bd, tunnel) {
+    modify_field(ingress_metadata.egress_ifindex, ifindex);
     bit_xor(l3_metadata.same_bd_check, ingress_metadata.bd, bd);
-#ifdef FABRIC_ENABLE
-    modify_field(fabric_metadata.dst_device, FABRIC_DEVICE_MULTICAST);
-#endif /* FABRIC_ENABLE */
+    bit_xor(l2_metadata.same_if_check, l2_metadata.same_if_check, ifindex);
+    bit_xor(tunnel_metadata.tunnel_if_check,
+            tunnel_metadata.tunnel_terminate, tunnel);
 }
 
 table nexthop {

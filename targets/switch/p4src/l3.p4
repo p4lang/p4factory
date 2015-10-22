@@ -49,6 +49,7 @@ header_type l3_metadata_t {
         routed : 1;                            /* is packet routed? */
         outer_routed : 1;                      /* is outer packet routed? */
         mtu_index : 8;                         /* index into mtu table */
+        l3_mtu_check : 16 (saturating);        /* result of mtu check */
     }
 }
 

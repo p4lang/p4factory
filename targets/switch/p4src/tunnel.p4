@@ -481,7 +481,6 @@ control process_mpls {
 action decap_vxlan_inner_ipv4() {
     copy_header(ethernet, inner_ethernet);
     copy_header(ipv4, inner_ipv4);
-    remove_header(udp);
     remove_header(vxlan);
     remove_header(ipv6);
     remove_header(inner_ethernet);
@@ -491,7 +490,6 @@ action decap_vxlan_inner_ipv4() {
 action decap_vxlan_inner_ipv6() {
     copy_header(ethernet, inner_ethernet);
     copy_header(ipv6, inner_ipv6);
-    remove_header(udp);
     remove_header(vxlan);
     remove_header(ipv4);
     remove_header(inner_ethernet);
@@ -500,7 +498,6 @@ action decap_vxlan_inner_ipv6() {
 
 action decap_vxlan_inner_non_ip() {
     copy_header(ethernet, inner_ethernet);
-    remove_header(udp);
     remove_header(vxlan);
     remove_header(ipv4);
     remove_header(ipv6);
@@ -509,7 +506,6 @@ action decap_vxlan_inner_non_ip() {
 action decap_genv_inner_ipv4() {
     copy_header(ethernet, inner_ethernet);
     copy_header(ipv4, inner_ipv4);
-    remove_header(udp);
     remove_header(genv);
     remove_header(ipv6);
     remove_header(inner_ethernet);
@@ -519,7 +515,6 @@ action decap_genv_inner_ipv4() {
 action decap_genv_inner_ipv6() {
     copy_header(ethernet, inner_ethernet);
     copy_header(ipv6, inner_ipv6);
-    remove_header(udp);
     remove_header(genv);
     remove_header(ipv4);
     remove_header(inner_ethernet);
@@ -528,7 +523,6 @@ action decap_genv_inner_ipv6() {
 
 action decap_genv_inner_non_ip() {
     copy_header(ethernet, inner_ethernet);
-    remove_header(udp);
     remove_header(genv);
     remove_header(ipv4);
     remove_header(ipv6);
@@ -556,7 +550,6 @@ action decap_nvgre_inner_ipv6() {
 
 action decap_nvgre_inner_non_ip() {
     copy_header(ethernet, inner_ethernet);
-    remove_header(udp);
     remove_header(nvgre);
     remove_header(gre);
     remove_header(ipv4);
@@ -752,16 +745,19 @@ action decap_inner_udp() {
 }
 
 action decap_inner_tcp() {
-    copy_header(tcp, inner_tcp);
+    copy_tcp_header(tcp, inner_tcp);
     remove_header(inner_tcp);
+    remove_header(udp);
 }
 
 action decap_inner_icmp() {
     copy_header(icmp, inner_icmp);
     remove_header(inner_icmp);
+    remove_header(udp);
 }
 
 action decap_inner_unknown() {
+    remove_header(udp);
 }
 
 table tunnel_decap_process_inner {
@@ -821,23 +817,6 @@ table egress_vni {
 /*****************************************************************************/
 /* Tunnel encap (inner header rewrite)                                       */
 /*****************************************************************************/
-field_list entropy_hash_fields {
-    inner_ethernet.srcAddr;
-    inner_ethernet.dstAddr;
-    inner_ethernet.etherType;
-    inner_ipv4.srcAddr;
-    inner_ipv4.dstAddr;
-    inner_ipv4.protocol;
-}
-
-field_list_calculation entropy_hash {
-    input {
-        entropy_hash_fields;
-    }
-    algorithm : crc16;
-    output_width : 16;
-}
-
 action inner_ipv4_udp_rewrite() {
     copy_header(inner_ipv4, ipv4);
     copy_header(inner_udp, udp);
@@ -848,7 +827,7 @@ action inner_ipv4_udp_rewrite() {
 
 action inner_ipv4_tcp_rewrite() {
     copy_header(inner_ipv4, ipv4);
-    copy_header(inner_tcp, tcp);
+    copy_tcp_header(inner_tcp, tcp);
     modify_field(egress_metadata.payload_length, ipv4.totalLen);
     remove_header(tcp);
     remove_header(ipv4);
@@ -877,7 +856,7 @@ action inner_ipv6_udp_rewrite() {
 
 action inner_ipv6_tcp_rewrite() {
     copy_header(inner_ipv6, ipv6);
-    copy_header(inner_tcp, tcp);
+    copy_tcp_header(inner_tcp, tcp);
     add(egress_metadata.payload_length, ipv6.payloadLen, 40);
     remove_header(tcp);
     remove_header(ipv6);
@@ -931,7 +910,8 @@ action f_insert_vxlan_header() {
     copy_header(inner_ethernet, ethernet);
     add_header(udp);
     add_header(vxlan);
-    modify_field_with_hash_based_offset(udp.srcPort, 0, entropy_hash, 16384);
+
+    modify_field(udp.srcPort, hash_metadata.entropy_hash);
     modify_field(udp.dstPort, UDP_PORT_VXLAN);
     modify_field(udp.checksum, 0);
     add(udp.length_, egress_metadata.payload_length, 30);
@@ -953,8 +933,11 @@ action f_insert_ipv4_header(proto) {
 
 action f_insert_ipv6_header(proto) {
     add_header(ipv6);
+    modify_field(ipv6.version, 0x6);
     modify_field(ipv6.nextHdr, proto);
     modify_field(ipv6.hopLimit, 64);
+    modify_field(ipv6.trafficClass, 4);
+    modify_field(ipv6.flowLabel, 0);
 }
 
 action ipv4_vxlan_rewrite() {
@@ -975,7 +958,8 @@ action f_insert_genv_header() {
     copy_header(inner_ethernet, ethernet);
     add_header(udp);
     add_header(genv);
-    modify_field_with_hash_based_offset(udp.srcPort, 0, entropy_hash, 16384);
+
+    modify_field(udp.srcPort, hash_metadata.entropy_hash);
     modify_field(udp.dstPort, UDP_PORT_GENV);
     modify_field(udp.checksum, 0);
     add(udp.length_, egress_metadata.payload_length, 30);
@@ -1018,7 +1002,12 @@ action f_insert_nvgre_header() {
     modify_field(gre.S, 0);
     modify_field(gre.s, 0);
     modify_field(nvgre.tni, tunnel_metadata.vnid);
-    modify_field(nvgre.reserved, 0);
+#ifndef __TARGET_BMV2__
+    modify_field(nvgre.flow_id, hash_metadata.entropy_hash, 0xFF);
+#else
+    modify_field(nvgre.flow_id, hash_metadata.entropy_hash & 0xFF);
+#endif
+
 }
 
 action ipv4_nvgre_rewrite() {
@@ -1378,6 +1367,8 @@ control process_tunnel_encap {
         /* rewrite tunnel src and dst ip */
         apply(tunnel_src_rewrite);
         apply(tunnel_dst_rewrite);
+
+        /* rewrite tunnel src and dst ip */
         apply(tunnel_smac_rewrite);
         apply(tunnel_dmac_rewrite);
     }

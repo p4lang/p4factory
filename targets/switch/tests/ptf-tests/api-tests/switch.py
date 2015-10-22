@@ -32,141 +32,21 @@ from ptf.testutils import *
 from ptf.thriftutils import *
 
 import os
-#import pdb
 
 from switch_api_thrift.ttypes import  *
 
-from scapy.all import Packet
-from scapy.fields import *
-from scapy.all import Ether
-from scapy.all import bind_layers
-
 this_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(this_dir, '..'))
+from common.utils import *
 
 device=0
 cpu_port=64
+swports = [x for x in range(65)]
 
-swports = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
 
-def verify_packet_list_any(test, pkt_list,  ofport_list):
-    logging.debug("Checking for packet on given ports")
-    (_, rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=1)
-    test.assertTrue(rcv_pkt != None, "No packet received")
-
-    i = 0
-    match_found = 0
-    for ofport in ofport_list:
-        pkt = pkt_list[i]
-        if ((str(rcv_pkt) == str(pkt)) and (ofport == rcv_port)):
-            match_index = i
-            match_found = 1
-        i = i + 1
-    test.assertTrue(match_found == 1, "Packet not received on expected port")
-    return match_index
-
-def verify_packet_list(test, pkt_list,  ofport_list):
-    logging.debug("Checking for packet on given ports")
-
-    match_found = 0
-    for ofport in ofport_list:
-        (_, rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=2)
-        test.assertTrue(rcv_pkt != None, "No packet received")
-        index = ofport_list.index(swports.index(rcv_port))
-        pkt = pkt_list[index]
-        if (str(rcv_pkt) == str(pkt)):
-            match_found += 1
-    test.assertTrue(match_found == len(pkt_list), "Packet not received on expected port")
-
-def verify_packet_on_set_of_ports(test, pkt, ofport_list):
-    logging.debug("Checking for packet on set of ports")
-    match_found = 0
-    for port_list in ofport_list:
-        for port in port_list:
-            (_, rcv_port, rcv_pkt, pkt_time) = test.dataplane.poll(timeout=1)
-            if (str(rcv_pkt) == str(pkt)):
-                match_found += 1
-    test.assertTrue(match_found == len(ofport_list), "Packet not received on expected port")
-
-class FabricHeader(Packet):
-    name = "Fabric Header"
-    fields_desc = [
-        BitField("packet_type", 0, 3),
-        BitField("header_version", 0, 2),
-        BitField("packet_version", 0, 2),
-        BitField("pad1", 0, 1),
-
-        BitField("fabric_color", 0, 3),
-        BitField("fabric_qos", 0, 5),
-
-        XByteField("dst_device", 0),
-        XShortField("dst_port_or_group", 0),
-
-        XShortField("ingress_ifindex", 0),
-        XShortField("ingress_bd", 0)
-    ]
-
-class FabricCpuHeader(Packet):
-    name = "Fabric Cpu Header"
-    fields_desc = [
-        BitField("egress_queue", 0, 5),
-        BitField("tx_bypass", 0, 1),
-        BitField("reserved1", 0, 2),
-
-        XShortField("ingress_port", 0),
-        XShortField("reason_code", 0)
-    ]
-
-class FabricPayloadHeader(Packet):
-    name = "Fabric Payload Header"
-    fields_desc = [
-        XShortField("ether_type", 0)
-    ]
-
-def simple_cpu_packet(header_version = 0,
-                      packet_version = 0,
-                      fabric_color = 0,
-                      fabric_qos = 0,
-                      dst_device = 0,
-                      dst_port_or_group = 0,
-                      ingress_ifindex = 1,
-                      ingress_bd = 0,
-                      egress_queue = 0,
-                      tx_bypass = False,
-                      ingress_port = 1,
-                      reason_code = 0,
-                      inner_pkt = None):
-
-    ether = Ether(str(inner_pkt))
-    eth_type = ether.type
-    ether.type = 0x9000
-
-    fabric_header = FabricHeader(packet_type = 0x5,
-                                  header_version = header_version,
-                                  packet_version = packet_version,
-                                  pad1 = 0,
-                                  fabric_color = fabric_color,
-                                  fabric_qos = fabric_qos,
-                                  dst_device = dst_device,
-                                  dst_port_or_group = dst_port_or_group,
-                                  ingress_ifindex = ingress_ifindex,
-                                  ingress_bd = ingress_bd)
-
-    fabric_cpu_header = FabricCpuHeader(egress_queue = egress_queue,
-                                        tx_bypass = tx_bypass,
-                                        reserved1 = 0,
-                                        ingress_port = ingress_port,
-                                        reason_code = reason_code)
-
-    fabric_payload_header = FabricPayloadHeader(ether_type = eth_type)
-
-    if inner_pkt:
-        pkt = (str(ether)[:14]) / fabric_header / fabric_cpu_header / fabric_payload_header / (str(inner_pkt)[14:])
-    else:
-        ip_pkt = simple_ip_only_packet()
-        pkt = (str(ether)[:14]) / fabric_header / fabric_cpu_header / fabric_payload_header / ip_pkt
-
-    return pkt
-
+###############################################################################
+@group('l2')
 class L2AccessToAccessVlanTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -202,7 +82,7 @@ class L2AccessToAccessVlanTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=64)
 
         try:
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
@@ -216,6 +96,9 @@ class L2AccessToAccessVlanTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('l2')
 class L2TrunkToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -255,7 +138,7 @@ class L2TrunkToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=64)
 
         try:
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
@@ -269,6 +152,116 @@ class L2TrunkToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('l2')
+class L2AccessToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        print "Sending L2 packet - port %d" % swports[1], " -> port %d" % swports[2], " [trunk vlan=10])"
+        self.client.switcht_api_init(device)
+        vlan = self.client.switcht_api_vlan_create(device, 10)
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        iu2 = interface_union(port_lag_handle = swports[2])
+        i_info2 = switcht_interface_info_t(device=0, type=3, u=iu2, mac='00:77:66:55:44:33', label=0)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
+        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
+
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
+
+        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=102,
+                                ip_ttl=64)
+        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=102,
+                                ip_ttl=64,
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                pktlen=104)
+        try:
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, exp_pkt, [swports[2]])
+        finally:
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
+
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
+
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+
+            self.client.switcht_api_vlan_delete(device, vlan)
+
+
+###############################################################################
+@group('l2')
+class L2TrunkToAccessVlanTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        print "Sending L2 packet - port %d" % swports[1], " -> port %d" % swports[2], " [trunk vlan=10])"
+        self.client.switcht_api_init(device)
+        vlan = self.client.switcht_api_vlan_create(device, 10)
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=3, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        iu2 = interface_union(port_lag_handle = swports[2])
+        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
+        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
+
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
+
+        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                ip_dst='10.0.0.1',
+                                ip_id=102,
+                                ip_ttl=64)
+        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=102,
+                                ip_ttl=64,
+                                pktlen=96)
+        try:
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, exp_pkt, [swports[2]])
+        finally:
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
+
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
+
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+
+            self.client.switcht_api_vlan_delete(device, vlan)
+
+###############################################################################
+@group('l2')
 class L2StaticMacMoveTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -309,7 +302,7 @@ class L2StaticMacMoveTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=103,
                                 ip_ttl=64)
         try:
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
 
             print "Moving mac (00:11:11:11:11:11) from port %d" % swports[2], " to port %d" % swports[3]
@@ -332,6 +325,10 @@ class L2StaticMacMoveTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('l2')
+@group('learn')
 class L2MacLearnTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -376,16 +373,16 @@ class L2MacLearnTest(api_base_tests.ThriftInterfaceDataPlane):
 
         try:
             print "Sending packet port %d" % swports[1], "-> port %d" % swports[3], " (00:11:11:11:11:11 -> 00:33:33:33:33:33)"
-            send_packet(self, 1, str(pkt1))
+            send_packet(self, swports[1], str(pkt1))
             verify_packets(self, pkt1, [swports[3]])
             time.sleep(3)
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[3], "  (00:22:22:22:22:22 -> 00:33:33:33:33:33)"
-            send_packet(self, 2, str(pkt2))
+            send_packet(self, swports[2], str(pkt2))
             verify_packets(self, pkt2, [swports[3]])
             time.sleep(3)
 
             print "Sending packet port %d" % swports[1], " -> port %d" % swports[2], " (00:11:11:11:11:11 -> 00:22:22:22:22:22)"
-            send_packet(self, 3, str(pkt3))
+            send_packet(self, swports[3], str(pkt3))
             verify_packets(self, pkt3, [swports[2]])
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
@@ -402,6 +399,10 @@ class L2MacLearnTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('l2')
+@group('learn')
 class L2DynamicMacMoveTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -441,23 +442,23 @@ class L2DynamicMacMoveTest(api_base_tests.ThriftInterfaceDataPlane):
 
         try:
             print "Sending packet port %d" % swports[1], " -> port %d" % swports[2], " (00:22:22:22:22:22 -> 00:11:11:11:11:11)"
-            send_packet(self, 1, str(pkt1))
+            send_packet(self, swports[1], str(pkt1))
             verify_packets(self, pkt1, [swports[2], swports[3]])
             time.sleep(3)
 
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[1], " (00:11:11:11:11:11 -> 00:22:22:22:22:22)"
-            send_packet(self, 2, str(pkt2))
+            send_packet(self, swports[2], str(pkt2))
             verify_packets(self, pkt2, [swports[1]])
             time.sleep(3)
 
             print "Moving mac (00:22:22:22:22:22) from port %d" % swports[1], " to port %d" % swports[3], " "
             print "Sending packet port %d" % swports[3], "  -> port %d" % swports[2], " (00:22:22:22:22:22 -> 00:11:11:11:11:11)"
-            send_packet(self, 3, str(pkt1))
+            send_packet(self, swports[3], str(pkt1))
             verify_packets(self, pkt1, [swports[2]])
             time.sleep(3)
 
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[3], "  (00:11:11:11:11:11 -> 00:22:22:22:22:22)"
-            send_packet(self, 2, str(pkt2))
+            send_packet(self, swports[2], str(pkt2))
             verify_packets(self, pkt2, [swports[3]])
         finally:
             self.client.switcht_api_mac_table_entries_delete_all(device)
@@ -472,6 +473,10 @@ class L2DynamicMacMoveTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('l2')
+@group('learn')
 class L2DynamicLearnAgeTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -511,21 +516,21 @@ class L2DynamicLearnAgeTest(api_base_tests.ThriftInterfaceDataPlane):
 
         try:
             print "Sending packet port %d" % swports[1], " -> port %d" % swports[2], ", port %d" % swports[3], "  (00:77:77:77:77:77 -> 00:66:66:66:66:66)"
-            send_packet(self, 1, str(pkt1))
+            send_packet(self, swports[1], str(pkt1))
             verify_packets(self, pkt1, [swports[2], swports[3]])
 
             #allow it to learn. Next set of packets should be unicast
             time.sleep(3)
 
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[1], " (00:66:66:66:66:66 -> 00:77:77:77:77:77)"
-            send_packet(self, 2, str(pkt2))
+            send_packet(self, swports[2], str(pkt2))
             verify_packets(self, pkt2, [swports[1]])
 
             #allow it to age. Next set of packets should be flooded
             time.sleep(20)
 
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[1], ",3 (00:66:66:66:66:66 -> 00:77:77:77:77:77)"
-            send_packet(self, 2, str(pkt2))
+            send_packet(self, swports[2], str(pkt2))
             verify_packets(self, pkt2, [swports[1], swports[3]])
 
         finally:
@@ -539,6 +544,253 @@ class L2DynamicLearnAgeTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('l2')
+@group('flood')
+class L2FloodTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        print "Sending packet port %d" % swports[1], " -> port %d" % swports[2], " (192.168.0.1 -> 10.0.0.1 [id = 101])"
+        self.client.switcht_api_init(device)
+        vlan = self.client.switcht_api_vlan_create(device, 10)
+        self.client.switcht_api_vlan_learning_enabled_set(vlan, 0)
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        iu2 = interface_union(port_lag_handle = swports[2])
+        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        iu3 = interface_union(port_lag_handle = swports[3])
+        i_info3 = switcht_interface_info_t(device=0, type=2, u=iu3, mac='00:77:66:55:44:33', label=0)
+        if3 = self.client.switcht_api_interface_create(device, i_info3)
+
+        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
+        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
+        vlan_port3 = switcht_vlan_port_t(handle=if3, tagging_mode=0)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port3)
+
+        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=107,
+                                ip_ttl=64)
+        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=107,
+                                ip_ttl=64)
+        try:
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, exp_pkt, [swports[2], swports[3]])
+            send_packet(self, swports[2], str(pkt))
+            verify_packets(self, exp_pkt, [swports[1], swports[3]])
+            send_packet(self, swports[3], str(pkt))
+            verify_packets(self, exp_pkt, [swports[1], swports[2]])
+        finally:
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port3)
+
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+            self.client.switcht_api_interface_delete(device, if3)
+
+            self.client.switcht_api_vlan_delete(device, vlan)
+
+
+###############################################################################
+@group('l2')
+class L2LagTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        self.client.switcht_api_init(device)
+        vlan = self.client.switcht_api_vlan_create(device, 10)
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        lag = self.client.switcht_api_lag_create(device)
+        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[5])
+        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[6])
+        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[7])
+        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[8])
+        iu2 = interface_union(port_lag_handle = lag)
+        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
+        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
+
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
+
+        try:
+            count = [0, 0, 0, 0]
+            dst_ip = int(socket.inet_aton('10.10.10.1').encode('hex'),16)
+            max_itrs = 100
+            for i in range(0, max_itrs):
+                dst_ip_addr = socket.inet_ntoa(hex(dst_ip)[2:].zfill(8).decode('hex'))
+                pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                        eth_src='00:22:22:22:22:22',
+                                        ip_dst=dst_ip_addr,
+                                        ip_src='192.168.8.1',
+                                        ip_id=109,
+                                        ip_ttl=64)
+
+                exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                            eth_src='00:22:22:22:22:22',
+                                            ip_dst=dst_ip_addr,
+                                            ip_src='192.168.8.1',
+                                            ip_id=109,
+                                            ip_ttl=64)
+
+                send_packet(self, swports[1], str(pkt))
+                rcv_idx = verify_any_packet_any_port(self,
+                              [exp_pkt, exp_pkt, exp_pkt, exp_pkt],
+                              [swports[5], swports[6], swports[7], swports[8]])
+                count[rcv_idx] += 1
+                dst_ip += 1
+
+            print 'L2LagTest:', count
+            hash_factor = 0.6
+            if is_bmv2:
+                hash_factor = 0.6
+
+            for i in range(0, 4):
+                self.assertTrue((count[i] >= ((max_itrs / 4) * hash_factor)),
+                        "Not all paths are equally balanced")
+
+            pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
+                                    eth_dst='00:22:22:22:22:22',
+                                    ip_dst='10.0.0.1',
+                                    ip_id=109,
+                                    ip_ttl=64)
+            exp_pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
+                                    eth_dst='00:22:22:22:22:22',
+                                    ip_dst='10.0.0.1',
+                                    ip_id=109,
+                                    ip_ttl=64)
+            print "Sending packet port %d" % swports[5], "  (lag member) -> port %d" % swports[1], ""
+            send_packet(self, swports[5], str(pkt))
+            verify_packets(self, exp_pkt, [swports[1]])
+            print "Sending packet port %d" % swports[6], " (lag member) -> port %d" % swports[1], ""
+            send_packet(self, swports[6], str(pkt))
+            verify_packets(self, exp_pkt, [swports[1]])
+            print "Sending packet port %d" % swports[7], " (lag member) -> port %d" % swports[1], ""
+            send_packet(self, swports[7], str(pkt))
+            verify_packets(self, exp_pkt, [swports[1]])
+            print "Sending packet port %d" % swports[8], " (lag member) -> port %d" % swports[1], ""
+            send_packet(self, swports[8], str(pkt))
+            verify_packets(self, exp_pkt, [swports[1]])
+        finally:
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
+
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
+
+            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[5])
+            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[6])
+            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[7])
+            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[8])
+
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+
+            self.client.switcht_api_lag_delete(device, lag)
+            self.client.switcht_api_vlan_delete(device, vlan)
+
+
+###############################################################################
+@group('l2')
+class L2StpTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        print "Sending packet port %d" % swports[1], " (forwarding)-> port %d" % swports[2], " (192.168.0.1 -> 10.0.0.1 [id = 101])"
+        self.client.switcht_api_init(device)
+
+        vlan = self.client.switcht_api_vlan_create(device, 10)
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        iu2 = interface_union(port_lag_handle = swports[2])
+        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
+        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
+
+        stp = self.client.switcht_api_stp_group_create(device=0, stp_mode=1)
+        self.client.switcht_api_stp_group_vlans_add(device, stp, 1, [vlan])
+        self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if1, stp_state=3)
+        self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if2, stp_state=3)
+
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
+        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
+
+        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=113,
+                                ip_ttl=64)
+        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=113,
+                                ip_ttl=64)
+        try:
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, exp_pkt, [swports[2]])
+
+            print "Sending packet port %d" % swports[1], " (blocked) -> port %d" % swports[2], " (192.168.0.1 -> 10.0.0.1 [id = 101])"
+            self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if1, stp_state=4)
+            pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                    eth_src='00:22:22:22:22:22',
+                                    ip_dst='10.0.0.1',
+                                    ip_id=113,
+                                    ip_ttl=64)
+            exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                    eth_src='00:22:22:22:22:22',
+                                    ip_dst='10.0.0.1',
+                                    ip_id=113,
+                                    ip_ttl=64)
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, exp_pkt, [])
+        finally:
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
+            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
+
+            self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if1, stp_state=0)
+            self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if2, stp_state=0)
+
+            self.client.switcht_api_stp_group_vlans_remove(device, stp, 1, [vlan])
+            self.client.switcht_api_stp_group_delete(device, stp)
+
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
+
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+
+            self.client.switcht_api_vlan_delete(device, vlan)
+
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3IPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -585,7 +837,7 @@ class L3IPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 #ip_tos=3,
                                 ip_ttl=63)
         try:
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor)
@@ -602,6 +854,10 @@ class L3IPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3IPv4HostModifyTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -646,7 +902,7 @@ class L3IPv4HostModifyTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=64)
-        send_packet(self, 1, str(pkt))
+        send_packet(self, swports[1], str(pkt))
 
         exp_pkt = simple_tcp_packet(
                                 eth_dst='00:22:22:22:22:22',
@@ -669,7 +925,7 @@ class L3IPv4HostModifyTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=64)
-        send_packet(self, 1, str(pkt))
+        send_packet(self, swports[1], str(pkt))
 
         exp_pkt = simple_tcp_packet(
                                 eth_dst='00:33:33:33:33:33',
@@ -700,6 +956,10 @@ class L3IPv4HostModifyTest(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_router_mac_group_delete(device, rmac)
         self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3IPv4LpmTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -746,7 +1006,7 @@ class L3IPv4LpmTest(api_base_tests.ThriftInterfaceDataPlane):
                                 #ip_tos=3,
                                 ip_ttl=63)
         try:
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor)
@@ -763,6 +1023,10 @@ class L3IPv4LpmTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv6')
 class L3IPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -806,7 +1070,7 @@ class L3IPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ipv6_src='2000::1',
                                 ipv6_hlim=63)
         try:
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor)
@@ -823,6 +1087,10 @@ class L3IPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv6')
 class L3IPv6LpmTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -867,7 +1135,7 @@ class L3IPv6LpmTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ipv6_src='2000::1',
                                 ipv6_hlim=63)
         try:
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor)
@@ -884,6 +1152,10 @@ class L3IPv6LpmTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3IPv4EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -950,8 +1222,8 @@ class L3IPv4EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='192.168.0.1',
                                     ip_id=106,
                                     ip_ttl=63)
-            send_packet(self, 1, str(pkt))
-            verify_packet_list_any(self, [exp_pkt1, exp_pkt2],
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt1, exp_pkt2],
                                    [swports[2], swports[3]])
 
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -976,8 +1248,8 @@ class L3IPv4EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=106,
                                     ip_ttl=63)
 
-            send_packet(self, 1, str(pkt))
-            verify_packet_list_any(self, [exp_pkt1, exp_pkt2],
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt1, exp_pkt2],
                                    [swports[2], swports[3]])
         finally:
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip4, ecmp)
@@ -1003,6 +1275,10 @@ class L3IPv4EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv6')
 class L3IPv6EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -1070,8 +1346,8 @@ class L3IPv6EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ipv6_src='2000:1:1:0:0:0:0:1',
                                     tcp_sport=0x1234,
                                     ipv6_hlim=63)
-            send_packet(self, 1, str(pkt))
-            verify_packet_list_any(self, [exp_pkt1, exp_pkt2],
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt1, exp_pkt2],
                                    [swports[2], swports[3]])
 
             print "Sending packet port %d" % swports[1], " -> port %d" % swports[3], " (2000:1:1:0:0:0:0:1 -> 5000:1:1::0:0:0:0:1) [id = 101])"
@@ -1096,8 +1372,8 @@ class L3IPv6EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ipv6_src='2000:1:1:0:0:0:0:1',
                                     tcp_sport=0x1248,
                                     ipv6_hlim=63)
-            send_packet(self, 1, str(pkt))
-            verify_packet_list_any(self, [exp_pkt1, exp_pkt2],
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt1, exp_pkt2],
                                    [swports[2], swports[3]])
         finally:
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip4, ecmp)
@@ -1123,6 +1399,10 @@ class L3IPv6EcmpTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3IPv4LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -1244,7 +1524,7 @@ class L3IPv4LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
                         tcp_dport=dst_port)
 
                 send_packet(self, swports[0], str(pkt))
-                rcv_idx = verify_packet_list_any(self,
+                rcv_idx = verify_any_packet_any_port(self,
                               [exp_pkt1, exp_pkt2, exp_pkt3, exp_pkt4],
                               [swports[1], swports[2], swports[3], swports[4]])
                 count[rcv_idx] += 1
@@ -1288,6 +1568,10 @@ class L3IPv4LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv6')
 class L3IPv6LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -1362,8 +1646,6 @@ class L3IPv6LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
             dport = 0x50
             for i in range(0, max_itrs):
                 dst_ip_addr = socket.inet_ntop(socket.AF_INET6, dst_ip)
-                #HACK: sport is a hack for hashing since the ecmp hash does not
-                #include ipv6 sa and da.
                 pkt = simple_tcpv6_packet(
                         eth_dst='00:77:66:55:44:33',
                         eth_src='00:22:22:22:22:22',
@@ -1405,8 +1687,8 @@ class L3IPv6LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
                         tcp_dport=dport,
                         ipv6_hlim=63)
 
-                send_packet(self, 1, str(pkt))
-                rcv_idx = verify_packet_list_any(self,
+                send_packet(self, swports[1], str(pkt))
+                rcv_idx = verify_any_packet_any_port(self,
                               [exp_pkt1, exp_pkt2, exp_pkt3, exp_pkt4],
                               [swports[2], swports[3], swports[4], swports[5]])
                 count[rcv_idx] += 1
@@ -1453,161 +1735,11 @@ class L3IPv6LpmEcmpTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
-class L2FloodTest(api_base_tests.ThriftInterfaceDataPlane):
-    def runTest(self):
-        print
-        print "Sending packet port %d" % swports[1], " -> port %d" % swports[2], " (192.168.0.1 -> 10.0.0.1 [id = 101])"
-        self.client.switcht_api_init(device)
-        vlan = self.client.switcht_api_vlan_create(device, 10)
-        self.client.switcht_api_vlan_learning_enabled_set(vlan, 0)
 
-        iu1 = interface_union(port_lag_handle = swports[1])
-        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
-        if1 = self.client.switcht_api_interface_create(device, i_info1)
-
-        iu2 = interface_union(port_lag_handle = swports[2])
-        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
-        if2 = self.client.switcht_api_interface_create(device, i_info2)
-
-        iu3 = interface_union(port_lag_handle = swports[3])
-        i_info3 = switcht_interface_info_t(device=0, type=2, u=iu3, mac='00:77:66:55:44:33', label=0)
-        if3 = self.client.switcht_api_interface_create(device, i_info3)
-
-        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
-        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
-        vlan_port3 = switcht_vlan_port_t(handle=if3, tagging_mode=0)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port3)
-
-        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                ip_dst='10.0.0.1',
-                                ip_id=107,
-                                ip_ttl=64)
-        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                ip_dst='10.0.0.1',
-                                ip_id=107,
-                                ip_ttl=64)
-        try:
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, exp_pkt, [swports[2], swports[3]])
-            send_packet(self, 2, str(pkt))
-            verify_packets(self, exp_pkt, [swports[1], swports[3]])
-            send_packet(self, 3, str(pkt))
-            verify_packets(self, exp_pkt, [swports[1], swports[2]])
-        finally:
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port3)
-
-            self.client.switcht_api_interface_delete(device, if1)
-            self.client.switcht_api_interface_delete(device, if2)
-            self.client.switcht_api_interface_delete(device, if3)
-
-            self.client.switcht_api_vlan_delete(device, vlan)
-
-class L2LagTest(api_base_tests.ThriftInterfaceDataPlane):
-    def runTest(self):
-        print
-        self.client.switcht_api_init(device)
-        vlan = self.client.switcht_api_vlan_create(device, 10)
-
-        iu1 = interface_union(port_lag_handle = swports[1])
-        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
-        if1 = self.client.switcht_api_interface_create(device, i_info1)
-
-        lag = self.client.switcht_api_lag_create(device)
-        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[5])
-        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[6])
-        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[7])
-        self.client.switcht_api_lag_member_add(device, lag_handle=lag, side=0, port=swports[8])
-        iu2 = interface_union(port_lag_handle = lag)
-        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
-        if2 = self.client.switcht_api_interface_create(device, i_info2)
-
-        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
-        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
-
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
-
-        try:
-            count = [0, 0, 0, 0]
-            dst_ip = int(socket.inet_aton('10.10.10.1').encode('hex'),16)
-            max_itrs = 100
-            for i in range(0, max_itrs):
-                dst_ip_addr = socket.inet_ntoa(hex(dst_ip)[2:].zfill(8).decode('hex'))
-                pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                        eth_src='00:22:22:22:22:22',
-                                        ip_dst=dst_ip_addr,
-                                        ip_src='192.168.8.1',
-                                        ip_id=109,
-                                        ip_ttl=64)
-
-                exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                            eth_src='00:22:22:22:22:22',
-                                            ip_dst=dst_ip_addr,
-                                            ip_src='192.168.8.1',
-                                            ip_id=109,
-                                            ip_ttl=64)
-
-                send_packet(self, 1, str(pkt))
-                rcv_idx = verify_packet_list_any(self,
-                              [exp_pkt, exp_pkt, exp_pkt, exp_pkt],
-                              [swports[5], swports[6], swports[7], swports[8]])
-                count[rcv_idx] += 1
-                dst_ip += 1
-
-            print 'L2LagTest:', count
-            for i in range(0, 4):
-                self.assertTrue((count[i] >= ((max_itrs / 4) * 0.9)),
-                        "Not all paths are equally balanced")
-
-            pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
-                                    eth_dst='00:22:22:22:22:22',
-                                    ip_dst='10.0.0.1',
-                                    ip_id=109,
-                                    ip_ttl=64)
-            exp_pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
-                                    eth_dst='00:22:22:22:22:22',
-                                    ip_dst='10.0.0.1',
-                                    ip_id=109,
-                                    ip_ttl=64)
-            print "Sending packet port %d" % swports[5], "  (lag member) -> port %d" % swports[1], ""
-            send_packet(self, 5, str(pkt))
-            verify_packets(self, exp_pkt, [swports[1]])
-            print "Sending packet port %d" % swports[6], " (lag member) -> port %d" % swports[1], ""
-            send_packet(self, 6, str(pkt))
-            verify_packets(self, exp_pkt, [swports[1]])
-            print "Sending packet port %d" % swports[7], " (lag member) -> port %d" % swports[1], ""
-            send_packet(self, 7, str(pkt))
-            verify_packets(self, exp_pkt, [swports[1]])
-            print "Sending packet port %d" % swports[8], " (lag member) -> port %d" % swports[1], ""
-            send_packet(self, 8, str(pkt))
-            verify_packets(self, exp_pkt, [swports[1]])
-        finally:
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
-
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
-
-            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[5])
-            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[6])
-            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[7])
-            self.client.switcht_api_lag_member_delete(device, lag_handle=lag, side=0, port=swports[8])
-
-            self.client.switcht_api_interface_delete(device, if1)
-            self.client.switcht_api_interface_delete(device, if2)
-
-            self.client.switcht_api_lag_delete(device, lag)
-            self.client.switcht_api_vlan_delete(device, vlan)
-
-
+###############################################################################
+@group('l2')
+@group('l3')
+@group('ipv4')
 class L3IPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -1654,8 +1786,8 @@ class L3IPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='192.168.0.1',
                                     ip_id=110,
                                     ip_ttl=63)
-            send_packet(self, 1, str(pkt))
-            verify_packets_any(self, exp_pkt, [swports[2], swports[3]])
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt], [swports[2], swports[3]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor)
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip3, nhop)
@@ -1675,6 +1807,11 @@ class L3IPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l2')
+@group('l3')
+@group('ipv4')
 class L3IPv6LagTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -1720,8 +1857,8 @@ class L3IPv6LagTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ipv6_dst='4001::1',
                                     ipv6_src='5001::1',
                                     ipv6_hlim=63)
-            send_packet(self, 1, str(pkt))
-            verify_packets_any(self, exp_pkt, [swports[2], swports[3], swports[4]])
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt], [swports[2], swports[3], swports[4]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor)
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip3, nhop)
@@ -1742,6 +1879,11 @@ class L3IPv6LagTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l2')
+@group('l3')
+@group('ipv4')
 class L3EcmpLagTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -1855,10 +1997,9 @@ class L3EcmpLagTest(api_base_tests.ThriftInterfaceDataPlane):
                         ip_id=106,
                         ip_ttl=63)
 
-                send_packet(self, 1, str(pkt))
-                rcv_idx = verify_packet_list_any(self,
-                              [exp_pkt1, exp_pkt1, exp_pkt1,
-                                  exp_pkt2, exp_pkt2, exp_pkt3],
+                send_packet(self, swports[1], str(pkt))
+                rcv_idx = verify_any_packet_any_port(self,
+                              [exp_pkt1, exp_pkt2, exp_pkt3],
                               [swports[2], swports[3], swports[4], swports[5], swports[6], swports[7]])
                 count[rcv_idx] += 1
                 dst_ip += 1
@@ -1918,82 +2059,11 @@ class L3EcmpLagTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
-class L2StpTest(api_base_tests.ThriftInterfaceDataPlane):
-    def runTest(self):
-        print
-        print "Sending packet port %d" % swports[1], " (forwarding)-> port %d" % swports[2], " (192.168.0.1 -> 10.0.0.1 [id = 101])"
-        self.client.switcht_api_init(device)
 
-        vlan = self.client.switcht_api_vlan_create(device, 10)
-
-        iu1 = interface_union(port_lag_handle = swports[1])
-        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
-        if1 = self.client.switcht_api_interface_create(device, i_info1)
-
-        iu2 = interface_union(port_lag_handle = swports[2])
-        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
-        if2 = self.client.switcht_api_interface_create(device, i_info2)
-
-        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
-        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
-
-        stp = self.client.switcht_api_stp_group_create(device=0, stp_mode=1)
-        self.client.switcht_api_stp_group_vlans_add(device, stp, 1, [vlan])
-        self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if1, stp_state=3)
-        self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if2, stp_state=3)
-
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
-
-        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                ip_dst='10.0.0.1',
-                                ip_id=113,
-                                ip_ttl=64)
-        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                ip_dst='10.0.0.1',
-                                ip_id=113,
-                                ip_ttl=64)
-        try:
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, exp_pkt, [swports[2]])
-
-            print "Sending packet port %d" % swports[1], " (blocked) -> port %d" % swports[2], " (192.168.0.1 -> 10.0.0.1 [id = 101])"
-            self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if1, stp_state=4)
-            pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                    eth_src='00:22:22:22:22:22',
-                                    ip_dst='10.0.0.1',
-                                    ip_id=113,
-                                    ip_ttl=64)
-            exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                    eth_src='00:22:22:22:22:22',
-                                    ip_dst='10.0.0.1',
-                                    ip_id=113,
-                                    ip_ttl=64)
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, exp_pkt, [])
-        finally:
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
-
-            self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if1, stp_state=0)
-            self.client.switcht_api_stp_port_state_set(device=0, stp_handle=stp, intf_handle=if2, stp_state=0)
-
-            self.client.switcht_api_stp_group_vlans_remove(device, stp, 1, [vlan])
-            self.client.switcht_api_stp_group_delete(device, stp)
-
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
-
-            self.client.switcht_api_interface_delete(device, if1)
-            self.client.switcht_api_interface_delete(device, if2)
-
-            self.client.switcht_api_vlan_delete(device, vlan)
-
-
+###############################################################################
+@group('l3')
+@group('ipv4')
+@group('urpf')
 class L3RpfTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -2057,7 +2127,7 @@ class L3RpfTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='10.10.10.1',
                                     ip_id=114,
                                     ip_ttl=63)
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
 
             print "Sending packet port %d" % swports[1], " -> port %d" % swports[2], ". Loose urpf (drop)"
@@ -2074,8 +2144,8 @@ class L3RpfTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='10.12.10.1',
                                     ip_id=114,
                                     ip_ttl=63)
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, exp_pkt, [])
+            send_packet(self, swports[1], str(pkt))
+            verify_no_other_packets(self, timeout=1)
 
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[1], ". Strict urpf (permit)"
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -2091,7 +2161,7 @@ class L3RpfTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='10.11.10.1',
                                     ip_id=114,
                                     ip_ttl=63)
-            send_packet(self, 2, str(pkt))
+            send_packet(self, swports[2], str(pkt))
             verify_packets(self, exp_pkt, [swports[1]])
 
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[1], ". Strict urpf (miss drop)"
@@ -2108,8 +2178,8 @@ class L3RpfTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='10.12.10.1',
                                     ip_id=114,
                                     ip_ttl=63)
-            send_packet(self, 2, str(pkt))
-            verify_packets(self, exp_pkt, [])
+            send_packet(self, swports[2], str(pkt))
+            verify_no_other_packets(self, timeout=1)
 
             print "Sending packet port %d" % swports[2], " -> port %d" % swports[1], ". Strict urpf (hit drop)"
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -2125,8 +2195,8 @@ class L3RpfTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='10.13.10.1',
                                     ip_id=114,
                                     ip_ttl=63)
-            send_packet(self, 2, str(pkt))
-            verify_packets(self, exp_pkt, [])
+            send_packet(self, swports[2], str(pkt))
+            verify_no_other_packets(self, timeout=1)
         finally:
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip3, nhop1)
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip4, nhop2)
@@ -2148,6 +2218,9 @@ class L3RpfTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l2')
 class L2StaticMacBulkDeleteTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -2260,6 +2333,8 @@ class L2StaticMacBulkDeleteTest(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_vlan_delete(device, vlan)
 
 
+###############################################################################
+@group('tunnel')
 class L2VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -2323,30 +2398,20 @@ class L2VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64)
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:33:33:33:33:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 1, str(pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from Vxlan port2 to Access port1"
             pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -2365,7 +2430,7 @@ class L2VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
+            send_packet(self, swports[2], str(vxlan_pkt))
             verify_packets(self, pkt, [swports[1]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
@@ -2388,6 +2453,233 @@ class L2VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
+class L2IPv4InIPv6VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        print "L2 Vxlan Over IPv6 Basic Mode Unicast Test"
+        self.client.switcht_api_init(device)
+
+        vrf = self.client.switcht_api_vrf_create(device, 2)
+
+        rmac = self.client.switcht_api_router_mac_group_create(device)
+        self.client.switcht_api_router_mac_add(device, rmac, '00:77:66:55:44:33')
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        iu2 = interface_union(port_lag_handle = swports[2])
+        i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        # Create a logical network (LN)
+        bt = switcht_bridge_type(tunnel_vni=0x1234)
+        encap = switcht_encap_info_t(u=bt)
+        lognet_info = switcht_logical_network_t(type=4, encap_info=encap, age_interval=1800, vrf=vrf)
+        ln1 = self.client.switcht_api_logical_network_create(device, lognet_info)
+
+        # Create a tunnel interface
+        udp = switcht_udp_t(src_port=1234, dst_port=4789)
+        ipv6_src_addr = '1234:5678:9abc:def0:1234:5678:9abc:def0'
+        ipv6_dst_addr = '1111:2222:3333:4444:5555:6666:7777:8888'
+        src_ip = switcht_ip_addr_t(addr_type=1, ipaddr=ipv6_src_addr, prefix_length=128)
+        dst_ip = switcht_ip_addr_t(addr_type=1, ipaddr=ipv6_dst_addr, prefix_length=128)
+        udp_tcp = switcht_udp_tcp_t(udp = udp)
+        #encap_type 3 is vxlan
+        encap_info = switcht_encap_info_t(encap_type=3)
+        ip_encap =  switcht_ip_encap_t(vrf=vrf, src_ip=src_ip, dst_ip=dst_ip, ttl=60, proto=17, u=udp_tcp)
+        tunnel_encap = switcht_tunnel_encap_t(ip_encap=ip_encap)
+        iu4 = switcht_tunnel_info_t(encap_mode = 0, tunnel_encap=tunnel_encap, encap_info=encap_info, out_if=if2)
+        if4 = self.client.switcht_api_tunnel_interface_create(device, 0, iu4)
+
+        #add L2 port to LN
+        self.client.switcht_api_logical_network_member_add(device, ln1, if1)
+        self.client.switcht_api_logical_network_member_add(device, ln1, if4)
+
+        nhop_key1 = switcht_nhop_key_t(intf_handle=if4, ip_addr_valid=0)
+        nhop1 = self.client.switcht_api_nhop_create(device, nhop_key1)
+        neighbor_entry1 = switcht_neighbor_info_t(nhop_handle=nhop1,
+                                                  interface_handle=if4,
+                                                  mac_addr='00:33:33:33:33:33',
+                                                  ip_addr=src_ip,
+                                                  rw_type=0, neigh_type=8)
+        neighbor1 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry1)
+
+        neighbor_entry2 = switcht_neighbor_info_t(nhop_handle=0, interface_handle=if4, mac_addr='00:33:33:33:33:33', ip_addr=src_ip)
+        neighbor2 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry2)
+
+        self.client.switcht_api_mac_table_entry_create(device, ln1, '00:11:11:11:11:11', 2, if1)
+        self.client.switcht_api_mac_table_entry_create(device, ln1, '00:22:22:22:22:22', 2, nhop1)
+
+        try:
+            print "Sending packet from Access port1 to Vxlan port2"
+            pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
+                                    eth_dst='00:22:22:22:22:22',
+                                    ip_dst='10.10.10.1',
+                                    ip_id=108,
+                                    ip_ttl=64)
+            udp_sport = entropy_hash(pkt)
+            print udp_sport
+            vxlan_pkt = simple_vxlanv6_packet(
+                                    eth_src='00:77:66:55:44:33',
+                                    eth_dst='00:33:33:33:33:33',
+                                    ipv6_dst=ipv6_dst_addr,
+                                    ipv6_src=ipv6_src_addr,
+                                    ipv6_hlim=64,
+                                    udp_sport=udp_sport,
+                                    with_udp_chksum=False,
+                                    vxlan_vni=0x1234,
+                                    inner_frame=pkt)
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
+            #send_packet(self, swports[5], str(vxlan_pkt))
+        finally:
+            self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
+            self.client.switcht_api_nhop_delete(device, nhop1)
+
+            self.client.switcht_api_neighbor_entry_remove(device, neighbor2)
+
+            self.client.switcht_api_mac_table_entry_delete(device, ln1, '00:11:11:11:11:11')
+            self.client.switcht_api_mac_table_entry_delete(device, ln1, '00:22:22:22:22:22')
+
+            self.client.switcht_api_logical_network_member_remove(device, ln1, if1)
+            self.client.switcht_api_logical_network_member_remove(device, ln1, if4)
+            self.client.switcht_api_logical_network_delete(device, ln1)
+
+            self.client.switcht_api_tunnel_interface_delete(device, if4)
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+
+            self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
+            self.client.switcht_api_router_mac_group_delete(device, rmac)
+            self.client.switcht_api_vrf_delete(device, vrf)
+
+
+###############################################################################
+@group('tunnel')
+class L2IPv6InIPv6VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        print "L2 Vxlan Over IPv6 Basic Mode Unicast Test"
+        self.client.switcht_api_init(device)
+
+        vrf = self.client.switcht_api_vrf_create(device, 2)
+
+        rmac = self.client.switcht_api_router_mac_group_create(device)
+        self.client.switcht_api_router_mac_add(device, rmac, '00:77:66:55:44:33')
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        iu2 = interface_union(port_lag_handle = swports[2])
+        i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        # Create a logical network (LN)
+        bt = switcht_bridge_type(tunnel_vni=0x1234)
+        encap = switcht_encap_info_t(u=bt)
+        lognet_info = switcht_logical_network_t(type=4, encap_info=encap, age_interval=1800, vrf=vrf)
+        ln1 = self.client.switcht_api_logical_network_create(device, lognet_info)
+
+        # Create a tunnel interface
+        udp = switcht_udp_t(src_port=1234, dst_port=4789)
+        ipv6_src_addr = '1234:5678:9abc:def0:1234:5678:9abc:def0'
+        ipv6_dst_addr = '1111:2222:3333:4444:5555:6666:7777:8888'
+        src_ip = switcht_ip_addr_t(addr_type=1, ipaddr=ipv6_src_addr, prefix_length=128)
+        dst_ip = switcht_ip_addr_t(addr_type=1, ipaddr=ipv6_dst_addr, prefix_length=128)
+        udp_tcp = switcht_udp_tcp_t(udp = udp)
+        #encap_type 3 is vxlan
+        encap_info = switcht_encap_info_t(encap_type=3)
+        ip_encap =  switcht_ip_encap_t(vrf=vrf, src_ip=src_ip, dst_ip=dst_ip, ttl=60, proto=17, u=udp_tcp)
+        tunnel_encap = switcht_tunnel_encap_t(ip_encap=ip_encap)
+        iu4 = switcht_tunnel_info_t(encap_mode = 0, tunnel_encap=tunnel_encap, encap_info=encap_info, out_if=if2)
+        if4 = self.client.switcht_api_tunnel_interface_create(device, 0, iu4)
+
+        #add L2 port to LN
+        self.client.switcht_api_logical_network_member_add(device, ln1, if1)
+        self.client.switcht_api_logical_network_member_add(device, ln1, if4)
+
+        nhop_key1 = switcht_nhop_key_t(intf_handle=if4, ip_addr_valid=0)
+        nhop1 = self.client.switcht_api_nhop_create(device, nhop_key1)
+        neighbor_entry1 = switcht_neighbor_info_t(nhop_handle=nhop1,
+                                                  interface_handle=if4,
+                                                  mac_addr='00:33:33:33:33:33',
+                                                  ip_addr=src_ip,
+                                                  rw_type=0, neigh_type=8)
+        neighbor1 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry1)
+
+        neighbor_entry2 = switcht_neighbor_info_t(nhop_handle=0, interface_handle=if4, mac_addr='00:33:33:33:33:33', ip_addr=src_ip)
+        neighbor2 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry2)
+
+        self.client.switcht_api_mac_table_entry_create(device, ln1, '00:11:11:11:11:11', 2, if1)
+        self.client.switcht_api_mac_table_entry_create(device, ln1, '00:22:22:22:22:22', 2, nhop1)
+
+        try:
+            print "Sending packet from Access port1 to Vxlan port2"
+            pkt = simple_tcpv6_packet(eth_dst='00:22:22:22:22:22',
+                                eth_src='00:11:11:11:11:11',
+                                ipv6_dst='1234:5678:9abc:def0:4422:1133:5577:99aa',
+                                ipv6_src='2000::1',
+                                ipv6_hlim=64)
+            vxlan_pkt = simple_vxlanv6_packet(
+                                eth_src='00:77:66:55:44:33',
+                                eth_dst='00:33:33:33:33:33',
+                                ipv6_dst=ipv6_dst_addr,
+                                ipv6_src=ipv6_src_addr,
+                                ipv6_hlim=64,
+                                udp_sport=46064,
+                                with_udp_chksum=False,
+                                vxlan_vni=0x1234,
+                                inner_frame=pkt)
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
+
+            print "Sending packet from Vxlan port2 to Access Port1"
+            pkt = simple_tcpv6_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ipv6_dst='1234:5678:9abc:def0:4422:1133:5577:99aa',
+                                ipv6_src='2000::1',
+                                ipv6_hlim=64)
+            vxlan_pkt = simple_vxlanv6_packet(
+                                eth_src='00:33:33:33:33:33',
+                                eth_dst='00:77:66:55:44:33',
+                                ipv6_dst=ipv6_dst_addr,
+                                ipv6_src=ipv6_src_addr,
+                                ipv6_hlim=64,
+                                udp_sport=0,
+                                with_udp_chksum=False,
+                                vxlan_vni=0x1234,
+                                inner_frame=pkt)
+            send_packet(self, swports[2], str(vxlan_pkt))
+            verify_packets(self, pkt, [swports[1]])
+        finally:
+            self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
+            self.client.switcht_api_nhop_delete(device, nhop1)
+
+            self.client.switcht_api_neighbor_entry_remove(device, neighbor2)
+
+            self.client.switcht_api_mac_table_entry_delete(device, ln1, '00:11:11:11:11:11')
+            self.client.switcht_api_mac_table_entry_delete(device, ln1, '00:22:22:22:22:22')
+
+            self.client.switcht_api_logical_network_member_remove(device, ln1, if1)
+            self.client.switcht_api_logical_network_member_remove(device, ln1, if4)
+            self.client.switcht_api_logical_network_delete(device, ln1)
+
+            self.client.switcht_api_tunnel_interface_delete(device, if4)
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+
+            self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
+            self.client.switcht_api_router_mac_group_delete(device, rmac)
+            self.client.switcht_api_vrf_delete(device, vrf)
+
+
+###############################################################################
+@group('tunnel')
 class L2NvgreUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -2449,6 +2741,7 @@ class L2NvgreUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64)
+            nvgre_flowid = entropy_hash(pkt) & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -2457,8 +2750,9 @@ class L2NvgreUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x1234,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, nvgre_pkt, [swports[2]])
 
             print "Sending packet from Nvgre port2 to Access port1"
@@ -2476,7 +2770,7 @@ class L2NvgreUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_ttl=64,
                                     nvgre_tni=0x1234,
                                     inner_frame=pkt)
-            send_packet(self, 2, str(nvgre_pkt))
+            send_packet(self, swports[2], str(nvgre_pkt))
             verify_packets(self, pkt, [swports[1]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
@@ -2499,6 +2793,9 @@ class L2NvgreUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2NvgreUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -2570,7 +2867,7 @@ class L2NvgreUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     nvgre_tni=0x1234,
                                     inner_frame=pkt)
 
-            send_packet(self, 2, str(nvgre_pkt))
+            send_packet(self, swports[2], str(nvgre_pkt))
             verify_packets(self, pkt, [swports[1]])
 
             print "Sending packet from Access port1 to Nvgre port2"
@@ -2580,6 +2877,7 @@ class L2NvgreUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
+            nvgre_flowid = entropy_hash(pkt) & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -2588,8 +2886,9 @@ class L2NvgreUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x1234,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, nvgre_pkt, [swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
@@ -2612,6 +2911,9 @@ class L2NvgreUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2VxlanUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -2693,12 +2995,12 @@ class L2VxlanUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Vxlan port3 to Access Lag"
-            send_packet(self, 3, str(vxlan_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[3], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             print "Sending packet from Lag Vxlan port4 to Access Lag"
-            send_packet(self, 4, str(vxlan_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[4], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
                                     eth_dst='00:22:22:22:22:22',
@@ -2706,6 +3008,7 @@ class L2VxlanUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
+            udp_sport = entropy_hash(pkt)
             vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -2713,18 +3016,18 @@ class L2VxlanUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Access port1 to Vxlan Lag"
-            send_packet(self, 1, str(pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
 
             print "Sending packet from Lag Access port2 to Vxlan Lag"
-            send_packet(self, 2, str(pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[2], str(pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
             self.client.switcht_api_nhop_delete(device, nhop1)
@@ -2755,108 +3058,9 @@ class L2VxlanUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
-class L2AccessToTrunkVlanTest(api_base_tests.ThriftInterfaceDataPlane):
-    def runTest(self):
-        print
-        print "Sending L2 packet - port %d" % swports[1], " -> port %d" % swports[2], " [trunk vlan=10])"
-        self.client.switcht_api_init(device)
-        vlan = self.client.switcht_api_vlan_create(device, 10)
 
-        iu1 = interface_union(port_lag_handle = swports[1])
-        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
-        if1 = self.client.switcht_api_interface_create(device, i_info1)
-
-        iu2 = interface_union(port_lag_handle = swports[2])
-        i_info2 = switcht_interface_info_t(device=0, type=3, u=iu2, mac='00:77:66:55:44:33', label=0)
-        if2 = self.client.switcht_api_interface_create(device, i_info2)
-
-        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
-        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
-
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
-
-        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                ip_dst='10.0.0.1',
-                                ip_id=102,
-                                ip_ttl=64)
-        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                ip_dst='10.0.0.1',
-                                ip_id=102,
-                                ip_ttl=64,
-                                dl_vlan_enable=True,
-                                vlan_vid=10,
-                                pktlen=104)
-        try:
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, exp_pkt, [swports[2]])
-        finally:
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
-
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
-
-            self.client.switcht_api_interface_delete(device, if1)
-            self.client.switcht_api_interface_delete(device, if2)
-
-            self.client.switcht_api_vlan_delete(device, vlan)
-
-class L2TrunkToAccessVlanTest(api_base_tests.ThriftInterfaceDataPlane):
-    def runTest(self):
-        print
-        print "Sending L2 packet - port %d" % swports[1], " -> port %d" % swports[2], " [trunk vlan=10])"
-        self.client.switcht_api_init(device)
-        vlan = self.client.switcht_api_vlan_create(device, 10)
-
-        iu1 = interface_union(port_lag_handle = swports[1])
-        i_info1 = switcht_interface_info_t(device=0, type=3, u=iu1, mac='00:77:66:55:44:33', label=0)
-        if1 = self.client.switcht_api_interface_create(device, i_info1)
-
-        iu2 = interface_union(port_lag_handle = swports[2])
-        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
-        if2 = self.client.switcht_api_interface_create(device, i_info2)
-
-        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
-        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
-        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
-
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if2)
-        self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if1)
-
-        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                dl_vlan_enable=True,
-                                vlan_vid=10,
-                                ip_dst='10.0.0.1',
-                                ip_id=102,
-                                ip_ttl=64)
-        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                                eth_src='00:22:22:22:22:22',
-                                ip_dst='10.0.0.1',
-                                ip_id=102,
-                                ip_ttl=64,
-                                pktlen=96)
-        try:
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, exp_pkt, [swports[2]])
-        finally:
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
-            self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
-
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
-            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
-
-            self.client.switcht_api_interface_delete(device, if1)
-            self.client.switcht_api_interface_delete(device, if2)
-
-            self.client.switcht_api_vlan_delete(device, vlan)
-
+###############################################################################
+@group('tunnel')
 class L2GeneveUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -2921,30 +3125,20 @@ class L2GeneveUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt)
+            geneve_pkt = simple_geneve_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x1234,
                                     inner_frame=pkt)
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:33:33:33:33:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 1, str(pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, geneve_pkt, [swports[2]])
 
             print "Sending packet from Geneve port2 to Access port1"
             pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -2965,7 +3159,7 @@ class L2GeneveUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     geneve_vni=0x1234,
                                     inner_frame=pkt)
 
-            send_packet(self, 2, str(geneve_pkt))
+            send_packet(self, swports[2], str(geneve_pkt))
             verify_packets(self, pkt, [swports[1]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
@@ -2988,6 +3182,9 @@ class L2GeneveUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2GeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -3070,12 +3267,12 @@ class L2GeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Geneve port3 to Access Lag"
-            send_packet(self, 3, str(geneve_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[3], str(geneve_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             print "Sending packet from Lag Geneve port4 to Access Lag"
-            send_packet(self, 4, str(geneve_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[4], str(geneve_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
                                     eth_dst='00:22:22:22:22:22',
@@ -3083,6 +3280,7 @@ class L2GeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
+            udp_sport = entropy_hash(pkt)
             geneve_pkt = simple_geneve_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -3090,18 +3288,18 @@ class L2GeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x1234,
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Access port1 to Geneve Lag"
-            send_packet(self, 1, str(pkt))
-            verify_packets_any(self, geneve_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [geneve_pkt], [swports[3], swports[4]])
 
             print "Sending packet from Lag Access port2 to Geneve Lag"
-            send_packet(self, 2, str(pkt))
-            verify_packets_any(self, geneve_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[2], str(pkt))
+            verify_any_packet_any_port(self, [geneve_pkt], [swports[3], swports[4]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
             self.client.switcht_api_nhop_delete(device, nhop1)
@@ -3132,6 +3330,9 @@ class L2GeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2NvgreUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -3210,12 +3411,12 @@ class L2NvgreUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Nvgre port3 to Access Lag"
-            send_packet(self, 3, str(nvgre_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[3], str(nvgre_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             print "Sending packet from Lag Nvgre port4 to Access Lag"
-            send_packet(self, 4, str(nvgre_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[4], str(nvgre_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
                                     eth_dst='00:22:22:22:22:22',
@@ -3223,6 +3424,7 @@ class L2NvgreUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
+            nvgre_flowid = entropy_hash(pkt) & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -3231,15 +3433,16 @@ class L2NvgreUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x1234,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Access port1 to Nvgre Lag"
-            send_packet(self, 1, str(pkt))
-            verify_packets_any(self, nvgre_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [nvgre_pkt], [swports[3], swports[4]])
 
             print "Sending packet from Lag Access port2 to Nvgre Lag"
-            send_packet(self, 2, str(pkt))
-            verify_packets_any(self, nvgre_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[2], str(pkt))
+            verify_any_packet_any_port(self, [nvgre_pkt], [swports[3], swports[4]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
             self.client.switcht_api_nhop_delete(device, nhop1)
@@ -3270,6 +3473,9 @@ class L2NvgreUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2LNSubIntfEncapTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -3311,7 +3517,7 @@ class L2LNSubIntfEncapTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_ttl=64,
                                     dl_vlan_enable=True,
                                     vlan_vid=20)
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
 
             print "Sending L2 packet - port %d" % swports[2], "(vlan 20) -> port %d" % swports[1], "(vlan 10)"
@@ -3325,11 +3531,11 @@ class L2LNSubIntfEncapTest(api_base_tests.ThriftInterfaceDataPlane):
             exp_pkt = simple_tcp_packet(eth_dst='00:22:22:22:22:22',
                                     eth_src='00:11:11:11:11:11',
                                     ip_dst='10.0.0.1',
-                                    dl_vlan_enable=True,
-                                    vlan_vid=10,
                                     ip_id=102,
-                                    ip_ttl=64)
-            send_packet(self, 2, str(pkt))
+                                    ip_ttl=64,
+                                    dl_vlan_enable=True,
+                                    vlan_vid=10)
+            send_packet(self, swports[2], str(pkt))
             verify_packets(self, exp_pkt, [swports[1]])
 
         finally:
@@ -3445,31 +3651,21 @@ class L2VxlanToGeneveUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     geneve_vni=0x1234,
                                     inner_frame=pkt)
 
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:44:44:44:44:44',
                                     ip_id=0,
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:44:44:44:44:44',
-                                    ip_id=108,
-                                    ip_dst='2.2.2.3',
-                                    ip_src='2.2.2.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
-            send_packet(self, 1, str(geneve_pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(geneve_pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from Vxlan port2 to Geneve port1"
             pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -3490,30 +3686,20 @@ class L2VxlanToGeneveUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt)
+            geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=9604,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x1234,
                                     inner_frame=pkt)
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_dst='00:33:33:33:33:33',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[2], str(vxlan_pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor3)
             self.client.switcht_api_nhop_delete(device, nhop3)
@@ -3540,6 +3726,9 @@ class L2VxlanToGeneveUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2VxlanToGeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -3643,6 +3832,7 @@ class L2VxlanToGeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane
                                     with_udp_chksum=False,
                                     geneve_vni=0x1234,
                                     inner_frame=pkt)
+            udp_sport = entropy_hash(pkt)
             vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:44:44:44:44:44',
@@ -3650,18 +3840,18 @@ class L2VxlanToGeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
             print "Sending packet from Geneve member port1 to Vxlan lag"
-            send_packet(self, 1, str(geneve_pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[1], str(geneve_pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
 
             print "Sending packet from Geneve member port2 to Vxlan lag"
-            send_packet(self, 2, str(geneve_pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[2], str(geneve_pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
 
             pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
                                     eth_src='00:22:22:22:22:22',
@@ -3679,6 +3869,7 @@ class L2VxlanToGeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
+            udp_sport = entropy_hash(pkt)
             geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
@@ -3686,18 +3877,19 @@ class L2VxlanToGeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=9604,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x1234,
                                     inner_frame=pkt)
 
             print "Sending packet from Vxlan member port1 to Geneve lag"
-            send_packet(self, 3, str(vxlan_pkt))
-            verify_packets_any(self, geneve_pkt, [swports[1], swports[2]])
+            send_packet(self, swports[3], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [geneve_pkt], [swports[1], swports[2]])
 
             print "Sending packet from Vxlan member port2 to Geneve lag"
-            send_packet(self, 4, str(vxlan_pkt))
-            verify_packets_any(self, geneve_pkt, [swports[1], swports[2]])
+            send_packet(self, swports[4], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [geneve_pkt], [swports[1], swports[2]])
+
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor3)
             self.client.switcht_api_nhop_delete(device, nhop3)
@@ -3732,6 +3924,9 @@ class L2VxlanToGeneveUnicastLagBasicTest(api_base_tests.ThriftInterfaceDataPlane
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2VxlanUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -3807,7 +4002,7 @@ class L2VxlanUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
-            send_packet(self, 2, str(vxlan_pkt))
+            send_packet(self, swports[2], str(vxlan_pkt))
             verify_packets(self, pkt, [swports[1]])
 
             print "Sending packet from Access port1 to Vxlan port2"
@@ -3817,30 +4012,20 @@ class L2VxlanUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:33:33:33:33:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 1, str(pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
             self.client.switcht_api_nhop_delete(device, nhop1)
@@ -3862,6 +4047,9 @@ class L2VxlanUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2VxlanUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -3944,12 +4132,12 @@ class L2VxlanUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Vxlan port3 to Access Lag"
-            send_packet(self, 3, str(vxlan_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[3], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             print "Sending packet from Lag Vxlan port4 to Access Lag"
-            send_packet(self, 4, str(vxlan_pkt))
-            verify_packets_any(self, pkt, [swports[1], swports[2]])
+            send_packet(self, swports[4], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [pkt], [swports[1], swports[2]])
 
             pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
                                     eth_dst='00:22:22:22:22:22',
@@ -3957,6 +4145,7 @@ class L2VxlanUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
+            udp_sport = entropy_hash(pkt)
             vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -3964,18 +4153,18 @@ class L2VxlanUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
             print "Sending packet from Lag Access port1 to Vxlan Lag"
-            send_packet(self, 1, str(pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
 
             print "Sending packet from Lag Access port2 to Vxlan Lag"
-            send_packet(self, 2, str(pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[2], str(pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
             self.client.switcht_api_nhop_delete(device, nhop1)
@@ -4006,6 +4195,9 @@ class L2VxlanUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2VxlanToGeneveUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4108,30 +4300,20 @@ class L2VxlanToGeneveUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
 
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:44:44:44:44:44',
                                     ip_id=0,
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:44:44:44:44:44',
-                                    ip_id=108,
-                                    ip_dst='2.2.2.3',
-                                    ip_src='2.2.2.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 1, str(geneve_pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(geneve_pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from Vxlan port2 to Geneve port1"
             pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -4152,30 +4334,20 @@ class L2VxlanToGeneveUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt)
+            geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=9604,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_dst='00:33:33:33:33:33',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x4321,
-                                    inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[2], str(vxlan_pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor3)
             self.client.switcht_api_nhop_delete(device, nhop3)
@@ -4202,6 +4374,9 @@ class L2VxlanToGeneveUnicastEnhancedTest(api_base_tests.ThriftInterfaceDataPlane
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2VxlanToGeneveUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4309,6 +4484,7 @@ class L2VxlanToGeneveUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPl
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
 
+            udp_sport = entropy_hash(pkt)
             vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:44:44:44:44:44',
@@ -4316,18 +4492,18 @@ class L2VxlanToGeneveUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPl
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=574,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
             print "Sending packet from Geneve member port1 to Vxlan lag"
-            send_packet(self, 1, str(geneve_pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[1], str(geneve_pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
 
             print "Sending packet from Geneve member port2 to Vxlan lag"
-            send_packet(self, 2, str(geneve_pkt))
-            verify_packets_any(self, vxlan_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[2], str(geneve_pkt))
+            verify_any_packet_any_port(self, [vxlan_pkt], [swports[3], swports[4]])
 
             print "Sending packet from Vxlan port2 to Geneve port1"
             pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -4348,6 +4524,7 @@ class L2VxlanToGeneveUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPl
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
+            udp_sport = entropy_hash(pkt)
             geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
@@ -4355,18 +4532,18 @@ class L2VxlanToGeneveUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPl
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=9604,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
 
             print "Sending packet from Vxlan member port1 to Geneve lag"
-            send_packet(self, 3, str(vxlan_pkt))
-            verify_packets_any(self, geneve_pkt, [swports[1], swports[2]])
+            send_packet(self, swports[3], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [geneve_pkt], [swports[1], swports[2]])
 
             print "Sending packet from Vxlan member port2 to Geneve lag"
-            send_packet(self, 4, str(vxlan_pkt))
-            verify_packets_any(self, geneve_pkt, [swports[1], swports[2]])
+            send_packet(self, swports[4], str(vxlan_pkt))
+            verify_any_packet_any_port(self, [geneve_pkt], [swports[1], swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor3)
             self.client.switcht_api_nhop_delete(device, nhop3)
@@ -4402,6 +4579,10 @@ class L2VxlanToGeneveUnicastLagEnhancedTest(api_base_tests.ThriftInterfaceDataPl
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
+@group('flood')
 class L2VxlanFloodBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4482,7 +4663,7 @@ class L2VxlanFloodBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     inner_frame=pkt)
 
             print "Sending packet from Vxlan port3 to Access port1 and Access port2"
-            send_packet(self, 3, str(vxlan_pkt))
+            send_packet(self, swports[3], str(vxlan_pkt))
             verify_packets(self, pkt, [swports[1], swports[2]])
 
             pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -4491,25 +4672,25 @@ class L2VxlanFloodBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
-            vxlan_pkt = simple_vxlan_packet(
-                                    eth_dst='00:33:33:33:33:33',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=0,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=9604,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(eth_dst='00:33:33:33:33:33',
+                                                eth_src='00:77:66:55:44:33',
+                                                ip_id=0,
+                                                ip_dst='1.1.1.3',
+                                                ip_src='1.1.1.1',
+                                                ip_ttl=64,
+                                                udp_sport=udp_sport,
+                                                with_udp_chksum=False,
+                                                vxlan_vni=0x1234,
+                                                inner_frame=pkt)
 
             print "Sending packet from Access port1 to Access port2 and Vxlan port3"
-            send_packet(self, 1, str(pkt))
-            verify_packet_list(self, [pkt, vxlan_pkt], [swports[2], swports[3]])
+            send_packet(self, swports[1], str(pkt))
+            verify_each_packet_on_each_port(self, [pkt, vxlan_pkt], [swports[2], swports[3]])
 
             print "Sending packet from Access port2 to Access port1 and Vxlan port3"
-            send_packet(self, 2, str(pkt))
-            verify_packet_list(self, [pkt, vxlan_pkt], [swports[1], swports[3]])
+            send_packet(self, swports[2], str(pkt))
+            verify_each_packet_on_each_port(self, [pkt, vxlan_pkt], [swports[1], swports[3]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
             self.client.switcht_api_nhop_delete(device, nhop1)
@@ -4529,6 +4710,9 @@ class L2VxlanFloodBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
             self.client.switcht_api_router_mac_group_delete(device, rmac)
 
+
+###############################################################################
+@group('tunnel')
 class L3VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4608,30 +4792,20 @@ class L3VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=63)
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt1)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:55:55:55:55:55',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=11587,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt2)
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:55:55:55:55:55',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt2)
-            send_packet(self, 1, str(pkt1))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(pkt1))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from Vxlan port2 to Access port1"
             pkt1 = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -4657,7 +4831,7 @@ class L3VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='20.20.20.1',
                                     ip_id=108,
                                     ip_ttl=63)
-            send_packet(self, 2, str(vxlan_pkt))
+            send_packet(self, swports[2], str(vxlan_pkt))
             verify_packets(self, pkt2, [swports[1]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
@@ -4681,6 +4855,10 @@ class L3VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l2')
+@group('learn')
 class L2DynamicMacLearnTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4759,6 +4937,9 @@ class L2DynamicMacLearnTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('tunnel')
 class L2MplsPopTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4811,7 +4992,7 @@ class L2MplsPopTest(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_src='00:11:11:11:11:11',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            send_packet(self, 1, str(mpls_pkt))
+            send_packet(self, swports[1], str(mpls_pkt))
             verify_packets(self, pkt, [swports[2]])
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, ln1, '00:11:11:11:11:11')
@@ -4832,6 +5013,9 @@ class L2MplsPopTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2MplsPushTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4898,7 +5082,7 @@ class L2MplsPushTest(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:44:44:44:44:44',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            send_packet(self, 2, str(pkt))
+            send_packet(self, swports[2], str(pkt))
             verify_packets(self, mpls_pkt, [swports[1]])
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, ln1, '00:11:11:11:11:11')
@@ -4923,6 +5107,9 @@ class L2MplsPushTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2MplsSwapTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -4981,7 +5168,7 @@ class L2MplsSwapTest(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:44:44:44:44:44',
                                     mpls_tags=mpls_tags2,
                                     inner_frame=pkt)
-            send_packet(self, 1, str(mpls_pkt1))
+            send_packet(self, swports[1], str(mpls_pkt1))
             verify_packets(self, mpls_pkt2, [swports[2]])
         finally:
             self.client.switcht_api_mpls_tunnel_transit_delete(device, mpls_encap)
@@ -5001,6 +5188,9 @@ class L2MplsSwapTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L3MplsPopTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -5064,7 +5254,7 @@ class L3MplsPopTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=63)
-            send_packet(self, 1, str(mpls_pkt))
+            send_packet(self, swports[1], str(mpls_pkt))
             verify_packets(self, pkt2, [swports[2]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor)
@@ -5086,6 +5276,9 @@ class L3MplsPopTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L3MplsPushTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -5156,7 +5349,7 @@ class L3MplsPushTest(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:44:44:44:44:44',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt2)
-            send_packet(self, 2, str(pkt1))
+            send_packet(self, swports[2], str(pkt1))
             verify_packets(self, mpls_pkt, [swports[1]])
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, ln1, '00:11:11:11:11:11')
@@ -5183,6 +5376,9 @@ class L3MplsPushTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('tunnel')
 class L2TunnelSplicingExtreme1Test(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -5320,30 +5516,20 @@ class L2TunnelSplicingExtreme1Test(api_base_tests.ThriftInterfaceDataPlane):
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
 
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:44:44:44:44:44',
                                     ip_id=0,
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=11250,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:44:44:44:44:44',
-                                    ip_id=108,
-                                    ip_dst='2.2.2.3',
-                                    ip_src='2.2.2.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 1, str(geneve_pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(geneve_pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from Vxlan port2 to Geneve port1"
             pkt = simple_tcp_packet(eth_dst='00:aa:aa:aa:aa:aa',
@@ -5364,30 +5550,20 @@ class L2TunnelSplicingExtreme1Test(api_base_tests.ThriftInterfaceDataPlane):
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt)
+            geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=5264,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_dst='00:33:33:33:33:33',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x4321,
-                                    inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[2], str(vxlan_pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
 
             print "Sending packet from Vxlan port2 to Mpls port %d" % swports[3], " "
             pkt = simple_tcp_packet(eth_dst='00:cc:cc:cc:cc:cc',
@@ -5415,7 +5591,7 @@ class L2TunnelSplicingExtreme1Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
+            send_packet(self, swports[2], str(vxlan_pkt))
             verify_packets(self, mpls_pkt, [swports[3]])
 
             print "Sending packet from Geneve port1 to Mpls port %d" % swports[3], " "
@@ -5444,7 +5620,7 @@ class L2TunnelSplicingExtreme1Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            send_packet(self, 1, str(geneve_pkt))
+            send_packet(self, swports[1], str(geneve_pkt))
             verify_packets(self, mpls_pkt, [swports[3]])
 
             print "Sending packet from Mpls port %d" % swports[3], "  to Geneve port %d" % swports[1], ""
@@ -5460,30 +5636,20 @@ class L2TunnelSplicingExtreme1Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_src='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt, layer='ether')
+            geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=15201,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_dst='00:33:33:33:33:33',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x4321,
-                                    inner_frame=pkt)
-            send_packet(self, 3, str(mpls_pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[3], str(mpls_pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor4)
             self.client.switcht_api_nhop_delete(device, nhop4)
@@ -5519,6 +5685,10 @@ class L2TunnelSplicingExtreme1Test(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
             self.client.switcht_api_router_mac_group_delete(device, rmac)
 
+
+###############################################################################
+@group('l2')
+@group('flood')
 class L2LagFloodTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -5580,30 +5750,29 @@ class L2LagFloodTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=64)
 
             print "Sending packet from lag1 on port1 -> lag2, lag3, port7, port8"
-            send_packet(self, 1, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[3], swports[4]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
+            send_packet(self, swports[1], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[3], swports[4]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
             print "Sending packet from lag1 on port2 -> lag2, lag3, port7, port8"
-            send_packet(self, 2, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[3], swports[4]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
+            send_packet(self, swports[2], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[3], swports[4]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
             print "Sending packet from lag2 on port3 -> lag1, lag3, port7, port8"
-            send_packet(self, 3, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[1], swports[2]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
+            send_packet(self, swports[3], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[1], swports[2]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
             print "Sending packet from lag2 on port4 -> lag1, lag3, port7, port8"
-            send_packet(self, 4, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[1], swports[2]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
+            send_packet(self, swports[4], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[1], swports[2]], [swports[5], swports[6]], [swports[7]], [swports[8]]])
             print "Sending packet from lag3 on port5 -> lag1, lag2, port7, port8"
-            send_packet(self, 5, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[1], swports[2]], [swports[3], swports[4]], [swports[7]], [swports[8]]])
+            send_packet(self, swports[5], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[1], swports[2]], [swports[3], swports[4]], [swports[7]], [swports[8]]])
             print "Sending packet from lag3 on port6 -> lag1, lag2, port7, port8"
-            send_packet(self, 6, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[1], swports[2]], [swports[3], swports[4]], [swports[7]], [swports[8]]])
+            send_packet(self, swports[6], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[1], swports[2]], [swports[3], swports[4]], [swports[7]], [swports[8]]])
             print "Sending packet from port7 -> lag1, lag2, lag3, port8"
-            send_packet(self, 7, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[1], swports[2]], [swports[3], swports[4]], [swports[5], swports[6]], [swports[8]]])
+            send_packet(self, swports[7], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[1], swports[2]], [swports[3], swports[4]], [swports[5], swports[6]], [swports[8]]])
             print "Sending packet from port7 -> lag1, lag2, lag3, port8"
-            send_packet(self, 8, str(pkt))
-            verify_packet_on_set_of_ports(self, exp_pkt, [[swports[1], swports[2]], [swports[3], swports[4]], [swports[5], swports[6]], [swports[7]]])
-
+            send_packet(self, swports[8], str(pkt))
+            verify_any_packet_on_ports_list(self, [exp_pkt], [[swports[1], swports[2]], [swports[3], swports[4]], [swports[5], swports[6]], [swports[7]]])
         finally:
             self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
             self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
@@ -5630,6 +5799,9 @@ class L2LagFloodTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('tunnel')
 class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -5663,7 +5835,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_lag_member_add(device, lag_handle=lag1, side=0, port=swports[6])
         iu5 = interface_union(port_lag_handle = lag1)
         i_info5 = switcht_interface_info_t(device=0, type=2, u=iu5, mac='00:77:66:55:44:33', label=0)
-        if5 = self.client.switcht_api_interface_create(device, i_info3)
+        if5 = self.client.switcht_api_interface_create(device, i_info5)
 
         iu7 = interface_union(port_lag_handle = swports[7])
         i_info7 = switcht_interface_info_t(device=0, type=2, u=iu7, mac='00:77:66:55:44:33', label=0)
@@ -5809,30 +5981,20 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
 
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:44:44:44:44:44',
                                     ip_id=0,
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=13003,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:44:44:44:44:44',
-                                    ip_id=108,
-                                    ip_dst='2.2.2.3',
-                                    ip_src='2.2.2.1',
-                                    ip_ttl=64,
-                                    udp_sport=11638,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 1, str(geneve_pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[1], str(geneve_pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from Vxlan port2 to Geneve port1"
             pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -5853,30 +6015,20 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt)
+            geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=3680,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_dst='00:33:33:33:33:33',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=574,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x4321,
-                                    inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[2], str(vxlan_pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
 
             print "Sending packet from Vxlan port2 to Mpls port %d" % swports[3], " "
             pkt = simple_tcp_packet(eth_dst='00:03:00:00:00:31',
@@ -5904,7 +6056,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
+            send_packet(self, swports[2], str(vxlan_pkt))
             verify_packets(self, mpls_pkt, [swports[3]])
 
             print "Sending packet from Geneve port1 to Mpls port %d" % swports[3], " "
@@ -5933,7 +6085,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            send_packet(self, 1, str(geneve_pkt))
+            send_packet(self, swports[1], str(geneve_pkt))
             verify_packets(self, mpls_pkt, [swports[3]])
 
             print "Sending packet from Mpls port %d" % swports[3], "  to Geneve port %d" % swports[1], ""
@@ -5949,30 +6101,20 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_src='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt, layer='ether')
+            geneve_pkt = simple_geneve_packet(
                                     eth_dst='00:33:33:33:33:33',
                                     eth_src='00:77:66:55:44:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=6761,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_dst='00:33:33:33:33:33',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=108,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x4321,
-                                    inner_frame=pkt)
-            send_packet(self, 3, str(mpls_pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[3], str(mpls_pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
 
             print "Sending packet from Geneve port1 to Nvgre port4"
             pkt = simple_tcp_packet(eth_dst='00:04:00:00:00:41',
@@ -5993,6 +6135,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
 
+            nvgre_flowid = entropy_hash(pkt) & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:66:66:66:66:66',
@@ -6001,8 +6144,9 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='3.3.3.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x4545,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
-            send_packet(self, 1, str(geneve_pkt))
+            send_packet(self, swports[1], str(geneve_pkt))
             verify_packets(self, nvgre_pkt, [swports[4]])
 
             print "Sending packet from Vxlan port2 to Nvgre port4"
@@ -6024,6 +6168,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
+            nvgre_flowid = entropy_hash(pkt) & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_dst='00:66:66:66:66:66',
                                     eth_src='00:77:66:55:44:33',
@@ -6032,8 +6177,9 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='3.3.3.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x4545,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
-            send_packet(self, 2, str(vxlan_pkt))
+            send_packet(self, swports[2], str(vxlan_pkt))
             verify_packets(self, nvgre_pkt, [swports[4]])
 
             print "Sending packet from Nvgre port4 to Geneve port1"
@@ -6053,31 +6199,20 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     nvgre_tni=0x4545,
                                     inner_frame=pkt)
 
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt)
+            geneve_pkt = simple_geneve_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=13908,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
-
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:33:33:33:33:33',
-                                    ip_id=0,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x4321,
-                                    inner_frame=pkt)
-            send_packet(self, 4, str(nvgre_pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[4], str(nvgre_pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
 
             print "Sending packet from Nvgre port4 to Vxlan port2"
             pkt = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
@@ -6096,32 +6231,21 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     nvgre_tni=0x4545,
                                     inner_frame=pkt)
 
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_dst='00:44:44:44:44:44',
                                     eth_src='00:77:66:55:44:33',
                                     ip_id=0,
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=14053,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_dst='00:44:44:44:44:44',
-                                    eth_src='00:77:66:55:44:33',
-                                    ip_id=0,
-                                    ip_dst='2.2.2.3',
-                                    ip_src='2.2.2.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-
-            send_packet(self, 4, str(nvgre_pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[4], str(nvgre_pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from Nvgre port4 to Mpls port %d" % swports[3], " "
             pkt = simple_tcp_packet(eth_dst='00:03:00:00:00:31',
@@ -6147,7 +6271,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_dst='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
-            send_packet(self, 4, str(nvgre_pkt))
+            send_packet(self, swports[4], str(nvgre_pkt))
             verify_packets(self, mpls_pkt, [swports[3]])
 
             print "Sending packet from Mpls port %d" % swports[3], "  to Nvgre port %d" % swports[4], ""
@@ -6163,6 +6287,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     eth_src='00:55:55:55:55:55',
                                     mpls_tags=mpls_tags,
                                     inner_frame=pkt)
+            nvgre_flowid = entropy_hash(pkt, layer='ether') & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_dst='00:66:66:66:66:66',
                                     eth_src='00:77:66:55:44:33',
@@ -6171,8 +6296,9 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='3.3.3.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x4545,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
-            send_packet(self, 3, str(mpls_pkt))
+            send_packet(self, swports[3], str(mpls_pkt))
             verify_packets(self, nvgre_pkt, [swports[4]])
 
             print "Sending packet from native port7 to Geneve port %d" % swports[1], ""
@@ -6181,31 +6307,20 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64)
-            geneve_pkt1 = simple_geneve_packet(
+            udp_sport = entropy_hash(pkt)
+            geneve_pkt = simple_geneve_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
                                     ip_id=0,
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=2638,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
-
-            geneve_pkt2 = simple_geneve_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:33:33:33:33:33',
-                                    ip_id=0,
-                                    ip_dst='1.1.1.3',
-                                    ip_src='1.1.1.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    geneve_vni=0x4321,
-                                    inner_frame=pkt)
-            send_packet(self, 7, str(pkt))
-            verify_packet_list_any(self, [geneve_pkt1, geneve_pkt2], [swports[1], swports[1]])
+            send_packet(self, swports[7], str(pkt))
+            verify_packets(self, geneve_pkt, [swports[1]])
 
             print "Sending packet from native port7 to Vxlan port %d" % swports[2], ""
             pkt = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
@@ -6213,31 +6328,20 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64)
-            vxlan_pkt1 = simple_vxlan_packet(
+            udp_sport = entropy_hash(pkt)
+            vxlan_pkt = simple_vxlan_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:44:44:44:44:44',
                                     ip_id=0,
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=2815,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
-
-            vxlan_pkt2 = simple_vxlan_packet(
-                                    eth_src='00:77:66:55:44:33',
-                                    eth_dst='00:44:44:44:44:44',
-                                    ip_id=0,
-                                    ip_dst='2.2.2.3',
-                                    ip_src='2.2.2.1',
-                                    ip_ttl=64,
-                                    udp_sport=0,
-                                    with_udp_chksum=False,
-                                    vxlan_vni=0x1234,
-                                    inner_frame=pkt)
-            send_packet(self, 7, str(pkt))
-            verify_packet_list_any(self, [vxlan_pkt1, vxlan_pkt2], [swports[2], swports[2]])
+            send_packet(self, swports[7], str(pkt))
+            verify_packets(self, vxlan_pkt, [swports[2]])
 
             print "Sending packet from native port7 to Nvgre port %d" % swports[4], ""
             pkt = simple_tcp_packet(eth_dst='00:04:00:00:00:41',
@@ -6245,6 +6349,7 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64)
+            nvgre_flowid = entropy_hash(pkt) & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:66:66:66:66:66',
@@ -6253,9 +6358,10 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='3.3.3.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x4545,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
 
-            send_packet(self, 7, str(pkt))
+            send_packet(self, swports[7], str(pkt))
             verify_packets(self, nvgre_pkt, [swports[4]])
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor11)
@@ -6309,6 +6415,10 @@ class L2TunnelSplicingExtreme2Test(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
 
+
+###############################################################################
+@group('learn')
+@group('tunnel')
 class L2VxlanLearnBasicTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -6379,17 +6489,18 @@ class L2VxlanLearnBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='10.10.10.1',
                                     ip_id=108,
                                     ip_ttl=64)
+            udp_sport = entropy_hash(pkt1)
             vxlan_pkt1 = simple_vxlan_packet(
-                                eth_src='00:77:66:55:44:33',
-                                eth_dst='00:33:33:33:33:33',
-                                ip_id=0,
-                                ip_dst='1.1.1.3',
-                                ip_src='1.1.1.1',
-                                ip_ttl=64,
-                                udp_sport=574,
-                                with_udp_chksum=False,
-                                vxlan_vni=0x1234,
-                                inner_frame=pkt1)
+                                    eth_src='00:77:66:55:44:33',
+                                    eth_dst='00:33:33:33:33:33',
+                                    ip_id=0,
+                                    ip_dst='1.1.1.3',
+                                    ip_src='1.1.1.1',
+                                    ip_ttl=64,
+                                    udp_sport=udp_sport,
+                                    with_udp_chksum=False,
+                                    vxlan_vni=0x1234,
+                                    inner_frame=pkt1)
 
             pkt2 = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
                                     eth_src='00:22:22:22:22:22',
@@ -6409,17 +6520,17 @@ class L2VxlanLearnBasicTest(api_base_tests.ThriftInterfaceDataPlane):
                                     inner_frame=pkt2)
 
             print "Sending packet from Access port1 to Vxlan port2 and native port %d" % swports[3], "  - Learn mac on port1"
-            send_packet(self, 1, str(pkt1))
-            verify_packet_list(self, [vxlan_pkt1, pkt1], [swports[2], swports[3]])
+            send_packet(self, swports[1], str(pkt1))
+            verify_each_packet_on_each_port(self, [vxlan_pkt1, pkt1], [swports[2], swports[3]])
             print "Sending packet from Vxlan port2 to Access port1 and native port %d" % swports[3], "  - Learn mac on vxlan tunnel port2"
-            send_packet(self, 2, str(vxlan_pkt2))
+            send_packet(self, swports[2], str(vxlan_pkt2))
             verify_packets(self, pkt2, [swports[1], swports[3]])
             time.sleep(3)
             print "Sending packet from Access port1 to Vxlan port2 - unicast to vxlan port2"
-            send_packet(self, 1, str(pkt1))
+            send_packet(self, swports[1], str(pkt1))
             verify_packets(self, vxlan_pkt1, [swports[2]])
             print "Sending packet from Vxlan port2 to Access port1 - unicast to native port1"
-            send_packet(self, 2, str(vxlan_pkt2))
+            send_packet(self, swports[2], str(vxlan_pkt2))
             verify_packets(self, pkt2, [swports[1]])
         finally:
             self.client.switcht_api_mac_table_entries_delete_all(device)
@@ -6442,7 +6553,10 @@ class L2VxlanLearnBasicTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
-class L2VlanStatsTestBasic(api_base_tests.ThriftInterfaceDataPlane):
+
+###############################################################################
+@group('stats')
+class L2VlanStatsTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
         print "Sending L2 packet port %d" % swports[1], " -> port %d" % swports[2], " [access vlan=10])"
@@ -6465,6 +6579,8 @@ class L2VlanStatsTestBasic(api_base_tests.ThriftInterfaceDataPlane):
 
         self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if1)
         self.client.switcht_api_mac_table_entry_create(device, vlan, '00:22:22:22:22:22', 2, if2)
+
+        counter0 = self.client.switcht_api_vlan_stats_get(vlan, [0, 1, 2])
 
         try:
             num_bytes = 0
@@ -6489,18 +6605,21 @@ class L2VlanStatsTestBasic(api_base_tests.ThriftInterfaceDataPlane):
                         ip_id=106,
                         ip_ttl=64,
                         pktlen=pktlen)
-                send_packet(self, 1, str(pkt))
-                verify_packet_list(self, [exp_pkt], [swports[2]])
+                send_packet(self, swports[1], str(pkt))
+                verify_each_packet_on_each_port(self, [exp_pkt], [swports[2]])
                 num_bytes += pktlen
 
             counter = self.client.switcht_api_vlan_stats_get(vlan, [0, 1, 2])
+            for i in range(0,3):
+                counter[i].num_packets = counter[i].num_packets - counter0[i].num_packets
+                counter[i].num_bytes = counter[i].num_bytes - counter0[i].num_bytes
             print "Stats results: ", counter
-            self.assertGreaterEqual(counter[0].num_packets, num_packets)
-            self.assertGreaterEqual(counter[0].num_bytes, num_bytes)
-            self.assertGreaterEqual(counter[1].num_packets, 0)
-            self.assertGreaterEqual(counter[1].num_bytes, 0)
-            self.assertGreaterEqual(counter[2].num_packets, 0)
-            self.assertGreaterEqual(counter[2].num_bytes, 0)
+            self.assertEqual(counter[0].num_packets, num_packets)
+            self.assertEqual(counter[0].num_bytes, num_bytes)
+            self.assertEqual(counter[1].num_packets, 0)
+            self.assertEqual(counter[1].num_bytes, 0)
+            self.assertEqual(counter[2].num_packets, 0)
+            self.assertEqual(counter[2].num_bytes, 0)
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
             self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:22:22:22:22:22')
@@ -6513,6 +6632,10 @@ class L2VlanStatsTestBasic(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_vlan_delete(device, vlan)
 
+
+###############################################################################
+@group('tunnel')
+@group('flood')
 class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -6642,6 +6765,7 @@ class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_id=108,
                                     ip_ttl=64)
 
+            udp_sport = entropy_hash(pkt)
             geneve_pkt = simple_geneve_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:11:11:11:11:11',
@@ -6649,7 +6773,7 @@ class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='1.1.1.3',
                                     ip_src='1.1.1.1',
                                     ip_ttl=64,
-                                    udp_sport=13003,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     geneve_vni=0x4321,
                                     inner_frame=pkt)
@@ -6661,11 +6785,12 @@ class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_dst='2.2.2.3',
                                     ip_src='2.2.2.1',
                                     ip_ttl=64,
-                                    udp_sport=13003,
+                                    udp_sport=udp_sport,
                                     with_udp_chksum=False,
                                     vxlan_vni=0x1234,
                                     inner_frame=pkt)
 
+            nvgre_flowid = udp_sport & 0xFF
             nvgre_pkt = simple_nvgre_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -6674,30 +6799,31 @@ class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='3.3.3.1',
                                     ip_ttl=64,
                                     nvgre_tni=0x4545,
+                                    nvgre_flowid=nvgre_flowid,
                                     inner_frame=pkt)
 
             encap_pkt1 = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
                                     eth_src='00:01:00:00:00:11',
                                     ip_dst='10.10.10.1',
-                                    dl_vlan_enable=True,
-                                    vlan_vid=10,
                                     ip_id=108,
                                     ip_ttl=64,
+                                    dl_vlan_enable=True,
+                                    vlan_vid=10,
                                     pktlen=104)
 
             encap_pkt2 = simple_tcp_packet(eth_dst='00:02:00:00:00:21',
                                     eth_src='00:01:00:00:00:11',
                                     ip_dst='10.10.10.1',
-                                    dl_vlan_enable=True,
-                                    vlan_vid=20,
                                     ip_id=108,
                                     ip_ttl=64,
+                                    dl_vlan_enable=True,
+                                    vlan_vid=20,
                                     pktlen=104)
 
             print "Sending packet on native access port %d" % swports[6]
-            send_packet(self, 6, str(pkt))
+            send_packet(self, swports[6], str(pkt))
             print "Packets expected on [geneve port1]. [vxlan port2], [nvgre port3], [encap vlan 10 port %d" % swports[4], "], [encap vlan 20 port %d" % swports[5], " ]"
-            verify_packet_list(self, [geneve_pkt, vxlan_pkt, nvgre_pkt, encap_pkt1, encap_pkt2], [swports[1], swports[2], swports[3], swports[4], swports[5]])
+            verify_each_packet_on_each_port(self, [geneve_pkt, vxlan_pkt, nvgre_pkt, encap_pkt1, encap_pkt2], [swports[1], swports[2], swports[3], swports[4], swports[5]])
         finally:
             self.client.switcht_api_mac_table_entries_delete_all(device)
 
@@ -6734,6 +6860,10 @@ class L2TunnelFloodEnhancedTest(api_base_tests.ThriftInterfaceDataPlane):
 
             self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3VIIPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -6813,7 +6943,7 @@ class L3VIIPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[1]])
 
             print "Sending packet l3 port %d" % swports[3], " to vlan interface port %d" % swports[2]
@@ -6830,7 +6960,7 @@ class L3VIIPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
 
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -6848,11 +6978,11 @@ class L3VIIPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=63)
 
             print "Sending packet vlan interface  port %d" % swports[1], " to l3  port %d" % swports[3]
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
             print "Sending packet vlan interface  port %d" % swports[2], " to l3  port %d" % swports[3]
-            send_packet(self, 2, str(pkt))
+            send_packet(self, swports[2], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
         finally:
@@ -6888,6 +7018,10 @@ class L3VIIPv4HostTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv6')
 class L3VIIPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -6964,7 +7098,7 @@ class L3VIIPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ipv6_dst='1234:5678:9abc:def0:4422:1133:5577:99aa',
                                 ipv6_src='2000::1',
                                 ipv6_hlim=63)
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[1]])
 
             print "Sending packet l3 port %d" % swports[3], " to vlan interface port %d" % swports[2]
@@ -6978,7 +7112,7 @@ class L3VIIPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ipv6_dst='1234:5678:9abc:def0:4422:1133:5577:99bb',
                                 ipv6_src='2000::1',
                                 ipv6_hlim=63)
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
 
             pkt = simple_tcpv6_packet(eth_dst='00:77:66:55:44:33',
@@ -6993,11 +7127,11 @@ class L3VIIPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ipv6_hlim=63)
 
             print "Sending packet vlan interface  port %d" % swports[1], " to l3  port %d" % swports[3]
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
             print "Sending packet vlan interface  port %d" % swports[2], " to l3  port %d" % swports[3]
-            send_packet(self, 2, str(pkt))
+            send_packet(self, swports[2], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
         finally:
@@ -7033,6 +7167,11 @@ class L3VIIPv6HostTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
+@group('flood')
 class L3VIIPv4HostFloodTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -7109,7 +7248,7 @@ class L3VIIPv4HostFloodTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[1], swports[2]])
 
             print "Sending packet l3 port %d " % swports[3], "to vlan interface - flood the packet on port %d" % swports[1], " and port %d" % swports[2]
@@ -7126,7 +7265,7 @@ class L3VIIPv4HostFloodTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[1], swports[2]])
 
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -7144,11 +7283,11 @@ class L3VIIPv4HostFloodTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=63)
 
             print "Sending packet vlan interface  port %d" % swports[1], " to l3  port %d" % swports[3]
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
             print "Sending packet vlan interface  port %d" % swports[2], " to l3  port %d" % swports[3]
-            send_packet(self, 2, str(pkt))
+            send_packet(self, swports[2], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
         finally:
@@ -7183,6 +7322,11 @@ class L3VIIPv4HostFloodTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
+@group('flood')
 class L3VIFloodTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -7231,7 +7375,7 @@ class L3VIFloodTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 ip_ttl=64)
             print "sending packet on port %d " % swports[1], "to port %d " % swports[2], "and port %d" % swports[3]
-            send_packet(self, 1, str(pkt1))
+            send_packet(self, swports[1], str(pkt1))
             verify_packets(self, pkt1, [swports[2], swports[3]])
 
             pkt2 = simple_tcp_packet(eth_dst='00:44:44:44:44:44',
@@ -7241,7 +7385,7 @@ class L3VIFloodTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 ip_ttl=64)
             print "sending packet on port %d " % swports[2], "to port %d " % swports[1], "and port %d" % swports[3]
-            send_packet(self, 2, str(pkt2))
+            send_packet(self, swports[2], str(pkt2))
             verify_packets(self, pkt2, [swports[1], swports[3]])
 
             pkt3 = simple_tcp_packet(eth_dst='00:44:44:44:44:44',
@@ -7251,7 +7395,7 @@ class L3VIFloodTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=105,
                                 ip_ttl=64)
             print "sending packet on port %d " % swports[3], "to port %d " % swports[1], "and port %d" % swports[2]
-            send_packet(self, 3, str(pkt3))
+            send_packet(self, swports[3], str(pkt3))
             verify_packets(self, pkt3, [swports[1], swports[2]])
 
         finally:
@@ -7274,6 +7418,10 @@ class L3VIFloodTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3VIIPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -7351,8 +7499,8 @@ class L3VIIPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='192.168.0.1',
                                     ip_id=110,
                                     ip_ttl=63)
-            send_packet(self, 5, str(pkt))
-            verify_packets_any(self, exp_pkt, [swports[1], swports[2]])
+            send_packet(self, swports[5], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt], [swports[1], swports[2]])
 
             print "Sending packet from port %d " % swports[5], "to VI lag (%d " % swports[3], "or %d)" % swports[4]
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -7369,8 +7517,8 @@ class L3VIIPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
                                     ip_src='192.168.0.1',
                                     ip_id=110,
                                     ip_ttl=63)
-            send_packet(self, 5, str(pkt))
-            verify_packets_any(self, exp_pkt, [swports[3], swports[4]])
+            send_packet(self, swports[5], str(pkt))
+            verify_any_packet_any_port(self, [exp_pkt], [swports[3], swports[4]])
         finally:
             self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:11:11:11:11:11')
             self.client.switcht_api_mac_table_entry_delete(device, vlan, '00:12:12:12:12:12')
@@ -7409,6 +7557,10 @@ class L3VIIPv4LagTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3VIIPv4HostVlanTaggingTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -7474,6 +7626,7 @@ class L3VIIPv4HostVlanTaggingTest(api_base_tests.ThriftInterfaceDataPlane):
 
         # send the test packet(s)
         try:
+            print "Sending packet l3 port %d " % swports[3], "to vlan interface port (untagged) %d" % swports[1]
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
                                 eth_src='00:66:66:66:66:66',
                                 ip_dst='10.10.10.1',
@@ -7487,10 +7640,10 @@ class L3VIIPv4HostVlanTaggingTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            print "Sending packet l3 port %d " % swports[3], "to vlan interface port (untagged) %d" % swports[1]
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[1]])
 
+            print "Sending packet l3 port %d " % swports[3], "to vlan interface port (tagged) %d" % swports[2]
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
                                 eth_src='00:66:66:66:66:66',
                                 ip_dst='11.11.11.1',
@@ -7502,13 +7655,12 @@ class L3VIIPv4HostVlanTaggingTest(api_base_tests.ThriftInterfaceDataPlane):
                                 eth_src='00:77:66:55:44:33',
                                 ip_dst='11.11.11.1',
                                 ip_src='192.168.0.1',
-                                dl_vlan_enable=True,
-                                pktlen=104,
-                                vlan_vid=10,
                                 ip_id=105,
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                pktlen=104,
                                 ip_ttl=63)
-            print "Sending packet l3 port %d " % swports[3], "to vlan interface port (tagged) %d" % swports[2]
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt, [swports[2]])
 
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -7526,7 +7678,7 @@ class L3VIIPv4HostVlanTaggingTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=63)
 
             print "sending packet vlan interface port(untagged) %d" % swports[1], "to l3 port %d" % swports[3]
-            send_packet(self, 1, str(pkt))
+            send_packet(self, swports[1], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
             pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
@@ -7546,7 +7698,7 @@ class L3VIIPv4HostVlanTaggingTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=63,
                                 pktlen=96)
             print "sending packet vlan interface port(tagged) %d" % swports[2], "to l3 port %d" % swports[3]
-            send_packet(self, 2, str(pkt))
+            send_packet(self, swports[2], str(pkt))
             verify_packets(self, exp_pkt, [swports[3]])
 
         finally:
@@ -7582,6 +7734,10 @@ class L3VIIPv4HostVlanTaggingTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('l3')
+@group('ipv4')
 class L3VINhopGleanTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -7657,20 +7813,20 @@ class L3VINhopGleanTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=63)
 
             print "Sending packet l3 port %d" % swports[3], "to cpu %d" % cpu_port
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt1, [cpu_port])
 
             self.client.switcht_api_mac_table_entry_create(device, vlan, '00:11:11:11:11:11', 2, if1)
 
             print "Sending packet l3 port %d" % swports[3], "to cpu %d" % cpu_port
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt1, [cpu_port])
 
             neighbor_entry41 = switcht_neighbor_info_t(nhop_handle=nhop41, interface_handle=if4, mac_addr='00:11:11:11:11:11', ip_addr=i_ip41, rw_type=1)
             neighbor41 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry41)
 
             print "Sending packet l3 port %d" % swports[3], "to vlan interface port %d" % swports[1]
-            send_packet(self, 3, str(pkt))
+            send_packet(self, swports[3], str(pkt))
             verify_packets(self, exp_pkt2, [swports[1]])
 
             print "Sending packet l3 port %d" % swports[3], "to vlan interface port %d" % swports[2]
@@ -7687,15 +7843,15 @@ class L3VINhopGleanTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_src='192.168.0.1',
                                 ip_id=105,
                                 ip_ttl=63)
-            send_packet(self, 3, str(pkt))
-            verify_packets(self, exp_pkt, [swports[2]])
-
+            try:
+                send_packet(self, swports[3], str(pkt))
+                verify_packets(self, exp_pkt, [swports[2]])
+            finally:
+                self.client.switcht_api_neighbor_entry_remove(device, neighbor41)
+                self.client.switcht_api_l3_route_delete(device, vrf, i_ip41, nhop41)
+                self.client.switcht_api_nhop_delete(device, nhop41)
 
         finally:
-            self.client.switcht_api_neighbor_entry_remove(device, neighbor41)
-            self.client.switcht_api_l3_route_delete(device, vrf, i_ip41, nhop41)
-            self.client.switcht_api_nhop_delete(device, nhop41)
-
             self.client.switcht_api_neighbor_entry_remove(device, neighbor42)
             self.client.switcht_api_l3_route_delete(device, vrf, i_ip42, nhop42)
             self.client.switcht_api_nhop_delete(device, nhop42)
@@ -7720,6 +7876,9 @@ class L3VINhopGleanTest(api_base_tests.ThriftInterfaceDataPlane):
             self.client.switcht_api_router_mac_group_delete(device, rmac)
             self.client.switcht_api_vrf_delete(device, vrf)
 
+
+###############################################################################
+@group('error')
 class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
     def setUp(self):
         print
@@ -7750,6 +7909,10 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                                self.vlan_port1)
         self.client.switcht_api_vlan_ports_add(device, self.vlan,
                                                self.vlan_port2)
+        self.client.switcht_api_mac_table_entry_create(device,
+                                                       self.vlan,
+                                                       '00:01:00:00:00:12',
+                                                       2, self.if1)
 
         # logical network with one native 2 and one tunnel interface 3
         iu3 = interface_union(port_lag_handle = swports[2])
@@ -7768,7 +7931,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
         bt = switcht_bridge_type(tunnel_vni=0x1234)
         encap = switcht_encap_info_t(u=bt)
         ln_info = switcht_logical_network_t(type=4, encap_info=encap,
-                                                age_interval=1800, vrf=self.vrf)
+                                            age_interval=1800, vrf=self.vrf)
         self.ln1 = self.client.switcht_api_logical_network_create(device,
                                                                   ln_info)
 
@@ -7780,12 +7943,14 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                    prefix_length=32)
         udp_tcp = switcht_udp_tcp_t(udp = udp)
         encap_info = switcht_encap_info_t(encap_type=3)
-        ip_encap = switcht_ip_encap_t(vrf=self.vrf, src_ip=src_ip, dst_ip=dst_ip,
+        ip_encap = switcht_ip_encap_t(vrf=self.vrf, src_ip=src_ip,
+                                      dst_ip=dst_ip,
                                       ttl=60, proto=17, u=udp_tcp)
         tunnel_encap = switcht_tunnel_encap_t(ip_encap=ip_encap)
         iu5 = switcht_tunnel_info_t(encap_mode = 0, tunnel_encap=tunnel_encap,
                                     encap_info=encap_info, out_if=self.if4)
-        self.if5 = self.client.switcht_api_tunnel_interface_create(device, 0, iu5)
+        self.if5 = self.client.switcht_api_tunnel_interface_create(device, 0,
+                                                                   iu5)
 
         # add the two interfaces
         self.client.switcht_api_logical_network_member_add(device,
@@ -7819,21 +7984,28 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
 
         print "Valid packet from port 0 to 1"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:22',
-                                eth_src='00:01:00:00:00:11',
+                                eth_src='00:01:00:00:00:12',
                                 ip_dst='10.10.10.1',
                                 ip_id=108,
                                 ip_ttl=64)
         send_packet(self, 0, str(pkt))
         verify_packets(self, pkt, [1])
 
-        print "MAC DA zeros, drop"
-        pkt = simple_tcp_packet(eth_dst='00:00:00:00:00:00',
-                                eth_src='00:01:00:00:00:11',
+        print "Same if check fail, drop"
+        pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:12',
+                                eth_src='00:01:00:00:00:12',
                                 ip_dst='10.10.10.1',
                                 ip_id=108,
                                 ip_ttl=64)
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
+
+        print "MAC DA zeros, drop"
+        pkt = simple_tcp_packet(eth_dst='00:00:00:00:00:00',
+                                eth_src='00:01:00:00:00:12',
+                                ip_dst='10.10.10.1',
+                                ip_id=108,
+                                ip_ttl=64)
+        send_packet(self, 0, str(pkt))
 
         print "MAC SA zeros, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7842,7 +8014,6 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=108,
                                 ip_ttl=64)
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "MAC SA broadcast, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7851,7 +8022,6 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=108,
                                 ip_ttl=64)
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "MAC SA IP multicast, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7860,7 +8030,6 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=108,
                                 ip_ttl=64)
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "MAC SA IPv6 multicast, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7869,7 +8038,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=108,
                                 ip_ttl=64)
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
+        verify_no_other_packets(self, timeout=1)
 
         print "Valid Vxlan packet from Vxlan port2 to Access port1"
         pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -7888,8 +8057,9 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
+        send_packet(self, swports[3], str(vxlan_pkt))
         verify_packets(self, pkt, [swports[2]])
+
         print "Inner MAC DA zeros, drop"
         pkt = simple_tcp_packet(eth_dst='00:00:00:00:00:00',
                                 eth_src='00:22:22:22:22:22',
@@ -7907,8 +8077,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "Inner MAC SA zeros, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7927,8 +8096,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "Inner MAC SA broadcast, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7947,8 +8115,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "Inner MAC SA IP multicast, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7967,8 +8134,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "Inner MAC SA IPv6 multicast, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:11',
@@ -7987,8 +8153,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "IPv4 TTL 0, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:22',
@@ -7997,14 +8162,12 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_id=108,
                                 ip_ttl=0)
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "IPv6 TTL 0, drop"
         pkt = simple_tcpv6_packet(eth_dst='00:01:00:00:00:22',
                                   eth_src='00:01:00:00:00:11',
                                   ipv6_hlim=0)
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "Inner IPv4 TTL 0, drop"
         pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -8023,8 +8186,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "Inner IPv6 TTL 0, drop"
         pkt = simple_tcpv6_packet(eth_dst='00:11:11:11:11:11',
@@ -8041,8 +8203,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "IPv4 invalid version, drop"
         pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:22',
@@ -8052,14 +8213,12 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 ip_ttl=64)
         pkt[IP].version = 6
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "IPv6 invalid version, drop"
         pkt = simple_tcpv6_packet(eth_dst='00:01:00:00:00:22',
                                   eth_src='00:01:00:00:00:11')
         pkt[IPv6].version = 4
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "Inner IPv4 invalid version, drop"
         pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -8079,10 +8238,9 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
-        print "Inner IPv6 invalid version, drop"
+        print "Inner IPv6 invalid version, drop (skipped for now)"
         pkt = simple_tcpv6_packet(eth_dst='00:11:11:11:11:11',
                                   eth_src='00:22:22:22:22:22',
                                   ipv6_hlim=64)
@@ -8098,8 +8256,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "IPv4 src is loopback, drop"
         pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -8118,8 +8275,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "IPv4 src is multicast, drop"
         pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -8138,8 +8294,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "Inner IPv4 src is loopback, drop"
         pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -8159,8 +8314,7 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "Inner IPv4 src is multicast, drop"
         pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
@@ -8180,15 +8334,13 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
 
         print "IPv6 src multicast, drop"
         pkt = simple_tcpv6_packet(eth_dst='00:01:00:00:00:22',
                                   eth_src='00:01:00:00:00:11',
                                   ipv6_src='ff02::1')
         send_packet(self, 0, str(pkt))
-        verify_packets(self, pkt, [])
 
         print "Inner IPv6 src multicast, drop"
         pkt = simple_tcpv6_packet(eth_dst='00:11:11:11:11:11',
@@ -8205,8 +8357,35 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
-        send_packet(self, 3, str(vxlan_pkt))
-        verify_packets(self, pkt, [])
+        send_packet(self, swports[3], str(vxlan_pkt))
+
+        print "IPv4 dst is loopback, drop"
+        pkt = simple_tcp_packet(eth_src='00:11:11:11:11:11',
+                                eth_dst='00:77:66:55:44:33',
+                                ip_dst='127.10.10.1',
+                                ip_src='10.10.10.1',
+                                ip_id=108,
+                                ip_ttl=64)
+        send_packet(self, swports[3], str(pkt))
+
+        print "IPv6 dst is loopback, drop"
+        pkt = simple_tcpv6_packet(eth_dst='00:77:66:55:44:33',
+                                  eth_src='00:22:22:22:22:22',
+                                  ipv6_dst='::1',
+                                  ipv6_src='2000::1',
+                                  ipv6_hlim=64)
+        send_packet(self, swports[3], str(pkt))
+
+        print "Port vlan mapping miss, drop"
+        pkt = simple_tcp_packet(eth_dst='00:01:00:00:00:22',
+                                eth_src='00:01:00:00:00:11',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                ip_dst='10.10.10.1',
+                                ip_id=108,
+                                ip_ttl=64)
+        send_packet(self, 0, str(pkt))
+        verify_no_other_packets(self, timeout=1)
 
         final_drop_stats = self.client.switcht_api_drop_stats_get(device)
         drop_stats = [a - b for a, b in zip(final_drop_stats, init_drop_stats)]
@@ -8240,6 +8419,418 @@ class MalformedPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_tunnel_interface_delete(device, self.if5)
 
         self.client.switcht_api_vlan_delete(device, self.vlan)
+        self.client.switcht_api_router_mac_delete(device, self.rmac,
+                                                  '00:77:66:55:44:33')
+        self.client.switcht_api_router_mac_group_delete(device, self.rmac)
+        self.client.switcht_api_vrf_delete(device, self.vrf)
+
+        api_base_tests.ThriftInterfaceDataPlane.tearDown(self)
+
+
+###############################################################################
+@group('l3')
+@group('ipv4')
+class L3VIIPv4HostMacMoveTest(api_base_tests.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+
+        self.client.switcht_api_init(device)
+        vrf = self.client.switcht_api_vrf_create(device, 1)
+
+        vlan = self.client.switcht_api_vlan_create(device, 10)
+
+        rmac = self.client.switcht_api_router_mac_group_create(device)
+        self.client.switcht_api_router_mac_add(device, rmac, '00:77:66:55:44:33')
+
+        iu1 = interface_union(port_lag_handle = swports[1])
+        i_info1 = switcht_interface_info_t(device=0, type=2, u=iu1, mac='00:77:66:55:44:33', label=0)
+        if1 = self.client.switcht_api_interface_create(device, i_info1)
+
+        iu2 = interface_union(port_lag_handle = swports[2])
+        i_info2 = switcht_interface_info_t(device=0, type=2, u=iu2, mac='00:77:66:55:44:33', label=0)
+        if2 = self.client.switcht_api_interface_create(device, i_info2)
+
+        vlan_port1 = switcht_vlan_port_t(handle=if1, tagging_mode=0)
+        vlan_port2 = switcht_vlan_port_t(handle=if2, tagging_mode=0)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port1)
+        self.client.switcht_api_vlan_ports_add(device, vlan, vlan_port2)
+
+        iu3 = interface_union(port_lag_handle = swports[3])
+        i_info3 = switcht_interface_info_t(device=0, type=4, u=iu3, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
+        if3 = self.client.switcht_api_interface_create(device, i_info3)
+        i_ip3 = switcht_ip_addr_t(addr_type=0, ipaddr='192.168.0.2', prefix_length=16)
+        self.client.switcht_api_l3_interface_address_add(device, if3, vrf, i_ip3)
+
+        iu4 = interface_union(vlan_id = 10)
+        i_info4 = switcht_interface_info_t(device=0, type=5, u=iu4, mac='00:77:66:55:44:33',
+                                           label=0, vrf_handle=vrf, rmac_handle=rmac,
+                                           v4_unicast_enabled=1, v6_unicast_enabled=1)
+        if4 = self.client.switcht_api_interface_create(device, i_info4)
+        i_ip4 = switcht_ip_addr_t(addr_type=0, ipaddr='10.0.0.2', prefix_length=16)
+        self.client.switcht_api_l3_interface_address_add(device, if4, vrf, i_ip4)
+
+        # Add a static route
+        i_ip41 = switcht_ip_addr_t(addr_type=0, ipaddr='10.10.10.1', prefix_length=32)
+        nhop_key41 = switcht_nhop_key_t(intf_handle=if4, ip_addr_valid=0)
+        nhop41 = self.client.switcht_api_nhop_create(device, nhop_key41)
+        neighbor_entry41 = switcht_neighbor_info_t(nhop_handle=nhop41, interface_handle=if4, mac_addr='00:11:11:11:11:11', ip_addr=i_ip41, rw_type=1)
+        neighbor41 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry41)
+        self.client.switcht_api_l3_route_add(device, vrf, i_ip41, nhop41)
+
+        i_ip31 = switcht_ip_addr_t(addr_type=0, ipaddr='12.12.12.1', prefix_length=32)
+        nhop_key31 = switcht_nhop_key_t(intf_handle=if3, ip_addr_valid=0)
+        nhop31 = self.client.switcht_api_nhop_create(device, nhop_key31)
+        neighbor_entry31 = switcht_neighbor_info_t(nhop_handle=nhop31, interface_handle=if3, mac_addr='00:33:33:33:33:33', ip_addr=i_ip31, rw_type=1)
+        neighbor31 = self.client.switcht_api_neighbor_entry_add(device, neighbor_entry31)
+        self.client.switcht_api_l3_route_add(device, vrf, i_ip31, nhop31)
+
+        # send the test packet(s)
+        try:
+            pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
+                                eth_src='00:11:11:11:11:11',
+                                ip_dst='12.12.12.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=64)
+            exp_pkt = simple_tcp_packet(
+                                eth_dst='00:33:33:33:33:33',
+                                eth_src='00:77:66:55:44:33',
+                                ip_dst='12.12.12.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=63)
+            print "Sending packet vlan interface  port %d" % swports[1], " to l3  port %d" % swports[3]
+            send_packet(self, swports[1], str(pkt))
+            verify_packets(self, exp_pkt, [swports[3]])
+
+            time.sleep(3)
+
+            pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
+                                eth_src='00:33:33:33:33:33',
+                                ip_dst='10.10.10.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=64)
+            exp_pkt = simple_tcp_packet(
+                                eth_dst='00:11:11:11:11:11',
+                                eth_src='00:77:66:55:44:33',
+                                ip_dst='10.10.10.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=63)
+            print "Sending packet l3 port %d" % swports[3], " to vlan interface port %d" % swports[1]
+            send_packet(self, swports[3], str(pkt))
+            verify_packets(self, exp_pkt, [swports[1]])
+
+            pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
+                                eth_src='00:11:11:11:11:11',
+                                ip_dst='12.12.12.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=64)
+            exp_pkt = simple_tcp_packet(
+                                eth_dst='00:33:33:33:33:33',
+                                eth_src='00:77:66:55:44:33',
+                                ip_dst='12.12.12.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=63)
+            print "Sending packet vlan interface  port %d" % swports[2], " to l3  port %d" % swports[3]
+            send_packet(self, swports[2], str(pkt))
+            verify_packets(self, exp_pkt, [swports[3]])
+
+            time.sleep(3)
+
+            pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
+                                eth_src='00:33:33:33:33:33',
+                                ip_dst='10.10.10.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=64)
+            exp_pkt = simple_tcp_packet(
+                                eth_dst='00:11:11:11:11:11',
+                                eth_src='00:77:66:55:44:33',
+                                ip_dst='10.10.10.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=63)
+            print "Sending packet l3 port %d" % swports[3], " to vlan interface port %d" % swports[2]
+            send_packet(self, swports[3], str(pkt))
+            verify_packets(self, exp_pkt, [swports[2]])
+
+        finally:
+            self.client.switcht_api_mac_table_entries_delete_all(device)
+
+            self.client.switcht_api_neighbor_entry_remove(device, neighbor41)
+            self.client.switcht_api_l3_route_delete(device, vrf, i_ip41, nhop41)
+            self.client.switcht_api_nhop_delete(device, nhop41)
+
+            self.client.switcht_api_neighbor_entry_remove(device, neighbor31)
+            self.client.switcht_api_l3_route_delete(device, vrf, i_ip31, nhop31)
+            self.client.switcht_api_nhop_delete(device, nhop31)
+
+            self.client.switcht_api_l3_interface_address_delete(device, if3, vrf, i_ip3)
+            self.client.switcht_api_l3_interface_address_delete(device, if4, vrf, i_ip4)
+
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port1)
+            self.client.switcht_api_vlan_ports_remove(device, vlan, vlan_port2)
+
+            self.client.switcht_api_interface_delete(device, if1)
+            self.client.switcht_api_interface_delete(device, if2)
+            self.client.switcht_api_interface_delete(device, if3)
+            self.client.switcht_api_interface_delete(device, if4)
+
+            self.client.switcht_api_vlan_delete(device, vlan)
+
+            self.client.switcht_api_router_mac_delete(device, rmac, '00:77:66:55:44:33')
+            self.client.switcht_api_router_mac_group_delete(device, rmac)
+            self.client.switcht_api_vrf_delete(device, vrf)
+
+
+###############################################################################
+@group('error')
+class ExceptionPacketsTest(api_base_tests.ThriftInterfaceDataPlane):
+    def setUp(self):
+        print
+        print 'Configuring devices for exception packet test cases'
+
+        api_base_tests.ThriftInterfaceDataPlane.setUp(self)
+        self.client.switcht_api_init(device)
+
+        self.vrf = self.client.switcht_api_vrf_create(device, 2)
+        self.rmac = self.client.switcht_api_router_mac_group_create(device)
+        self.client.switcht_api_router_mac_add(device, self.rmac,
+                                               '00:77:66:55:44:33')
+
+        # create two l3 interfaces
+        iu1 = interface_union(port_lag_handle = swports[0])
+        i_info1 = switcht_interface_info_t(device=0, type=4, u=iu1,
+                                           mac='00:77:66:55:44:33', label=0,
+                                           vrf_handle=self.vrf,
+                                           rmac_handle=self.rmac)
+        self.if1 = self.client.switcht_api_interface_create(device, i_info1)
+        self.i_ip1 = switcht_ip_addr_t(addr_type=0, ipaddr='192.168.0.2',
+                                       prefix_length=16)
+        self.i_ip11 = switcht_ip_addr_t(addr_type=1, ipaddr='2000::2',
+                                        prefix_length=64)
+        self.client.switcht_api_l3_interface_address_add(device, self.if1,
+                                                         self.vrf,
+                                                         self.i_ip1)
+        self.client.switcht_api_l3_interface_address_add(device, self.if1,
+                                                         self.vrf,
+                                                         self.i_ip11)
+        iu2 = interface_union(port_lag_handle = swports[1])
+        i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2,
+                                           mac='00:77:66:55:44:33', label=0,
+                                           vrf_handle=self.vrf,
+                                           rmac_handle=self.rmac)
+        self.if2 = self.client.switcht_api_interface_create(device, i_info2)
+        self.i_ip2 = switcht_ip_addr_t(addr_type=0, ipaddr='10.0.0.2',
+                                       prefix_length=16)
+        self.i_ip21 = switcht_ip_addr_t(addr_type=1, ipaddr='3000::2',
+                                        prefix_length=64)
+        self.client.switcht_api_l3_interface_address_add(device, self.if2,
+                                                         self.vrf,
+                                                         self.i_ip2)
+
+        # add ipv4 static routes
+        self.i_ip3 = switcht_ip_addr_t(addr_type=0, ipaddr='10.10.10.1',
+                                       prefix_length=32)
+        nhop_key = switcht_nhop_key_t(intf_handle=self.if2, ip_addr_valid=0)
+        self.nhop1 = self.client.switcht_api_nhop_create(device, nhop_key)
+        neighbor_entry = switcht_neighbor_info_t(nhop_handle=self.nhop1,
+                                                 interface_handle=self.if2,
+                                                 mac_addr='00:11:22:33:44:55',
+                                                 ip_addr=self.i_ip3, rw_type=1)
+        self.neighbor1 = self.client.switcht_api_neighbor_entry_add(device,
+                                                                neighbor_entry)
+        self.client.switcht_api_l3_route_add(device, self.vrf, self.i_ip3,
+                                             self.nhop1)
+
+        self.i_ip31 = switcht_ip_addr_t(addr_type=0, ipaddr='10.20.10.1',
+                                        prefix_length=32)
+        nhop_key = switcht_nhop_key_t(intf_handle=self.if1, ip_addr_valid=0)
+        self.nhop11 = self.client.switcht_api_nhop_create(device, nhop_key)
+        neighbor_entry = switcht_neighbor_info_t(nhop_handle=self.nhop11,
+                                                 interface_handle=self.if1,
+                                                 mac_addr='00:11:22:33:44:66',
+                                                 ip_addr=self.i_ip31, rw_type=1)
+        self.neighbor11 = self.client.switcht_api_neighbor_entry_add(device,
+                                                                neighbor_entry)
+        self.client.switcht_api_l3_route_add(device, self.vrf, self.i_ip31,
+                                             self.nhop11)
+
+        # add an ipv6 static route
+        self.i_ip4 = switcht_ip_addr_t(addr_type=1,
+                                       ipaddr='3000::3', prefix_length=64)
+        nhop_key = switcht_nhop_key_t(intf_handle=self.if2, ip_addr_valid=0)
+        self.nhop2 = self.client.switcht_api_nhop_create(device, nhop_key)
+        neighbor_entry = switcht_neighbor_info_t(nhop_handle=self.nhop2,
+                                                 interface_handle=self.if2,
+                                                 mac_addr='00:11:22:33:44:55',
+                                                 ip_addr=self.i_ip4, rw_type=1)
+        self.neighbor2 = self.client.switcht_api_neighbor_entry_add(device,
+                                                                neighbor_entry)
+        self.client.switcht_api_l3_route_add(device, self.vrf, self.i_ip4,
+                                             self.nhop2)
+        self.i_ip41 = switcht_ip_addr_t(addr_type=1,
+                                        ipaddr='2000::3', prefix_length=64)
+        nhop_key = switcht_nhop_key_t(intf_handle=self.if1, ip_addr_valid=0)
+        self.nhop21 = self.client.switcht_api_nhop_create(device, nhop_key)
+        neighbor_entry = switcht_neighbor_info_t(nhop_handle=self.nhop21,
+                                                 interface_handle=self.if2,
+                                                 mac_addr='00:11:22:33:44:77',
+                                                 ip_addr=self.i_ip41, rw_type=1)
+        self.neighbor21 = self.client.switcht_api_neighbor_entry_add(device,
+                                                                 neighbor_entry)
+        self.client.switcht_api_l3_route_add(device, self.vrf, self.i_ip41,
+                                             self.nhop21)
+
+    def runTest(self):
+        print "Valid IPv4 packet from port 0 to 1"
+        pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.10.10.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=64)
+        exp_pkt = simple_tcp_packet(eth_dst='00:11:22:33:44:55',
+                                    eth_src='00:77:66:55:44:33',
+                                    ip_dst='10.10.10.1',
+                                    ip_src='192.168.0.1',
+                                    ip_id=105,
+                                    ip_ttl=63)
+        send_packet(self, swports[0], str(pkt))
+        verify_packets(self, exp_pkt, [swports[1]])
+
+        print "Valid IPv6 packet from port 0 to 1"
+        pkt = simple_tcpv6_packet(eth_dst='00:77:66:55:44:33',
+                                  eth_src='00:22:22:22:22:22',
+                                  ipv6_dst='3000::3',
+                                  ipv6_src='2000::3',
+                                  ipv6_hlim=64)
+        exp_pkt = simple_tcpv6_packet(eth_dst='00:11:22:33:44:55',
+                                      eth_src='00:77:66:55:44:33',
+                                      ipv6_dst='3000::3',
+                                      ipv6_src='2000::3',
+                                      ipv6_hlim=63)
+        send_packet(self, swports[0], str(pkt))
+        verify_packets(self, exp_pkt, [swports[1]])
+
+        print "ipv4, routed, ttl = 1, redirect to cpu"
+        pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.10.10.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=1)
+        cpu_pkt = simple_cpu_packet(ingress_port=swports[0],
+                                    ingress_ifindex=1,
+                                    reason_code=0x1d,
+                                    ingress_bd=0x02,
+                                    inner_pkt=pkt)
+        send_packet(self, swports[0], str(pkt))
+        verify_packets(self, cpu_pkt, [cpu_port])
+
+        print "ipv6, routed, ttl = 1, redirect to cpu"
+        pkt = simple_tcpv6_packet(eth_dst='00:77:66:55:44:33',
+                                  eth_src='00:22:22:22:22:22',
+                                  ipv6_dst='3000::3',
+                                  ipv6_src='2000::3',
+                                  ipv6_hlim=1)
+        cpu_pkt = simple_cpu_packet(ingress_port=swports[0],
+                                    ingress_ifindex=1,
+                                    reason_code=0x1d,
+                                    ingress_bd=0x02,
+                                    inner_pkt=pkt)
+        send_packet(self, swports[0], str(pkt))
+        verify_packets(self, cpu_pkt, [cpu_port])
+
+        print "ipv4, routed, ingress bd == egress_bd, copy to cpu"
+        pkt = simple_tcp_packet(eth_dst='00:77:66:55:44:33',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.20.10.1',
+                                ip_src='192.168.0.1',
+                                ip_id=105,
+                                ip_ttl=63)
+        cpu_pkt = simple_cpu_packet(ingress_port=swports[0],
+                                    ingress_ifindex=1,
+                                    reason_code=0x104,
+                                    ingress_bd=0x02,
+                                    inner_pkt=pkt)
+        exp_pkt = simple_tcp_packet(eth_dst='00:11:22:33:44:66',
+                                    eth_src='00:77:66:55:44:33',
+                                    ip_dst='10.20.10.1',
+                                    ip_src='192.168.0.1',
+                                    ip_id=105,
+                                    ip_ttl=62)
+        send_packet(self, swports[0], str(pkt))
+        verify_each_packet_on_each_port(self, [cpu_pkt, exp_pkt], [cpu_port, swports[0]])
+        verify_no_other_packets(self, timeout=1)
+
+        print "ipv6, routed, ingress bd == egress_bd, copy to cpu"
+        pkt = simple_tcpv6_packet(eth_dst='00:77:66:55:44:33',
+                                  eth_src='00:22:22:22:22:22',
+                                  ipv6_dst='2000::3',
+                                  ipv6_src='3000::3',
+                                  ipv6_hlim=64)
+        cpu_pkt = simple_cpu_packet(ingress_port=swports[0],
+                                    ingress_ifindex=1,
+                                    reason_code=0x104,
+                                    ingress_bd=0x02,
+                                    inner_pkt=pkt)
+        exp_pkt = simple_tcpv6_packet(eth_dst='00:11:22:33:44:77',
+                                      eth_src='00:77:66:55:44:33',
+                                      ipv6_dst='2000::3',
+                                      ipv6_src='3000::3',
+                                      ipv6_hlim=63)
+        send_packet(self, swports[0], str(pkt))
+        verify_each_packet_on_each_port(self, [cpu_pkt, exp_pkt], [cpu_port, swports[0]])
+        verify_no_other_packets(self, timeout=1)
+
+        print "ipv6, routed, src is link-local, redirect to cpu"
+        pkt = simple_tcpv6_packet(eth_dst='00:77:66:55:44:33',
+                                  eth_src='00:22:22:22:22:22',
+                                  ipv6_dst='3000::3',
+                                  ipv6_src='fe80::1',
+                                  ipv6_hlim=64)
+        cpu_pkt = simple_cpu_packet(ingress_port=swports[0],
+                                    ingress_ifindex=1,
+                                    reason_code=0x105,
+                                    ingress_bd=0x02,
+                                    inner_pkt=pkt)
+        send_packet(self, swports[0], str(pkt))
+        verify_packets(self, cpu_pkt, [cpu_port])
+
+    def tearDown(self):
+        self.client.switcht_api_neighbor_entry_remove(device, self.neighbor1)
+        self.client.switcht_api_neighbor_entry_remove(device, self.neighbor11)
+        self.client.switcht_api_neighbor_entry_remove(device, self.neighbor2)
+        self.client.switcht_api_l3_route_delete(device, self.vrf, self.i_ip3,
+                                                self.nhop1)
+        self.client.switcht_api_l3_route_delete(device, self.vrf, self.i_ip31,
+                                                self.nhop11)
+        self.client.switcht_api_l3_route_delete(device, self.vrf, self.i_ip4,
+                                                self.nhop2)
+        self.client.switcht_api_nhop_delete(device, self.nhop1)
+        self.client.switcht_api_nhop_delete(device, self.nhop11)
+        self.client.switcht_api_nhop_delete(device, self.nhop2)
+        self.client.switcht_api_mac_table_entries_delete_all(device)
+        self.client.switcht_api_l3_interface_address_delete(device, self.if1,
+                                                            self.vrf,
+                                                            self.i_ip1)
+        self.client.switcht_api_l3_interface_address_delete(device, self.if1,
+                                                            self.vrf,
+                                                            self.i_ip11)
+        self.client.switcht_api_l3_interface_address_delete(device, self.if2,
+                                                            self.vrf,
+                                                            self.i_ip2)
+        self.client.switcht_api_l3_interface_address_delete(device, self.if2,
+                                                            self.vrf,
+                                                            self.i_ip21)
+        self.client.switcht_api_interface_delete(device, self.if1)
+        self.client.switcht_api_interface_delete(device, self.if2)
+
         self.client.switcht_api_router_mac_delete(device, self.rmac,
                                                   '00:77:66:55:44:33')
         self.client.switcht_api_router_mac_group_delete(device, self.rmac)
