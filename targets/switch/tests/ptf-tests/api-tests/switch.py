@@ -661,10 +661,8 @@ class L2LagTest(api_base_tests.ThriftInterfaceDataPlane):
                 dst_ip += 1
 
             print 'L2LagTest:', count
+            #setting the hash to 60% for bmv2
             hash_factor = 0.6
-            if is_bmv2:
-                hash_factor = 0.6
-
             for i in range(0, 4):
                 self.assertTrue((count[i] >= ((max_itrs / 4) * hash_factor)),
                         "Not all paths are equally balanced")

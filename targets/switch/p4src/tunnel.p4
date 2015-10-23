@@ -936,7 +936,7 @@ action f_insert_ipv6_header(proto) {
     modify_field(ipv6.version, 0x6);
     modify_field(ipv6.nextHdr, proto);
     modify_field(ipv6.hopLimit, 64);
-    modify_field(ipv6.trafficClass, 4);
+    modify_field(ipv6.trafficClass, 0);
     modify_field(ipv6.flowLabel, 0);
 }
 

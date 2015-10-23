@@ -1747,9 +1747,6 @@ class L3EcmpLagTest(sai_base_test.ThriftInterfaceDataPlane):
 
 class IPAclTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
-        #if is_bmv2:
-        #    print "BMV2_TEST == 1 => test skipped"
-        #    return
         print
         print "Sending packet port 1 -> port 2 (192.168.0.1 -> 10.10.10.1 [id = 101])"
         switch_init(self.client)
@@ -1996,9 +1993,6 @@ class L3IPv4MacRewriteTest(sai_base_test.ThriftInterfaceDataPlane):
 
 class IngressLocalMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
-        #if is_bmv2:
-        #    print "BMV2_TEST == 1 => test skipped"
-        #    return
         print
         switch_init(self.client)
         vlan_id = 10
@@ -2115,9 +2109,6 @@ class IngressLocalMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
 
 class IngressERSpanMirrorTest(sai_base_test.ThriftInterfaceDataPlane):
     def runTest(self):
-        #if is_bmv2:
-        #    print "BMV2_TEST == 1 => test skipped"
-        #    return
         print
         switch_init(self.client)
         vlan_id = 10
