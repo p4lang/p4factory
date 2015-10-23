@@ -246,7 +246,7 @@ field_list_calculation fabric_lag_hash {
         fabric_lag_hash_fields;
     }
     algorithm : identity;
-    output_width : 14; //LAG_BIT_WIDTH;
+    output_width : LAG_BIT_WIDTH;
 }
 
 action_selector fabric_lag_selector {

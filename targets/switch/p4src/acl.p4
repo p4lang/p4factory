@@ -99,9 +99,7 @@ action acl_mirror(session_id, acl_stats_index) {
     modify_field(i2e_metadata.ingress_tstamp, _ingress_global_tstamp_);
     modify_field(ingress_metadata.enable_dod, 0);
     clone_ingress_pkt_to_egress(session_id, i2e_mirror_info);
-#ifndef __TARGET_BMV2__
     modify_field(acl_metadata.acl_stats_index, acl_stats_index);
-#endif
 }
 
 action acl_redirect_nexthop(nexthop_index, acl_stats_index) {
