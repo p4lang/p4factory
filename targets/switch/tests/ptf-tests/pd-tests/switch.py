@@ -98,6 +98,14 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
                                      sess_hdl, dev_tgt)
     client.egress_port_mapping_set_default_action_egress_port_type_normal(
                                      sess_hdl, dev_tgt)
+    client.compute_ipv4_hashes_set_default_action_compute_lkp_ipv4_hash(
+                                     sess_hdl, dev_tgt)
+    client.compute_ipv6_hashes_set_default_action_compute_lkp_ipv6_hash(
+                                     sess_hdl, dev_tgt)
+    client.compute_non_ip_hashes_set_default_action_compute_lkp_non_ip_hash(
+                                     sess_hdl, dev_tgt)
+    client.compute_other_hashes_set_default_action_computed_two_hashes(
+                                     sess_hdl, dev_tgt)
 
     if acl_enabled:
         client.ip_acl_set_default_action_nop(
@@ -107,6 +115,8 @@ def populate_default_entries(client, sess_hdl, dev_tgt):
         client.egress_acl_set_default_action_nop(
                                      sess_hdl, dev_tgt)
         client.qos_set_default_action_nop(
+                                     sess_hdl, dev_tgt)
+        client.acl_stats_set_default_action_acl_stats_update(
                                      sess_hdl, dev_tgt)
     if tunnel_enabled:
         client.outer_rmac_set_default_action_on_miss(
@@ -802,6 +812,53 @@ def delete_egress_vni(client, sess_hdl, dev, hdl):
                                   sess_hdl, dev,
                                   hdl)
 
+def program_rid(client, sess_hdl, dev_tgt, rid, inner_replica, bd, nhop_index, tunnel_type, tunnel_index):
+    match_spec = dc_rid_match_spec_t(intrinsic_metadata_egress_rid=rid)
+    if inner_replica:
+        if nhop_index != None:
+            action_spec = dc_inner_replica_from_rid_with_nexthop_action_spec_t(
+                                           action_bd=bd,
+                                           action_nexthop_index=nhop_index,
+                                           action_tunnel_index=tunnel_index,
+                                           action_tunnel_type=tunnel_type)
+            hdl = client.rid_table_add_with_inner_replica_from_rid(sess_hdl,
+                                                                   dev_tgt,
+                                                                   match_spec,
+                                                                   action_spec)
+        else:
+            action_spec = dc_inner_replica_from_rid_action_spec_t(
+                                           action_bd=bd,
+                                           action_tunnel_index=tunnel_index,
+                                           action_tunnel_type=tunnel_type)
+            hdl = client.rid_table_add_with_inner_replica_from_rid(sess_hdl,
+                                                                   dev_tgt,
+                                                                   match_spec,
+                                                                   action_spec)
+    else:
+        if nhop_index != None:
+            action_spec = dc_outer_replica_from_rid_with_nexthop_action_spec_t(
+                                           action_bd=bd,
+                                           action_nexthop_index=nhop_index,
+                                           action_tunnel_index=tunnel_index,
+                                           action_tunnel_type=tunnel_type)
+            hdl = client.rid_table_add_with_outer_replica_from_rid(sess_hdl,
+                                                                   dev_tgt,
+                                                                   match_spec,
+                                                                   action_spec)
+        else:
+            action_spec = dc_outer_replica_from_rid_action_spec_t(
+                                           action_bd=bd,
+                                           action_tunnel_index=tunnel_index,
+                                           action_tunnel_type=tunnel_type)
+            hdl = client.rid_table_add_with_outer_replica_from_rid(sess_hdl,
+                                                                   dev_tgt,
+                                                                   match_spec,
+                                                                   action_spec)
+    return hdl
+
+def delete_rid(client, sess_hdl, dev, hdl):
+    client.rid_table_delete(sess_hdl, dev, hdl)
+
 def client_init(client, sess_hdl, dev_tgt):
     print "Cleaning state"
     client.clean_all(sess_hdl, dev_tgt)
@@ -1185,7 +1242,7 @@ class L2VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_dst='10.10.10.2',
                                 ip_src='10.10.10.1',
                                 ip_ttl=64,
-                                udp_sport=4966,
+                                udp_sport=27655,
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt)
@@ -1363,7 +1420,7 @@ class L3VxlanTunnelTest(pd_base_tests.ThriftInterfaceDataPlane):
                                 ip_dst='10.10.10.2',
                                 ip_src='10.10.10.1',
                                 ip_ttl=64,
-                                udp_sport=5928,
+                                udp_sport=20087,
                                 with_udp_chksum=False,
                                 vxlan_vni=0x1234,
                                 inner_frame=pkt2)
@@ -1556,6 +1613,10 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         v6_enabled=0
         mgid = 0x100
         rid = 0x200
+        inner_replica=True
+        nhop_index=None
+        tunnel_type=0
+        tunnel_index=0
 
         # Add bd entry
         vlan_hdl = program_bd(self.client, sess_hdl, dev_tgt, vlan, mgid)
@@ -1565,6 +1626,8 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         hdl2, mbr_hdl2 = program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan, port2, v4_enabled, v6_enabled, 0, 0)
         hdl3, mbr_hdl3 = program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan, port3, v4_enabled, v6_enabled, 0, 0)
         hdl4, mbr_hdl4 = program_vlan_mapping(self.client, sess_hdl, dev_tgt, vlan, port4, v4_enabled, v6_enabled, 0, 0)
+
+        rid_hdl = program_rid(self.client, sess_hdl, dev_tgt, rid, inner_replica, vlan, nhop_index, tunnel_type, tunnel_index)
 
         port_map = set_port_or_lag_bitmap(256, [port1, port2, port3, port4])
         lag_map = set_port_or_lag_bitmap(256, [])
@@ -1589,6 +1652,7 @@ class L2FloodTest(pd_base_tests.ThriftInterfaceDataPlane):
         self.mc.mc_mgrp_destroy(mc_sess_hdl, dev_tgt.dev_id, mgrp_hdl)
 
 #        self.mc.mc_complete_operations(mc_sess_hdl)
+        delete_rid(self.client, sess_hdl, device, rid_hdl)
 
         # delete port_vlan entries
         delete_vlan_mapping(self.client, sess_hdl, device, hdl4, mbr_hdl4)

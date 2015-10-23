@@ -130,7 +130,7 @@ field_list_calculation ecmp_hash {
         l3_hash_fields;
     }
     algorithm : identity;
-    output_width : 14; //ECMP_BIT_WIDTH;
+    output_width : ECMP_BIT_WIDTH;
 }
 
 action_selector ecmp_selector {
