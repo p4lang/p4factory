@@ -15,6 +15,8 @@ wireshark libgmp-dev
 
 sudo pip install --upgrade thrift
 sudo pip install tenjin
+sudo pip install ctypesgen
+sudo pip install crc16
 
 # build thrift from sources
 mkdir install_tmp

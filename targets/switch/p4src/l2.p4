@@ -99,6 +99,7 @@ table smac {
 /*****************************************************************************/
 action dmac_hit(ifindex) {
     modify_field(ingress_metadata.egress_ifindex, ifindex);
+    bit_xor(l2_metadata.same_if_check, l2_metadata.same_if_check, ifindex);
 }
 
 action dmac_multicast_hit(mc_index) {
@@ -310,12 +311,6 @@ action remove_vlan_double_tagged() {
     remove_header(vlan_tag_[1]);
 }
 
-action remove_vlan_qinq_tagged() {
-    modify_field(ethernet.etherType, vlan_tag_[1].etherType);
-    remove_header(vlan_tag_[0]);
-    remove_header(vlan_tag_[1]);
-}
-
 table vlan_decap {
     reads {
         vlan_tag_[0] : valid;
@@ -325,7 +320,6 @@ table vlan_decap {
         nop;
         remove_vlan_single_tagged;
         remove_vlan_double_tagged;
-        remove_vlan_qinq_tagged;
     }
     size: VLAN_DECAP_TABLE_SIZE;
 }

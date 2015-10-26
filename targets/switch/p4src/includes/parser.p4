@@ -23,7 +23,8 @@ parser start {
 
 #define ETHERTYPE_BF_FABRIC    0x9000
 #define ETHERTYPE_BF_SFLOW     0x9001
-#define ETHERTYPE_VLAN         0x8100, 0x9100
+#define ETHERTYPE_VLAN         0x8100
+#define ETHERTYPE_QINQ         0x9100
 #define ETHERTYPE_MPLS         0x8847
 #define ETHERTYPE_IPV4         0x0800
 #define ETHERTYPE_IPV6         0x86dd
@@ -55,6 +56,16 @@ parser start {
 #ifndef ADV_FEATURES
 #define PARSE_ETHERTYPE                                    \
         ETHERTYPE_VLAN : parse_vlan;                       \
+        ETHERTYPE_QINQ : parse_qinq;                       \
+        ETHERTYPE_MPLS : parse_mpls;                       \
+        ETHERTYPE_IPV4 : parse_ipv4;                       \
+        ETHERTYPE_IPV6 : parse_ipv6;                       \
+        ETHERTYPE_ARP : parse_arp_rarp;                    \
+        ETHERTYPE_LLDP  : parse_set_prio_high;             \
+        ETHERTYPE_LACP  : parse_set_prio_high;             \
+        default: ingress
+
+#define PARSE_ETHERTYPE_MINUS_VLAN                         \
         ETHERTYPE_MPLS : parse_mpls;                       \
         ETHERTYPE_IPV4 : parse_ipv4;                       \
         ETHERTYPE_IPV6 : parse_ipv6;                       \
@@ -65,6 +76,23 @@ parser start {
 #else
 #define PARSE_ETHERTYPE                                    \
         ETHERTYPE_VLAN : parse_vlan;                       \
+        ETHERTYPE_QINQ : parse_qinq;                       \
+        ETHERTYPE_MPLS : parse_mpls;                       \
+        ETHERTYPE_IPV4 : parse_ipv4;                       \
+        ETHERTYPE_IPV6 : parse_ipv6;                       \
+        ETHERTYPE_ARP : parse_arp_rarp;                    \
+        ETHERTYPE_RARP : parse_arp_rarp;                   \
+        ETHERTYPE_NSH : parse_nsh;                         \
+        ETHERTYPE_ROCE : parse_roce;                       \
+        ETHERTYPE_FCOE : parse_fcoe;                       \
+        ETHERTYPE_TRILL : parse_trill;                     \
+        ETHERTYPE_VNTAG : parse_vntag;                     \
+        ETHERTYPE_LLDP  : parse_set_prio_high;             \
+        ETHERTYPE_LACP  : parse_set_prio_high;             \
+        ETHERTYPE_BF_SFLOW : parse_bf_internal_sflow;      \
+        default: ingress
+
+#define PARSE_ETHERTYPE_MINUS_VLAN                         \
         ETHERTYPE_MPLS : parse_mpls;                       \
         ETHERTYPE_IPV4 : parse_ipv4;                       \
         ETHERTYPE_IPV6 : parse_ipv6;                       \
@@ -131,13 +159,26 @@ parser parse_fcoe {
 
 #define VLAN_DEPTH 2
 header vlan_tag_t vlan_tag_[VLAN_DEPTH];
-header vlan_tag_3b_t vlan_tag_3b[VLAN_DEPTH];
-header vlan_tag_5b_t vlan_tag_5b[VLAN_DEPTH];
 
 parser parse_vlan {
-    extract(vlan_tag_[next]);
+    extract(vlan_tag_[0]);
     return select(latest.etherType) {
-        PARSE_ETHERTYPE;
+        PARSE_ETHERTYPE_MINUS_VLAN;
+    }
+}
+
+parser parse_qinq {
+    extract(vlan_tag_[0]);
+    return select(latest.etherType) {
+        ETHERTYPE_VLAN : parse_qinq_vlan;
+        default : ingress;
+    }
+}
+
+parser parse_qinq_vlan {
+    extract(vlan_tag_[1]);
+    return select(latest.etherType) {
+        PARSE_ETHERTYPE_MINUS_VLAN;
     }
 }
 
@@ -279,7 +320,47 @@ parser parse_ipv6_in_ip {
     return parse_inner_ipv6;
 }
 
+#define UDP_PORT_BOOTPS                67
+#define UDP_PORT_BOOTPC                68
+#define UDP_PORT_RIP                   520
+#define UDP_PORT_RIPNG                 521
+#define UDP_PORT_DHCPV6_CLIENT         546
+#define UDP_PORT_DHCPV6_SERVER         547
+#define UDP_PORT_HSRP                  1985
+#define UDP_PORT_BFD                   3785
+#define UDP_PORT_LISP                  4341
+#define UDP_PORT_VXLAN                 4789
+#define UDP_PORT_VXLAN_GPE             4790
+#define UDP_PORT_ROCE_V2               4791
+#define UDP_PORT_GENV                  6081
+#define UDP_PORT_SFLOW                 6343
+
 header ipv6_t ipv6;
+
+parser parse_udp_v6 {
+    extract(udp);
+    set_metadata(l3_metadata.lkp_l4_sport, latest.srcPort);
+    set_metadata(l3_metadata.lkp_l4_dport, latest.dstPort);
+    return select(latest.dstPort) {
+        UDP_PORT_BOOTPS : parse_set_prio_med;
+        UDP_PORT_BOOTPC : parse_set_prio_med;
+        UDP_PORT_DHCPV6_CLIENT : parse_set_prio_med;
+        UDP_PORT_DHCPV6_SERVER : parse_set_prio_med;
+        UDP_PORT_RIP : parse_set_prio_med;
+        UDP_PORT_RIPNG : parse_set_prio_med;
+        UDP_PORT_HSRP : parse_set_prio_med;
+        default: ingress;
+    }
+}
+
+parser parse_gre_v6 {
+    extract(gre);
+    return select(latest.C, latest.R, latest.K, latest.S, latest.s,
+                  latest.recurse, latest.flags, latest.ver, latest.proto) {
+        ETHERTYPE_IPV4 : parse_gre_ipv4;
+        default: ingress;
+    }
+}
 
 parser parse_ipv6 {
     extract(ipv6);
@@ -292,10 +373,15 @@ parser parse_ipv6 {
     return select(latest.nextHdr) {
         IP_PROTOCOLS_ICMPV6 : parse_icmp;
         IP_PROTOCOLS_TCP : parse_tcp;
+        IP_PROTOCOLS_IPV4 : parse_ipv4_in_ip;
+#ifndef TUNNEL_OVER_IPV6_DISABLE
         IP_PROTOCOLS_UDP : parse_udp;
         IP_PROTOCOLS_GRE : parse_gre;
-        IP_PROTOCOLS_IPV4 : parse_ipv4_in_ip;
         IP_PROTOCOLS_IPV6 : parse_ipv6_in_ip;
+#else
+        IP_PROTOCOLS_UDP : parse_udp_v6;
+        IP_PROTOCOLS_GRE : parse_gre_v6;
+#endif
         IP_PROTOCOLS_EIGRP : parse_set_prio_med;
         IP_PROTOCOLS_OSPF : parse_set_prio_med;
         IP_PROTOCOLS_PIM : parse_set_prio_med;
@@ -334,21 +420,6 @@ parser parse_tcp {
         default: ingress;
     }
 }
-
-#define UDP_PORT_BOOTPS                67
-#define UDP_PORT_BOOTPC                68
-#define UDP_PORT_RIP                   520
-#define UDP_PORT_RIPNG                 521
-#define UDP_PORT_DHCPV6_CLIENT         546
-#define UDP_PORT_DHCPV6_SERVER         547
-#define UDP_PORT_HSRP                  1985
-#define UDP_PORT_BFD                   3785
-#define UDP_PORT_LISP                  4341
-#define UDP_PORT_VXLAN                 4789
-#define UDP_PORT_VXLAN_GPE             4790
-#define UDP_PORT_ROCE_V2               4791
-#define UDP_PORT_GENV                  6081
-#define UDP_PORT_SFLOW                 6343
 
 header udp_t udp;
 
@@ -639,6 +710,7 @@ parser parse_inner_icmp {
     return ingress;
 }
 
+#define copy_tcp_header(dst_tcp, src_tcp) copy_header(dst_tcp, src_tcp)
 header tcp_t inner_tcp;
 
 parser parse_inner_tcp {

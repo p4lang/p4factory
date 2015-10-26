@@ -120,6 +120,7 @@ ifndef bm-switchsai_BINARY
 endif
 
 SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/tests/pd_thrift/switch_sai_thrift
+SWITCHSAI_HEADER_FILES_DIR := $(SUBMODULE_SWITCHSAI)/submodules/ocpsai/sai/inc
 THRIFT_INPUT_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_DEP_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_SERVICE_NAMES := switch_sai_rpc
@@ -133,6 +134,7 @@ switchsai_THRIFT : ${GEN_THRIFT_PY_MODULE}
 	@rm -r ${THRIFT_TEMP_DIR}/switch_api/
 	@cp -r ${THRIFT_TEMP_DIR}/switch_sai/* ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/
 	@rm -r ${THRIFT_TEMP_DIR}/switch_sai/
+	@ctypesgen.py -I/usr/include -I$(SWITCHSAI_HEADER_FILES_DIR) $(SWITCHSAI_HEADER_FILES_DIR)/*.h -o ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/sai_headers.py
 	@cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
 bm-switchsai : export LIB_SWITCHSAI_ENABLE=1

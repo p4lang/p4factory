@@ -128,6 +128,7 @@ ifndef drivers-switchsai_BINARY
 endif
 
 SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../tests/pd_thrift/switch_sai_thrift
+SWITCHSAI_HEADER_FILES_DIR := $(SUBMODULE_SWITCHSAI)/submodules/ocpsai/sai/inc
 THRIFT_INPUT_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_DEP_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_SERVICE_NAMES := switch_sai_rpc
@@ -137,6 +138,7 @@ switchsai_THRIFT : switchapi_THRIFT FORCE
 	@mkdir -p ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}
 	@cp -r ${THRIFT_TEMP_DIR}/switch_sai/* ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/
 	@rm -r ${THRIFT_TEMP_DIR}/switch_sai/
+	@ctypesgen.py -I/usr/include -I$(SWITCHSAI_HEADER_FILES_DIR) $(SWITCHSAI_HEADER_FILES_DIR)/*.h -o ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/sai_headers.py
 
 drivers-switchsai : export LIB_SWITCHSAI_ENABLE=1
 drivers-switchsai : export LIB_SWITCHAPI_ENABLE=1

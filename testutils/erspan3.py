@@ -1,6 +1,6 @@
 import ptf.dataplane as dataplane
 
-def match_erspan_III_pkt(exp_pkt, pkt, ignore_tstamp=True):
+def match_erspan3_pkt(exp_pkt, pkt, ignore_tstamp=True):
     """
     Compare ERSPAN_III packets, ignore the timestamp value. Just make sure
     it is non-zero
@@ -11,9 +11,9 @@ def match_erspan_III_pkt(exp_pkt, pkt, ignore_tstamp=True):
             #self.logger.error("No ERSPAN pkt received")
             return False
 
-        if erspan3.timestamp == 0:
-            #self.logger.error("Invalid ERSPAN timestamp")
-            return False
+        #if erspan3.timestamp == 0:
+        #    #self.logger.error("Invalid ERSPAN timestamp")
+        #    return False
 
         #fix the exp_pkt timestamp and compare
         exp_erspan3 = exp_pkt.getlayer(ERSPAN_III)
@@ -26,7 +26,7 @@ def match_erspan_III_pkt(exp_pkt, pkt, ignore_tstamp=True):
 
     return dataplane.match_exp_pkt(exp_pkt, pkt)
 
-def verify_erspan_III_packet(test, pkt, ofport):
+def verify_erspan3_packet(test, pkt, ofport):
     """
     Check that an expected packet is received
     """
@@ -35,4 +35,4 @@ def verify_erspan_III_packet(test, pkt, ofport):
     test.assertTrue(rcv_pkt != None, "Did not receive pkt on %r" % ofport)
     # convert rcv_pkt string back to layered pkt
     nrcv = pkt.__class__(rcv_pkt)
-    test.assertTrue(match_erspan_III_pkt(pkt, nrcv), "Received packet did not match expected packet")
+    test.assertTrue(match_erspan3_pkt(pkt, nrcv), "Received packet did not match expected packet")

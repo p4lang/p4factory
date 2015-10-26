@@ -35,6 +35,7 @@ header_type acl_metadata_t {
         if_label : 15;                         /* if label for acls */
         bd_label : 16;                         /* bd label for acls */
         mirror_session_id : 10;                /* mirror session id */
+        acl_stats_index : 32;                  /* acl stats index */
     }
 }
 header_type qos_metadata_t {
@@ -61,49 +62,60 @@ metadata i2e_metadata_t i2e_metadata;
 /*****************************************************************************/
 /* ACL Actions                                                               */
 /*****************************************************************************/
-action acl_log() {
+action acl_log(acl_stats_index) {
     modify_field(ingress_metadata.enable_dod, 0);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
-action acl_deny() {
+action acl_deny(acl_stats_index) {
     modify_field(acl_metadata.acl_deny, TRUE);
     modify_field(ingress_metadata.enable_dod, 0);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
-action acl_permit() {
+action acl_permit(acl_stats_index) {
     modify_field(ingress_metadata.enable_dod, 0);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
 field_list i2e_mirror_info {
     i2e_metadata.ingress_tstamp;
     i2e_metadata.mirror_session_id;
-}
-
-field_list e2e_mirror_info {
-    i2e_metadata.mirror_session_id;
-}
-
-action acl_mirror(session_id) {
-    modify_field(i2e_metadata.mirror_session_id, session_id);
-    modify_field(i2e_metadata.ingress_tstamp, _ingress_global_tstamp_);
-    modify_field(ingress_metadata.enable_dod, 0);
-#ifndef __TARGET_BMV2__
-    clone_ingress_pkt_to_egress(session_id, i2e_mirror_info);
+#ifdef __TARGET_BMV2__
+    standard_metadata.instance_type;
 #endif
 }
 
-action acl_redirect_nexthop(nexthop_index) {
+field_list e2e_mirror_info {
+    i2e_metadata.ingress_tstamp;
+    i2e_metadata.mirror_session_id;
+#ifdef __TARGET_BMV2__
+    standard_metadata.instance_type;
+#endif
+}
+
+action acl_mirror(session_id, acl_stats_index) {
+    modify_field(i2e_metadata.mirror_session_id, session_id);
+    modify_field(i2e_metadata.ingress_tstamp, _ingress_global_tstamp_);
+    modify_field(ingress_metadata.enable_dod, 0);
+    clone_ingress_pkt_to_egress(session_id, i2e_mirror_info);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
+}
+
+action acl_redirect_nexthop(nexthop_index, acl_stats_index) {
     modify_field(acl_metadata.acl_redirect, TRUE);
     modify_field(acl_metadata.acl_nexthop, nexthop_index);
     modify_field(acl_metadata.acl_nexthop_type, NEXTHOP_TYPE_SIMPLE);
     modify_field(ingress_metadata.enable_dod, 0);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
-action acl_redirect_ecmp(ecmp_index) {
+action acl_redirect_ecmp(ecmp_index, acl_stats_index) {
     modify_field(acl_metadata.acl_redirect, TRUE);
     modify_field(acl_metadata.acl_nexthop, ecmp_index);
     modify_field(acl_metadata.acl_nexthop_type, NEXTHOP_TYPE_ECMP);
     modify_field(ingress_metadata.enable_dod, 0);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
 action acl_dod_en() {
@@ -116,13 +128,6 @@ action acl_dod_en() {
 /* MAC ACL                                                                   */
 /*****************************************************************************/
 #if !defined(ACL_DISABLE) && !defined(L2_DISABLE)
-#ifndef STATS_DISABLE
-counter mac_acl_stats {
-    type : packets_and_bytes;
-    direct : mac_acl;
-}
-#endif /* STATS_DISABLE */
-
 table mac_acl {
     reads {
         acl_metadata.if_label : ternary;
@@ -149,18 +154,10 @@ control process_mac_acl {
 #endif /* !ACL_DISABLE && !L2_DISABLE */
 }
 
-
 /*****************************************************************************/
 /* IPv4 ACL                                                                  */
 /*****************************************************************************/
 #if !defined(ACL_DISABLE) && !defined(IPV4_DISABLE)
-#ifndef STATS_DISABLE
-counter ip_acl_stats {
-    type : packets_and_bytes;
-    direct : ip_acl;
-}
-#endif /* STATS_DISABLE */
-
 table ip_acl {
     reads {
         acl_metadata.if_label : ternary;
@@ -194,13 +191,6 @@ table ip_acl {
 /* IPv6 ACL                                                                  */
 /*****************************************************************************/
 #if !defined(ACL_DISABLE) && !defined(IPV6_DISABLE)
-#ifndef STATS_DISABLE
-counter ipv6_acl_stats {
-    type : packets_and_bytes;
-    direct : ipv6_acl;
-}
-#endif /* STATS_DISABLE */
-
 table ipv6_acl {
     reads {
         acl_metadata.if_label : ternary;
@@ -302,26 +292,31 @@ control process_qos {
 /* RACL actions                                                              */
 /*****************************************************************************/
 #ifndef ACL_DISABLE
-action racl_log() {
+action racl_log(acl_stats_index) {
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
-action racl_deny() {
+action racl_deny(acl_stats_index) {
     modify_field(acl_metadata.racl_deny, TRUE);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
-action racl_permit() {
+action racl_permit(acl_stats_index) {
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
-action racl_redirect_nexthop(nexthop_index) {
+action racl_redirect_nexthop(nexthop_index, acl_stats_index) {
     modify_field(acl_metadata.racl_redirect, TRUE);
     modify_field(acl_metadata.racl_nexthop, nexthop_index);
     modify_field(acl_metadata.racl_nexthop_type, NEXTHOP_TYPE_SIMPLE);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 
-action racl_redirect_ecmp(ecmp_index) {
+action racl_redirect_ecmp(ecmp_index, acl_stats_index) {
     modify_field(acl_metadata.racl_redirect, TRUE);
     modify_field(acl_metadata.racl_nexthop, ecmp_index);
     modify_field(acl_metadata.racl_nexthop_type, NEXTHOP_TYPE_ECMP);
+    modify_field(acl_metadata.acl_stats_index, acl_stats_index);
 }
 #endif /* ACL_DISABLE */
 
@@ -330,13 +325,6 @@ action racl_redirect_ecmp(ecmp_index) {
 /* IPv4 RACL                                                                 */
 /*****************************************************************************/
 #if !defined(ACL_DISABLE) && !defined(IPV4_DISABLE)
-#ifndef STATS_DISABLE
-counter ip_racl_stats {
-    type : packets_and_bytes;
-    direct : ipv4_racl;
-}
-#endif /* STATS_DISABLE */
-
 table ipv4_racl {
     reads {
         acl_metadata.bd_label : ternary;
@@ -400,6 +388,34 @@ control process_ipv6_racl {
 
 
 /*****************************************************************************/
+/* ACL stats                                                                 */
+/*****************************************************************************/
+counter acl_stats {
+    type : packets_and_bytes;
+    instance_count : ACL_STATS_TABLE_SIZE;
+}
+
+action acl_stats_update() {
+    count(acl_stats, acl_metadata.acl_stats_index);
+}
+
+table acl_stats {
+    reads {
+        acl_metadata.acl_stats_index : exact;
+    }
+    actions {
+        acl_stats_update;
+    }
+    size : ACL_STATS_TABLE_SIZE;
+}
+
+control process_ingress_acl_stats {
+#ifndef STATS_DISABLE
+    apply(acl_stats);
+#endif /* STATS_DISABLE */
+}
+
+/*****************************************************************************/
 /* System ACL                                                                */
 /*****************************************************************************/
 counter drop_stats {
@@ -436,13 +452,15 @@ field_list cpu_info {
     ingress_metadata.bd;
     ingress_metadata.ifindex;
     fabric_metadata.reason_code;
+    ingress_metadata.ingress_port;
+#ifdef __TARGET_BMV2__
+    standard_metadata.instance_type;
+#endif
 }
 
 action copy_to_cpu(reason_code) {
     modify_field(fabric_metadata.reason_code, reason_code);
-#ifndef __TARGET_BMV2__
     clone_ingress_pkt_to_egress(CPU_MIRROR_SESSION_ID, cpu_info);
-#endif
 }
 
 action drop_packet() {
@@ -540,27 +558,37 @@ control process_system_acl {
 /* Egress ACL                                                                */
 /*****************************************************************************/
 #ifndef ACL_DISABLE
-action egress_port_mirror(session_id) {
+action egress_mirror(session_id) {
     modify_field(i2e_metadata.mirror_session_id, session_id);
-#ifndef __TARGET_BMV2__
     clone_egress_pkt_to_egress(session_id, e2e_mirror_info);
-#endif
 }
 
-action egress_port_mirror_drop(session_id) {
-    egress_port_mirror(session_id);
+action egress_mirror_drop(session_id) {
+    egress_mirror(session_id);
     drop();
+}
+
+action egress_redirect_to_cpu(reason_code) {
+    egress_copy_to_cpu(reason_code);
+    drop();
+}
+
+action egress_copy_to_cpu(reason_code) {
+    modify_field(fabric_metadata.reason_code, reason_code);
+    clone_egress_pkt_to_egress(CPU_MIRROR_SESSION_ID, cpu_info);
 }
 
 table egress_acl {
     reads {
         standard_metadata.egress_port : ternary;
         intrinsic_metadata.deflection_flag : ternary;
+        l3_metadata.l3_mtu_check : ternary;
     }
     actions {
         nop;
-        egress_port_mirror;
-        egress_port_mirror_drop;
+        egress_mirror;
+        egress_mirror_drop;
+        egress_redirect_to_cpu;
     }
     size : EGRESS_ACL_TABLE_SIZE;
 }

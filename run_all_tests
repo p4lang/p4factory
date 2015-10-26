@@ -316,6 +316,27 @@ def check_ifaces():
              "sudo sysctl -w net.ipv6.conf.eth0.disable_ipv6=1",
              "red")
 
+def ifaces_up_down():
+    target_dir = os.path.join(_THIS_DIR, "targets", "switch", "bmv2")
+    save_cwd = os.getcwd()
+    os.chdir(target_dir)
+    cmd = ['make', 'clean']
+    print ' '.join(cmd)
+    subprocess.call(cmd)
+    os.chdir(save_cwd)
+
+    cmd = ['sudo', './tools/veth_teardown.sh']
+    print ' '.join(cmd)
+    subprocess.call(cmd)
+
+    cmd = ['sudo', './tools/veth_setup.sh']
+    print ' '.join(cmd)
+    subprocess.call(cmd)
+
+    cmd = ['sudo', './tools/veth_disable_ipv6.sh']
+    print ' '.join(cmd)
+    subprocess.call(cmd)
+
 def main():
     if(os.getuid() != 0):
         my_print("I cannot run as a mortal, I need to be root, rrrOOOOOOTTTTT",
@@ -328,6 +349,8 @@ def main():
         bmv2_pd_tests()
         bmv2_switchapi_test()
         bmv2_switchsai_test()
+
+    ifaces_up_down()
 
     pd_tests()
     switchapi_test()

@@ -35,13 +35,15 @@ import os
 
 from switch_api_thrift.ttypes import  *
 
-from erspan_III import *
+from erspan3 import *
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 
 is_bmv2 = ('BMV2_TEST' in os.environ) and (int(os.environ['BMV2_TEST']) == 1)
 swports = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
+###############################################################################
+@group('acl')
 class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
         print
@@ -58,7 +60,7 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
         i_ip1 = switcht_ip_addr_t(ipaddr='192.168.0.2', prefix_length=16)
         self.client.switcht_api_l3_interface_address_add(0, if1, vrf, i_ip1)
 
-        iu2 = interface_union(port_lag_handle = 2)
+        iu2 = interface_union(port_lag_handle = swports[2])
         i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if2 = self.client.switcht_api_interface_create(0, i_info2)
         i_ip2 = switcht_ip_addr_t(ipaddr='10.0.0.2', prefix_length=16)
@@ -135,11 +137,12 @@ class IPAclTest(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_router_mac_group_delete(0, rmac)
         self.client.switcht_api_vrf_delete(0, vrf)
 
+
+###############################################################################
+@group('acl')
+@group('mirror')
 class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
-        if is_bmv2:
-            print "BMV2_TEST == 1 => test skipped"
-            return
         print
         print "Sending packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
@@ -154,7 +157,7 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
         i_ip1 = switcht_ip_addr_t(ipaddr='192.168.0.2', prefix_length=16)
         self.client.switcht_api_l3_interface_address_add(0, if1, vrf, i_ip1)
 
-        iu2 = interface_union(port_lag_handle = 2)
+        iu2 = interface_union(port_lag_handle = swports[2])
         i_info2 = switcht_interface_info_t(device=0, type=4, u=iu2, mac='00:77:66:55:44:33', label=0, vrf_handle=vrf, rmac_handle=rmac)
         if2 = self.client.switcht_api_interface_create(0, i_info2)
         i_ip2 = switcht_ip_addr_t(ipaddr='10.0.0.2', prefix_length=16)
@@ -244,11 +247,12 @@ class MirrorAclTest_i2e(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_router_mac_group_delete(0, rmac)
         self.client.switcht_api_vrf_delete(0, vrf)
 
+
+###############################################################################
+@group('acl')
+@group('mirror')
 class MirrorSessionTest(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
-        if is_bmv2:
-            print "BMV2_TEST == 1 => test skipped"
-            return
         self.client.switcht_api_init(0)
         print "create mirror sessions"
         minfo1 = switcht_mirror_info_t(session_id=1, direction=1,
@@ -276,11 +280,12 @@ class MirrorSessionTest(api_base_tests.ThriftInterfaceDataPlane):
         # delete again -ve test
         self.client.switcht_api_mirror_session_delete(0, mirror3)
 
+
+###############################################################################
+@group('acl')
+@group('mirror')
 class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
-        if is_bmv2:
-            print "BMV2_TEST == 1 => test skipped"
-            return
         print "Test e2e Mirror packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
@@ -338,14 +343,14 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
 
         # setup a egress Mirror acl
         print "Create Egress Mirror ACL to mirror e2e from 2->4"
-        acl = self.client.switcht_api_acl_list_create(0, 9)
+        acl = self.client.switcht_api_acl_list_create(0, 6)
         # create kvp to match egress port and defect bit
         kvp = []
-        kvp.append(switcht_acl_egr_port_key_value_pair_t(field=0, value=2, mask=-1))
-        kvp.append(switcht_acl_egr_port_key_value_pair_t(field=1, value=0, mask=-1))
+        kvp.append(switcht_acl_egr_key_value_pair_t(field=0, value=2, mask=-1))
+        kvp.append(switcht_acl_egr_key_value_pair_t(field=1, value=0, mask=-1))
         action = 1
         action_param = switcht_acl_action_params_t(mirror = switcht_acl_action_mirror(mirror_handle=mirror1))
-        ace = self.client.switcht_api_acl_egr_port_rule_create(0, acl, 11, 1, kvp, action, action_param)
+        ace = self.client.switcht_api_acl_egr_rule_create(0, acl, 11, 2, kvp, action, action_param)
         self.client.switcht_api_acl_reference(0, acl, if2)
         send_packet(self, 1, str(pkt))
         verify_packet(self, exp_pkt, swports[2])
@@ -390,11 +395,12 @@ class MirrorAclTest_e2e(api_base_tests.ThriftInterfaceDataPlane):
         self.client.switcht_api_router_mac_group_delete(0, rmac)
         self.client.switcht_api_vrf_delete(0, vrf)
 
+
+###############################################################################
+@group('acl')
+@group('mirror')
 class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
     def runTest(self):
-        if is_bmv2:
-            print "BMV2_TEST == 1 => test skipped"
-            return
         print "Test i2e Erspan Mirror packet port %d" % swports[1], "  -> port %d" % swports[2], "  (192.168.0.1 -> 10.0.0.1 [id = 101])"
         self.client.switcht_api_init(0)
         vrf = self.client.switcht_api_vrf_create(0, 1)
@@ -514,7 +520,7 @@ class MirrorAclTest_i2e_erspan(api_base_tests.ThriftInterfaceDataPlane):
                                            inner_frame=pkt);
         # verify mirrored and original pkts
         time.sleep(1)
-        verify_erspan_III_packet(self, exp_mirrored_pkt, swports[4])
+        verify_erspan3_packet(self, exp_mirrored_pkt, swports[4])
         verify_packet(self, exp_pkt, swports[2])
         verify_no_other_packets(self)
 
