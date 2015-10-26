@@ -2520,7 +2520,6 @@ class L2IPv4InIPv6VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane)
                                     ip_id=108,
                                     ip_ttl=64)
             udp_sport = entropy_hash(pkt)
-            print udp_sport
             vxlan_pkt = simple_vxlanv6_packet(
                                     eth_src='00:77:66:55:44:33',
                                     eth_dst='00:33:33:33:33:33',
@@ -2533,7 +2532,6 @@ class L2IPv4InIPv6VxlanUnicastBasicTest(api_base_tests.ThriftInterfaceDataPlane)
                                     inner_frame=pkt)
             send_packet(self, swports[1], str(pkt))
             verify_packets(self, vxlan_pkt, [swports[2]])
-            #send_packet(self, swports[5], str(vxlan_pkt))
         finally:
             self.client.switcht_api_neighbor_entry_remove(device, neighbor1)
             self.client.switcht_api_nhop_delete(device, nhop1)
