@@ -349,8 +349,7 @@ def main():
         bmv2_pd_tests()
         bmv2_switchapi_test()
         bmv2_switchsai_test()
-
-    ifaces_up_down()
+        ifaces_up_down()
 
     pd_tests()
     switchapi_test()
