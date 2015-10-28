@@ -78,7 +78,17 @@ before_install:
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 99
 
 install:
-  - bash submodules/bm/build/travis/install-thrift.sh
+  - wget https://s3-us-west-2.amazonaws.com/p4lang/thrift_bin.tar.gz
+  - tar -xzvf thrift_bin.tar.gz -C $HOME/
+  - export PATH=$PATH:$HOME/thrift/bin/
+  - export LDFLAGS="$LDFLAGS -L$HOME/thrift/lib"
+  - export CPPFLAGS="$CPPFLAGS -I$HOME/thrift/include"
+  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/thrift/lib
+  - sudo ln -s $HOME/thrift/lib/libthrift-0.9.2.so /usr/local/lib/libthrift.so
+  # our Makefiles use shell, not bash, this is a quick fix
+  - sudo ln -s $HOME/thrift/bin/thrift /usr/local/bin/thrift
+  # for bmv1 tests
+  - sudo ln -s $HOME/thrift/include/thrift /usr/local/include/thrift
   - bash submodules/bm/build/travis/install-nanomsg.sh
   - mkdir install_tmp && cd install_tmp/
   - git clone https://github.com/p4lang/p4-hlir.git && cd p4-hlir && sudo python setup.py install && cd ..
