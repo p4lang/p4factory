@@ -42,9 +42,6 @@ header_type fabric_header_t {
 
         dstDevice : 8;
         dstPortOrGroup : 16;
-
-        ingressIfindex : 16;
-        ingressBd : 16;
     }
 }
 
@@ -55,6 +52,9 @@ header_type fabric_header_cpu_t {
         reserved : 2;
 
         ingressPort: 16;
+        ingressIfindex : 16;
+        ingressBd : 16;
+
         reasonCode : 16;
     }
 }
@@ -138,7 +138,7 @@ action packet_out_unicast() {
 table packet_out {
     reads {
         fabric_header.packetType : exact;
-        fabric_header_cpu.reserved : exact;
+        fabric_header_cpu.reasonCode : exact;
     }
 
     actions {

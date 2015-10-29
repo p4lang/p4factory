@@ -50,11 +50,13 @@ from thrift.protocol import TBinaryProtocol
 from thrift.protocol import TMultiplexedProtocol
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
-pd_dir = os.path.join(root_dir, '../targets/switch/of-tests/pd_thrift')
-oft_infra_dir = os.path.join(root_dir, '..', 'submodules', 'oft-infra')
+pd_dir = os.path.join(root_dir, '../targets/switch/tests/pd_thrift')
+ptf_dir = os.path.join(root_dir, '..', 'submodules', 'ptf')
+utils_dir = os.path.join(root_dir, '..', 'testutils')
 
 sys.path.append(pd_dir)
-sys.path.append(oft_infra_dir)
+sys.path.append(ptf_dir)
+sys.path.append(utils_dir)
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
@@ -82,7 +84,8 @@ def setup_bd(client, conn_mgr):
                                 action_ipv4_urpf_mode=0,
                                 action_ipv6_urpf_mode=0,
                                 action_stp_group=0,
-                                action_stats_idx=0)
+                                action_stats_idx=0,
+                                action_learning_enabled=0)
         
         mbr_hdl = client.bd_action_profile_add_member_with_set_bd(
                                 sess_hdl, dev_tgt,
@@ -131,6 +134,7 @@ class OpenflowEnabledP4Switch(P4Switch):
         args = [self.sw_path]
         args.extend(['--of-ip', parser_args.controller_ip])
         args.extend(['--no-veth'])
+        args.extend(['-t'])
         for intf in self.intfs.values():
             if not intf.IP():
                 args.extend( ['-i', intf.name] )
