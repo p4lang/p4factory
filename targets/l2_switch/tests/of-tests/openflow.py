@@ -129,14 +129,14 @@ def repopulate_openflow_defaults(client, sess_hdl, dev_tgt):
 
     match_spec = l2_switch_packet_out_match_spec_t(
         fabric_header_packetType = 5,
-        fabric_header_cpu_reserved = 1) 
+        fabric_header_cpu_reasonCode = 1) 
 
     result = client.packet_out_table_add_with_packet_out_unicast(
         sess_hdl, dev_tgt, match_spec)
 
     match_spec = l2_switch_packet_out_match_spec_t(
         fabric_header_packetType = 5,
-        fabric_header_cpu_reserved = 2) 
+        fabric_header_cpu_reasonCode = 2) 
 
     result = client.packet_out_table_add_with_packet_out_eth_flood(
         sess_hdl, dev_tgt, match_spec)
