@@ -42,9 +42,9 @@ RUN apt-get install -y \
 # install thrift
 RUN mkdir -p /tmp/thrift ; \
     cd /tmp/thrift ; \
-    wget -q http://www.gtlib.gatech.edu/pub/apache/thrift/0.9.1/thrift-0.9.1.tar.gz ; \
-    tar xvzf thrift-0.9.1.tar.gz; \
-    cd thrift-0.9.1; \
+    wget -q http://archive.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz ; \
+    tar xvzf thrift-0.9.2.tar.gz; \
+    cd thrift-0.9.2; \
     ./configure ; cd test/cpp ; ln -s . .libs ; cd ../.. ; \
     make -j 4 install; ldconfig ; \
     rm -fr /tmp/thrift
@@ -71,6 +71,14 @@ COPY diffs/mstpd.diff /third-party/diffs/mstpd.diff
 RUN cd /third-party; \
     svn checkout svn://svn.code.sf.net/p/mstpd/code/trunk mstpd; \
     cd mstpd; patch -p0 -i /third-party/diffs/mstpd.diff; make install
+
+# install ctypesgen
+RUN mkdir -p /tmp/ctypesgen ; \
+    cd /tmp/ctypesgen ; \
+    git clone https://github.com/davidjamesca/ctypesgen.git ; \
+    cd ctypesgen ; \
+    python setup.py install ; \
+    rm -fr /tmp/ctypesgen
 
 ADD p4factory /p4factory
 
