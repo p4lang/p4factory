@@ -27,8 +27,10 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 from distutils.version import StrictVersion
 from p4_mininet import P4DockerSwitch
+from time import sleep
+import sys
 
-def main():
+def main(cli=0):
     net = Mininet( controller = None )
 
     # add hosts
@@ -56,11 +58,45 @@ def main():
         net.addLink( sw2, h2, port1 = 1, fast=False )
 
     net.start()
+    result = 0
 
-    CLI( net )
+    if cli:
+        CLI( net )
+    else:
+        sleep(3)
+
+        node_values = net.values()
+        print node_values
+
+        hosts = net.hosts
+        print hosts
+
+        # ping hosts
+        print "PING BETWEEN THE HOSTS"
+        result = net.ping(hosts,30)
+
+        # print host arp table & routes
+        for host in hosts:
+            print "ARP ENTRIES ON HOST"
+            print host.cmd('arp -n')
+            print "HOST ROUTES"
+            print host.cmd('route')
+            print "HOST INTERFACE LIST"
+            intfList = host.intfNames()
+            print intfList
+
+        if result != 0:
+	        print "PING FAILED BETWEEN HOSTS %s"  % (hosts)
+        else:
+            print "PING SUCCESSFUL!!!"
 
     net.stop()
+    return result
 
 if __name__ == '__main__':
+    args = sys.argv
     setLogLevel( 'info' )
-    main()
+    cli = 0
+    if "--cli" in args:
+        cli = 1
+    main(cli)
