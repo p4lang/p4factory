@@ -27,8 +27,10 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 from distutils.version import StrictVersion
 from p4_mininet import P4DockerSwitch
+from time import sleep
+import sys
 
-def main():
+def main(cli=0):
     net = Mininet( controller = None )
 
     # add hosts
@@ -62,11 +64,41 @@ def main():
     h2.setARP( ip = '172.16.102.1', mac = '00:02:00:00:00:01' )
     h1.setDefaultRoute( 'via 172.16.101.1' )
     h2.setDefaultRoute( 'via 172.16.102.1' )
+    result = 0
 
-    CLI( net )
+    if cli:
+        CLI( net )
+    else:
+        sleep(10)
+        hosts = net.hosts
+        print hosts
+
+        # ping hosts
+        print "ping between the hosts"
+        result = net.ping(hosts,30)
+        if result != 0:
+            print "PING FAILED BETWEEN HOSTS %s" % (hosts)
+        else:
+            print "PING SUCCESSFUL"
+
+        # print host arp table & routes
+        for host in hosts:
+            print "arp entries on host"
+            print host.cmd('arp -n')
+            print "host routes"
+            print host.cmd('route')
+            print "host interface list"
+            intfList = host.intfNames()
+            print intfList
 
     net.stop()
+    return result
+
 
 if __name__ == '__main__':
+    args = sys.argv
     setLogLevel( 'info' )
-    main()
+    cli = 0
+    if "--cli" in args:
+        cli = 1
+    main(cli)
