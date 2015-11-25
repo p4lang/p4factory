@@ -34,13 +34,14 @@ endif
 MAKEFILES_DIR := ${P4FACTORY}/makefiles
 
 # This target's P4 name
-export P4_INPUT := ../p4src/switch.p4
+export P4_INPUT := ../../../submodules/switch/p4src/switch.p4
 export P4_NAME := switch
 export P4_PREFIX := dc
 
-SUBMODULES_CLEAN := $(SUBMODULE_SWITCHAPI)
-SUBMODULES_CLEAN += $(SUBMODULE_SWITCHSAI)
-SUBMODULES_CLEAN += $(SUBMODULE_SWITCHLINK)
+SUBMODULES_CLEAN := $(SUBMODULE_SWITCH)
+# SUBMODULES_CLEAN := $(SUBMODULE_SWITCHAPI)
+# SUBMODULES_CLEAN += $(SUBMODULE_SWITCHSAI)
+# SUBMODULES_CLEAN += $(SUBMODULE_SWITCHLINK)
 
 include $(MAKEFILES_DIR)/bmv2_common.mk
 
@@ -65,7 +66,7 @@ endif
 $(p4utils_OBJS_C) : MODULE_INFO := p4utils
 
 
-SWITCHAPI_INC := ${TARGET_ROOT}/../p4src/includes
+SWITCHAPI_INC := ../../../submodules/switch/p4src/includes
 SWITCHAPI_INC += $(BMV2_PD_INC)
 SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHAPI_INC += ${C_INCLUDE_PATH}
