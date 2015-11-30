@@ -21,4 +21,4 @@
 	url = https://github.com/floodlight/oftest
 [submodule "submodules/switch"]
 	path = submodules/switch
-	url = git@github.com:p4lang/switch.git
+	url = https://github.com/p4lang/switch.git
