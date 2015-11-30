@@ -72,29 +72,38 @@ ifndef SUBMODULE_P4C_GRAPHS
   endif
 endif
 
+ifndef SUBMODULE_SWITCH
+  ifdef SUBMODULES
+    SUBMODULE_SWITCH := $(SUBMODULES)/switch
+  else
+    SUBMODULE_SWITCH := $(ROOT)/submodules/switch
+    SUBMODULES_LOCAL += switch
+  endif
+endif
+
 ifndef SUBMODULE_SWITCHAPI
   ifdef SUBMODULES
-    SUBMODULE_SWITCHAPI := $(SUBMODULES)/switchapi
+    SUBMODULE_SWITCHAPI := $(SUBMODULES)/switch/switchapi
   else
-    SUBMODULE_SWITCHAPI := $(ROOT)/submodules/switchapi
+    SUBMODULE_SWITCHAPI := $(ROOT)/submodules/switch/switchapi
     SUBMODULES_LOCAL += switchapi
   endif
 endif
 
 ifndef SUBMODULE_SWITCHSAI
   ifdef SUBMODULES
-    SUBMODULE_SWITCHSAI := $(SUBMODULES)/switchsai
+    SUBMODULE_SWITCHSAI := $(SUBMODULES)/switch/switchsai
   else
-    SUBMODULE_SWITCHSAI := $(ROOT)/submodules/switchsai
+    SUBMODULE_SWITCHSAI := $(ROOT)/submodules/switch/switchsai
     SUBMODULES_LOCAL += switchsai
   endif
 endif
 
 ifndef SUBMODULE_SWITCHLINK
   ifdef SUBMODULES
-    SUBMODULE_SWITCHLINK:= $(SUBMODULES)/switchlink
+    SUBMODULE_SWITCHLINK:= $(SUBMODULES)/switch/switchlink
   else
-	SUBMODULE_SWITCHLINK := $(ROOT)/submodules/switchlink
+	SUBMODULE_SWITCHLINK := $(ROOT)/submodules/switch/switchlink
     SUBMODULES_LOCAL += switchlink
   endif
 endif
