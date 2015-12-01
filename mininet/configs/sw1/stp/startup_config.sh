@@ -9,6 +9,7 @@ brctl addbr br0
 brctl addif br0 swp1
 brctl addif br0 swp2
 brctl addif br0 swp3
+brctl addif br0 swp4
 
 mstpctl addbridge br0
 mstpctl setforcevers br0 rstp
