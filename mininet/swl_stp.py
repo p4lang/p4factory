@@ -69,16 +69,18 @@ def main():
 
     # add links
     if StrictVersion(VERSION) <= StrictVersion('2.2.0') :
-        net.addLink( sw1, h1, port1 = 1 )
-        net.addLink( sw2, h2, port1 = 1 )
+        net.addLink( sw1, h1, port1 = 4 )
+        net.addLink( sw2, h2, port1 = 4 )
+        net.addLink( sw1, sw2, port1 = 1, port2 = 1 )
         net.addLink( sw1, sw3, port1 = 2, port2 = 1 )
         net.addLink( sw1, sw4, port1 = 3, port2 = 1 )
         net.addLink( sw2, sw3, port1 = 2, port2 = 2 )
         net.addLink( sw2, sw4, port1 = 3, port2 = 2 )
         net.addLink( sw3, sw4, port1 = 3, port2 = 3 )
     else:
-        net.addLink( sw1, h1, port1 = 1, fast = False )
-        net.addLink( sw2, h2, port1 = 1, fast = False )
+        net.addLink( sw1, h1, port1 = 4, fast = False )
+        net.addLink( sw2, h2, port1 = 4, fast = False )
+        net.addLink( sw1, sw2, port1 = 1, port2 = 1, fast = False )
         net.addLink( sw1, sw3, port1 = 2, port2 = 1, fast = False )
         net.addLink( sw1, sw4, port1 = 3, port2 = 1, fast = False )
         net.addLink( sw2, sw3, port1 = 2, port2 = 2, fast = False )
