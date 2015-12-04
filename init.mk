@@ -63,15 +63,6 @@ ifndef SUBMODULE_P4C_BM
   endif
 endif
 
-ifndef SUBMODULE_P4C_GRAPHS
-  ifdef SUBMODULES
-    SUBMODULE_P4C_GRAPHS := $(SUBMODULES)/p4c-graphs
-  else
-    SUBMODULE_P4C_GRAPHS := $(ROOT)/submodules/p4c-graphs
-    SUBMODULES_LOCAL += p4c-graphs
-  endif
-endif
-
 ifndef SUBMODULE_SWITCH
   ifdef SUBMODULES
     SUBMODULE_SWITCH := $(SUBMODULES)/switch
