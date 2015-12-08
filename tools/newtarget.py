@@ -106,8 +106,8 @@ def main():
     try:
         os.mkdir(os.path.join(targets_dir, proj_name))
         os.mkdir(os.path.join(targets_dir, proj_name, "p4src"))
-        os.mkdir(os.path.join(targets_dir, proj_name, "of-tests"))
-        os.mkdir(os.path.join(targets_dir, proj_name, "of-tests", "tests"))
+        os.mkdir(os.path.join(targets_dir, proj_name, "tests"))
+        os.mkdir(os.path.join(targets_dir, proj_name, "tests", "ptf-tests"))
         os.mkdir(os.path.join(targets_dir, proj_name, "targets"))
         os.mkdir(os.path.join(targets_dir, proj_name, "targets", "libpd_thrift"))
         os.mkdir(os.path.join(targets_dir, proj_name, "targets", "libtbl_packing"))

@@ -1,0 +1,10 @@
+create libp4.a
+addlib ../../submodules/switch/switchapi/libswitchapi.a
+addlib ../../submodules/switch/switchsai/libswitchsai.a
+addlib build/lib/p4ns_common.a
+addlib build/lib/p4utils.a
+addlib build/lib/bm.a
+addlib build/lib/BMI.a
+save
+end
+

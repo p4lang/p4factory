@@ -1,0 +1,107 @@
+# Config file for automatic testing at travis-ci.org
+
+sudo: required
+
+language: c
+
+# My very smart trick to force inclusion of the veth kernel module
+# (even though we do not use docker at all her)
+services:
+  - docker
+
+# There is probably some redundant stuff in this list. If you find one, remove
+# it 
+addons:
+  apt:
+    sources:
+      - boost-latest
+      - ubuntu-toolchain-r-test
+    packages:
+      - libjudy-dev
+      - libgmp-dev
+      - libpcap-dev
+      - libboost1.55-dev
+      - libboost-test1.55-dev
+      - libboost-program-options1.55-dev
+      - libboost-system1.55-dev
+      - libboost-filesystem1.55-dev
+      - libboost-thread1.55-dev
+      - libboost-test1.55-dev
+      - libevent-dev
+      - automake
+      - libtool
+      - flex 
+      - bison
+      - pkg-config
+      - g++-4.8
+      - libssl-dev
+      - doxygen
+      - git
+      - libedit-dev
+      - libevent-dev
+      - libfreetype6-dev
+      - libhiredis-dev
+      - libpng-dev
+      - libyaml-0-2
+      - libbz2-dev
+      - libnl-route-3-dev
+      - openssl
+      - pkg-config
+      - python-dev
+      - python-matplotlib
+      - python-numpy
+      - python-pip
+      - python-scipy
+      - python-setuptools
+      - python-yaml
+      - redis-server      
+
+# need to replace github ssh references with https
+before_install:
+  - git submodule update --init
+  - cd submodules/p4ofagent/
+  - git submodule update --init
+  - cd submodules/indigo/
+  - find -name ".gitmodules" -type f -exec sed -i 's/git@github.com:/https:\/\/github.com\//' {} \;
+  - git submodule update --init
+  - cd submodules/bigcode/
+  - find -name ".gitmodules" -type f -exec sed -i 's/git@github.com:/https:\/\/github.com\//' {} \;
+  - cd ../../../../../../
+  - git submodule update --init --recursive
+  # following is failing for some reason
+  # - sudo apt-get update -qq
+  - sudo apt-get install ethtool
+  - sudo pip install --upgrade pip
+  - sudo pip install --upgrade thrift
+  - sudo pip install ctypesgen
+  - sudo pip install crc16
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 99
+
+install:
+  - wget https://s3-us-west-2.amazonaws.com/p4lang/thrift_bin.tar.gz
+  - tar -xzvf thrift_bin.tar.gz -C $HOME/
+  - export PATH=$PATH:$HOME/thrift/bin/
+  - export LDFLAGS="$LDFLAGS -L$HOME/thrift/lib"
+  - export CPPFLAGS="$CPPFLAGS -I$HOME/thrift/include"
+  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/thrift/lib
+  - sudo ln -s $HOME/thrift/lib/libthrift-0.9.2.so /usr/local/lib/libthrift.so
+  # our Makefiles use shell, not bash, this is a quick fix
+  - sudo ln -s $HOME/thrift/bin/thrift /usr/local/bin/thrift
+  # for bmv1 tests
+  - sudo ln -s $HOME/thrift/include/thrift /usr/local/include/thrift
+  - bash submodules/bm/build/travis/install-nanomsg.sh
+  - mkdir install_tmp && cd install_tmp/
+  - git clone https://github.com/p4lang/p4-hlir.git && cd p4-hlir && sudo python setup.py install && cd ..
+  - sudo apt-get remove python-scapy
+  - git clone https://github.com/p4lang/scapy-vxlan.git && cd scapy-vxlan && sudo python setup.py install && cd ..
+  - cd .. && sudo rm -rf install_tmp/
+  - sudo ldconfig
+  - sudo pip install -r submodules/p4c-bm/requirements.txt
+  - ./autogen.sh; ./configure
+
+before_script:
+  - cp travis/veth_setup.sh tools/
+  - cd tools; sudo ./veth_setup.sh; sudo ./veth_disable_ipv6.sh; cd ..
+
+script:
+  - sudo ./run_all_tests -j2 --travis # Travis VMs have 1.5 cores

@@ -1,0 +1,34 @@
+# Config file for automatic testing at travis-ci.org
+
+# If I want to switch to building a docker to run the tests, I can use this
+# script instead of the current one
+
+sudo: required
+
+language: c
+
+services:
+  - docker
+
+before_install:
+  - cp travis/veth_setup.sh tools/
+  - git submodule update --init
+  - cd submodules/p4ofagent/
+  - git submodule update --init
+  - cd submodules/indigo/
+  - find -name ".gitmodules" -type f -exec sed -i 's/git@github.com:/https:\/\/github.com\//' {} \;
+  - git submodule update --init
+  - cd submodules/bigcode/
+  - find -name ".gitmodules" -type f -exec sed -i 's/git@github.com:/https:\/\/github.com\//' {} \;
+  - cd ../../../../../../
+  - git submodule update --init --recursive
+
+install:
+  - mkdir /tmp/docker_tmp && mkdir /tmp/docker_tmp/p4factory
+  - cp -rf * /tmp/docker_tmp/p4factory/
+  - cp travis/Dockerfile /tmp/docker_tmp
+  - cp travis/init.py /tmp/docker_tmp/p4factory/submodules/init.py
+  - sudo docker build --no-cache -t testimage /tmp/docker_tmp
+
+script:
+  - sudo docker run --privileged=true testimage /bin/bash -c "cd /p4factory/tools; sudo ./veth_setup.sh; sudo ./veth_disable_ipv6.sh; cd ..; ./autogen.sh; ./configure; sudo ./run_all_tests"

@@ -1,7 +1,0 @@
-/build
-/.*_ts
-/dependmodules.x
-/dc_example.mk
-/*.pcap
-/dc_example
-/of-tests/pd_thrift

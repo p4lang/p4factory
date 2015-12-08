@@ -27,6 +27,15 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 # Resolve submodule dependencies. 
 # Please keep alphabetized
 
+ifndef SUBMODULE_BM
+  ifdef SUBMODULES
+    SUBMODULE_BM := $(SUBMODULES)/bm
+  else
+    SUBMODULE_BM := $(ROOT)/submodules/bm
+    SUBMODULES_LOCAL += bm
+  endif
+endif
+
 ifndef SUBMODULE_OFT_INFRA
   ifdef SUBMODULES
     SUBMODULE_OFT_INFRA := $(SUBMODULES)/oft-infra
@@ -45,12 +54,57 @@ ifndef SUBMODULE_P4C_BEHAVIORAL
   endif
 endif
 
-ifndef SUBMODULE_P4C_GRAPHS
+ifndef SUBMODULE_P4C_BM
   ifdef SUBMODULES
-    SUBMODULE_P4C_GRAPHS := $(SUBMODULES)/p4c-graphs
+    SUBMODULE_P4C_BM := $(SUBMODULES)/p4c-bm
   else
-    SUBMODULE_P4C_GRAPHS := $(ROOT)/submodules/p4c-graphs
-    SUBMODULES_LOCAL += p4c-graphs
+    SUBMODULE_P4C_BM := $(ROOT)/submodules/p4c-bm
+    SUBMODULES_LOCAL += p4c-bm
+  endif
+endif
+
+ifndef SUBMODULE_SWITCH
+  ifdef SUBMODULES
+    SUBMODULE_SWITCH := $(SUBMODULES)/switch
+  else
+    SUBMODULE_SWITCH := $(ROOT)/submodules/switch
+    SUBMODULES_LOCAL += switch
+  endif
+endif
+
+ifndef SUBMODULE_SWITCHAPI
+  ifdef SUBMODULES
+    SUBMODULE_SWITCHAPI := $(SUBMODULES)/switch/switchapi
+  else
+    SUBMODULE_SWITCHAPI := $(ROOT)/submodules/switch/switchapi
+    SUBMODULES_LOCAL += switchapi
+  endif
+endif
+
+ifndef SUBMODULE_SWITCHSAI
+  ifdef SUBMODULES
+    SUBMODULE_SWITCHSAI := $(SUBMODULES)/switch/switchsai
+  else
+    SUBMODULE_SWITCHSAI := $(ROOT)/submodules/switch/switchsai
+    SUBMODULES_LOCAL += switchsai
+  endif
+endif
+
+ifndef SUBMODULE_SWITCHLINK
+  ifdef SUBMODULES
+    SUBMODULE_SWITCHLINK:= $(SUBMODULES)/switch/switchlink
+  else
+	SUBMODULE_SWITCHLINK := $(ROOT)/submodules/switch/switchlink
+    SUBMODULES_LOCAL += switchlink
+  endif
+endif
+
+ifndef SUBMODULE_P4OFAGENT
+  ifdef SUBMODULES
+    SUBMODULE_P4OFAGENT:= $(SUBMODULES)/p4ofagent
+  else
+	SUBMODULE_P4OFAGENT := $(ROOT)/submodules/p4ofagent
+    SUBMODULES_LOCAL += p4ofagent
   endif
 endif
 
@@ -64,14 +118,26 @@ ifdef SUBMODULES_LOCAL
   endif
 endif
 
+export SUBMODULE_BM
 export SUBMODULE_OFT_INFRA
 export SUBMODULE_P4C_BEHAVIORAL
+export SUBMODULE_P4C_BM
 export SUBMODULE_P4C_GRAPHS
+export SUBMODULE_SWITCHAPI
+export SUBMODULE_SWITCHSAI
+export SUBMODULE_SWITCHLINK
+export SUBMODULE_P4OFAGENT
 
 MODULE_DIRS := $(ROOT)/modules
 
 .show-submodules:
+	@echo bm @ $(SUBMODULE_BM)
 	@echo oft_infra @ $(SUBMODULE_OFT_INFRA)
 	@echo p4c_behavioral @ $(SUBMODULE_P4C_BEHAVIORAL)
+	@echo p4c_bm @ $(SUBMODULE_P4C_BM)
 	@echo p4c_graphs @ $(SUBMODULE_P4C_GRAPHS)
+	@echo switchapi @ $(SUBMODULE_SWITCHAPI)
+	@echo switchsai @ $(SUBMODULE_SWITCHSAI)
+	@echo switchlink @ $(SUBMODULE_SWITCHLINK)
+	@echo p4ofagent @ $(SUBMODULE_P4OFAGENT)
 

@@ -57,7 +57,7 @@ class PdCli(cmd.Cmd):
         action_names.append(action_name)
       self.pipe_to("\n".join(action_names), line)
     except Exception as e:
-      self.usage(ie, 'show_actions')
+      self.usage(e, 'show_actions')
 
   def complete_show_actions(self, text, line, begidx, endidx):
     incomplete_word_idx = self.get_incomplete_word_idx(line, begidx)
@@ -91,6 +91,27 @@ class PdCli(cmd.Cmd):
       print >> sys.stderr, e
     except Exception as e:
       self.usage(e, "add_entry")
+
+  def do_set_default_action(self, line):
+    """
+    set_default_action TABLE_NAME ACTION_NAME ACTION_PARAMETERS
+    This funciton sets the default action of a given table.
+    """
+    words = collections.deque(line.split())
+    try:
+      table_name = self.get_table_name(words)
+      (action_name, action_tuple) = self.get_action_name_and_tuple(words, table_name)
+
+      entry_index = self._thrift_client.set_default_action(table_name,
+        action_name, action_tuple)
+
+      print "Default action with handle %d" % entry_index
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "set_default_action")
 
   def complete_add_entry(self, text, line, begidx, endidx):
     incomplete_word_idx = self.get_incomplete_word_idx(line, begidx)
@@ -439,6 +460,158 @@ class PdCli(cmd.Cmd):
     print >> sys.stderr, exception
     print >> sys.stderr, "Try 'help %s' for more information" % command
 
+# Multicast API
+  def do_mc_mgrp_create(self, line):
+    """
+    mc_mgrp_create MGRP_ID
+    This function creates a multicast group with multicast index MGRP_ID.
+    For example: mc_mgrp_create 1
+    """
+    words = collections.deque(line.split())
+    try:
+      mgid = self.get_handle(words, "MGRP_ID")
+      mgrp_hdl = self._thrift_client.mc_mgrp_create(mgid)
+      print "MGRP has created with handle %d" % mgrp_hdl
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "mc_mgrp_create")
+
+  ## TODO - add multiple port and lag support
+  def do_mc_node_create(self, line):
+    """
+    mc_node_create R_ID PORT_MAP LAG_MAP
+    This function creates a multicast node with replication id R_ID and with list of ports defined by PORT_MAP (as a bit vector).
+    Currently only port 0-7 can be configured with this function.
+    For exmaple: mc_node_create 0 30 -1
+    If PORT_MAP or LAG_MAP is -1, their value is not specified.
+    """
+    words = collections.deque(line.split())
+    try:
+      rid = self.get_handle(words, "R_ID")
+      port_map = self.get_handle(words, "PORT_MAP")
+      lag_map = self.get_handle(words, "LAG_MAP")
+      if port_map != -1:
+        ports = chr(port_map) + ('\x00' * 31)
+      else:
+        ports = '\x00' * 32
+      if lag_map != -1:
+        lags = chr(lag_map) + ('\x00' * 31)
+      else:
+        lags = '\x00' * 32
+      l1_hdl = self._thrift_client.mc_node_create(rid, ports, lags)
+      print "Node was created with handle %d" % l1_hdl
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "mc_node_create")
+
+  def do_mc_node_update(self, line):
+    """
+    mc_node_update L1_HDL PORT_MAP LAG_MAP
+    This function updates a multicast node.
+    Currently only port 0-7 can be configured with this function.
+    For example: mc_node_update 1234321 14 -1
+    """
+    words = collections.deque(line.split())
+    try:
+      l1_hdl = self.get_handle(words, "L1_HDL")
+      port_map = self.get_handle(words, "PORT_MAP")
+      lag_map = self.get_handle(words, "LAG_MAP")
+      if port_map != -1:
+        ports = chr(port_map) + ('\x00' * 31)
+      else:
+        ports = '\x00' * 32
+      if lag_map != -1:
+        lags = chr(lag_map) + ('\x00' * 31)
+      else:
+        lags = '\x00' * 32
+      self._thrift_client.mc_node_update(l1_hdl, ports, lags)
+      print "Node has been updated."
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "mc_node_update")
+
+  def do_mc_mgrp_destroy(self, line):
+    """
+    mc_mgrp_destroy MGRP_HDL
+    This function removes multcast group MGRP_HDL
+    For example: mc_mgrp_destroy 1234321
+    """
+    words = collections.deque(line.split())
+    try:
+      mgrp_hdl = self.get_handle(words, "MGRP_HDL")
+      self._thrift_client.mc_mgrp_destroy(mgrp_hdl)
+      print "Multicast group has been destroyed."
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "mc_mgrp_destroy")
+
+  def do_mc_node_destroy(self, line):
+    """
+    mc_node_destroy L1_HDL
+    This function removes node L1_HDL
+    For example: mc_node_destroy 1234321
+    """
+    words = collections.deque(line.split())
+    try:
+      l1_hdl = self.get_handle(words, "L1_HDL")
+      self._thrift_client.mc_l1_node_destroy(l1_hdl)
+      print "Node has been destroyed."
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "mc_node_destroy")
+
+  def do_mc_associate_node(self, line):
+    """
+    mc_associate_node MGRP_HANDLE L1_HANDLE
+    This function associates a node to a multicast tree.
+    For example: mc_associate_node 1234321 1234567
+    """
+    words = collections.deque(line.split())
+    try:
+      mgrp_hdl = self.get_handle(words, "MGRP_HANDLE")
+      l1_hdl = self.get_handle(words, "L1_HANDLE")
+      self._thrift_client.mc_associate_node(mgrp_hdl, l1_hdl)
+      print "Node has been associated to the multicast group"
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "mc_associate_node")
+
+  def do_mc_dissociate_node(self, line):
+    """
+    mc_dissociate_node MGRP_HANDLE L1_HANDLE
+    This function dissociates a node from a multicast tree.
+    For example: mc_dissociate_node 1234321 1234567
+    """
+    words = collections.deque(line.split())
+    try:
+      mgrp_hdl = self.get_handle(words, "MGRP_HANDLE")
+      l1_hdl = self.get_handle(words, "L1_HANDLE")
+      self._thrift_client.mc_associate_node(mgrp_hdl, l1_hdl)
+      print "Node has been dissociated from the multicast group"
+    except NameError as ne:
+      print >> sys.stderr, ne
+    except thrift.protocol.TProtocol.TProtocolException as e:
+      print >> sys.stderr, e
+    except Exception as e:
+      self.usage(e, "mc_dissociate_node")
 
 def main(argv):
   def usage():

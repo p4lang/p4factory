@@ -1,0 +1,88 @@
+<!-- Copyright 2015-present Barefoot Networks, Inc.
+ --
+ -- Licensed under the Apache License, Version 2.0 (the "License");
+ -- you may not use this file except in compliance with the License.
+ -- You may obtain a copy of the License at
+ --
+ --    http://www.apache.org/licenses/LICENSE-2.0
+ --
+ -- Unless required by applicable law or agreed to in writing, software
+ -- distributed under the License is distributed on an "AS IS" BASIS,
+ -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ -- See the License for the specific language governing permissions and
+ -- limitations under the License.
+ -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="lib/bootstrap-3.3.5-dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="lib/bootstrap-3.3.5-dist/css/bootstrap-theme.min.css" />
+    <link rel="stylesheet" type="text/css" href="styles/main.css" />
+  </head>
+
+  <body>
+    <nav class="navbar navbar-inverse">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Network Dashboard</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12" style="min-height:inherit">
+          <div class="panel panel-primary" style="min-height:inherit">
+            <div class="panel-heading">
+              <h3 class="panel-title">Flows</h3>
+            </div>
+            <div class="panel-body" style="min-height:inherit">
+              <div id="chart-packets-filter">
+                <select id="flow-filter" class="form-control">
+                  <option value="all">All flows</option>
+                </select>
+              </div>
+              <div id="network-graph" style="height: 500px; background-color: #DDD"></div>
+              <div id="chart-packets-legend" style="height: 80px"></div>
+              <div id="chart-packets-sw1" style="height: 100px; margin-top:20px;"></div>
+              <div id="chart-packets-sw2" style="height: 100px; margin-top:20px"></div>
+              <div id="chart-packets-sw3" style="height: 100px; margin-top:20px"></div>
+              <div id="chart-packets-sw4" style="height: 100px; margin-top:20px"></div>
+              <div id="chart-packets-x-axis" style="height: 40px; width: 100%"></div>
+              <div id="chart-packets-labels" style="height: 40px; text-align: center; vertical-align:middle; line-height:40px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12" style="min-height:inherit">
+          <div class="panel panel-primary" style="min-height:inherit">
+            <div class="panel-heading">
+              <h3 class="panel-title">Notifications</h3>
+            </div>
+            <div class="panel-body" style="min-height:inherit; height: 200px">
+              <textarea id="notifications" class="form-control" style="height: 100%" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- External library dependencies -->
+    <script type="text/javascript" src="lib/jquery.min.js"></script>
+    <script type="text/javascript" src="lib/bootstrap-3.3.5-dist/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="lib/d3.min.js"></script>
+    <script type="text/javascript" src="lib/highlight.pack.js"></script>
+    <script type="text/javascript" src="lib/cola.v1.min.js"></script>
+    <script type="text/javascript" src="lib/graphlib-dot.min.js"></script>
+
+    <!-- Internal dependencies -->
+    <script type="text/javascript" src="js/helper.js"></script>
+    <script type="text/javascript" src="js/network.js"></script>
+    <script type="text/javascript" src="js/topology-graph.js"></script>
+    <script type="text/javascript" src="js/websocket.js"></script>
+    <script type="text/javascript" src="js/app-state.js"></script>
+    <script type="text/javascript" src="js/time-series.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
+  </body>
+</html>

@@ -1,9 +1,21 @@
 [submodule "submodules/p4c-behavioral"]
 	path = submodules/p4c-behavioral
 	url = https://github.com/p4lang/p4c-behavioral.git
-[submodule "submodules/oft-infra"]
-	path = submodules/oft-infra
-	url = https://github.com/p4lang/oftest.git
-[submodule "submodules/p4c-graphs"]
-	path = submodules/p4c-graphs
-	url = https://github.com/p4lang/p4c-graphs.git
+[submodule "submodules/p4c-bm"]
+	path = submodules/p4c-bm
+	url = https://github.com/p4lang/p4c-bm.git
+[submodule "submodules/bm"]
+	path = submodules/bm
+	url = https://github.com/p4lang/behavioral-model.git
+[submodule "submodules/p4ofagent"]
+	path = submodules/p4ofagent
+	url = https://github.com/p4lang/p4ofagent
+[submodule "submodules/ptf"]
+	path = submodules/ptf
+	url = https://github.com/p4lang/ptf.git
+[submodule "submodules/oftest"]
+	path = submodules/oftest
+	url = https://github.com/floodlight/oftest
+[submodule "submodules/switch"]
+	path = submodules/switch
+	url = https://github.com/p4lang/switch.git

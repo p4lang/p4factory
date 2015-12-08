@@ -41,8 +41,6 @@ include ${MAKEFILES_DIR}/common.mk
 # BM_PARAMS += --plugin="plugin1 plugin2"
 BM_PARAMS += --plugin="sai"
 
-include ${P4FACTORY}/submodules/p4c-behavioral/p4c_bm/plugin/p4c-plugin.mk
-
 sai_THRIFT : ${GEN_THRIFT_PY_MODULE}
 
 
