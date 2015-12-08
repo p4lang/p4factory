@@ -274,7 +274,7 @@ action set_switch(port_number, cpu_port, max_virtual_routers, fdb_table_size, on
 
 table switch {
 	actions {
-		set_switch;
+		set_switch; // default and only action
 	}
 }
 
@@ -301,11 +301,17 @@ counter port_counters {
     direct : port;
 }
 
+
+action drop_pkt() {
+    drop();
+}
+
 table port {
 	reads {
         intrinsic_metadata.ingress_port: exact;
 	}
 	actions {
+        drop_pkt;           // miss action
 		set_in_port;
 //		set_lag_index;
 	}
@@ -332,8 +338,8 @@ action set_vlan(max_learned_address) {
 
 action_profile vlan {
 	actions {
-        set_vlan;
         nop;
+        set_vlan;
 	}
 }
 
@@ -354,7 +360,7 @@ table ports {
     action_profile : vlan;
 }
 
-#define MAC_LEARN_RECIEVER          1024
+#define MAC_LEARN_RECEIVER          1024
 
 field_list mac_learn_digest {
     ingress_metadata.vlan_id;
@@ -364,7 +370,7 @@ field_list mac_learn_digest {
 }
 
 action generate_learn_notify() {
-    generate_digest(MAC_LEARN_RECIEVER, mac_learn_digest);
+    generate_digest(MAC_LEARN_RECEIVER, mac_learn_digest);
 }
 
 table learn_notify {
@@ -544,7 +550,6 @@ table cos_map {
     reads {
         intrinsic_metadata.ingress_port : exact;
         ingress_metadata.qos_selector : exact;
-        ingress_metadata.cos_index : exact;
     }
     actions {
         set_cos_map;
@@ -620,10 +625,8 @@ control ingress {
     /* get the port properties */
     apply(port);
     if(ingress_metadata.oper_status == UP) {
-#if NOT_READY_YET
         /* get the VLAN properties */
-        apply(ports);
-#endif
+//        apply(ports);
         /* router interface properties */
         apply(router_interface);
         /* SMAC check */
@@ -640,21 +643,17 @@ control ingress {
             if((valid(ipv4)) and (ingress_metadata.v4_enable != 0)) {
                 apply(route);
             }
-#if NOT_READY_YET
             if(ingress_metadata.ecmp_nhop != 0) {
                 apply(nexthop);
             }
             else {
-#endif
                 apply(next_hop);
-#if NOT_READY_YET
             }
-#endif
         }
         if(ingress_metadata.routed != 0) {
             apply(neighbor);
         }
-#if 0
+#if NOT_READY_YET 
         apply(ingress_acl);
         apply(qos);
         apply(cos_map);
@@ -692,7 +691,7 @@ table egress_acl {
 
 control egress {
     if(ingress_metadata.oper_status == UP) {
-#if 0
+#if NOT_READY_YET 
         apply(egress_acl);
 #endif
     }
