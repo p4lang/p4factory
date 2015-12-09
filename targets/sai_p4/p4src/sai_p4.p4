@@ -156,6 +156,8 @@ header_type ingress_metadata_t {
         srcPort : 16;
         dstPort : 16;
         router_mac : 1;     // routers' mac
+        // multicast
+        multicast_index: 16;
 	}
 }
 
@@ -330,9 +332,10 @@ action set_unknown_unicast() {
 }
 
 
-action set_vlan(max_learned_address) {
+action set_vlan(max_learned_address, multicast_index) {
     modify_field(ingress_metadata.mac_limit, max_learned_address);
     modify_field(ingress_metadata.vlan_id, vlan.vid);
+    modify_field(ingress_metadata.multicast_index, multicast_index);
 }
 
 
@@ -389,7 +392,10 @@ action fdb_set(type_, port_id) {
     modify_field(ingress_metadata.mac_type, type_);
     modify_field(intrinsic_metadata.ucast_egress_port, port_id);
     modify_field(standard_metadata.egress_spec, port_id);
-    modify_field(ingress_metadata.routed, 0);
+    modify_field(ingress_metadata.multicast_index, 0); // cancel multicast
+}
+
+action flood_to_ports() {
 }
 
 table fdb {
@@ -398,8 +404,8 @@ table fdb {
 		eth.dstAddr : exact;
 	}
 	actions {
+        flood_to_ports;         // miss action - flood to ports of vlan
         fdb_set;
-        // TODO: miss action - flood to vlan
 	}
 }
 
@@ -606,19 +612,30 @@ action set_dmac(dst_mac_address, port_id) {
     modify_field(standard_metadata.egress_spec, port_id);
 }
 
+action set_dmac_vlan(dmac_address, vlan_id, multicast_index) {
+    modify_field(eth.dstAddr, dmac_address);
+    modify_field(eth.srcAddr, ingress_metadata.def_smac);
+	modify_field(ingress_metadata.vlan_id, vlan_id);
+    modify_field(ingress_metadata.multicast_index, multicast_index);
+}
+
+action cpu_redirect() {
+    modify_field(intrinsic_metadata.ucast_egress_port, ingress_metadata.cpu_port);
+    modify_field(standard_metadata.egress_spec, ingress_metadata.cpu_port);
+}
+
 table neighbor {
 	reads {
-		ingress_metadata.vrf : exact;
 		ingress_metadata.ip_dest: exact;
 		ingress_metadata.router_intf: exact;
 	}
 	actions {
-		set_dmac;
+        cpu_redirect;           // miss
+		set_dmac;               // for router interface of type Port
+        set_dmac_vlan;          // for router interface of type VLAN
 	}
 }
 
-// The NOT ready features to be enabled
-// software notify based learning
 
 control ingress {
     apply(switch);
@@ -633,11 +650,7 @@ control ingress {
         if(ingress_metadata.learning != 0) {
             apply(learn_notify);
         }
-        if(ingress_metadata.router_mac == 0) {
-            /* L2 processing */
-            apply(fdb);
-        }
-        else {
+        if(ingress_metadata.router_mac == 1) {
             /* L3 processing */
             apply(virtual_router);
             if((valid(ipv4)) and (ingress_metadata.v4_enable != 0)) {
@@ -650,9 +663,12 @@ control ingress {
                 apply(next_hop);
             }
         }
-        if(ingress_metadata.routed != 0) {
+        if(ingress_metadata.routed == 1) {
             apply(neighbor);
         }
+        /* L2 processing */
+        apply(fdb);
+
 #if NOT_READY_YET 
         apply(ingress_acl);
         apply(qos);
