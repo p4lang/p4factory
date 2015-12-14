@@ -3,15 +3,57 @@ trap 'exit' ERR
 
 sudo apt-get update
 
-sudo apt-get install -y automake bison doxygen ethtool flex g++ git \
-ipython ipython-notebook libany-moose-perl libboost-dev libboost-filesystem-dev \
-libboost-program-options-dev libboost-system-dev libboost-test-dev libbsd-dev \
-libedit-dev libevent-dev libfreetype6-dev libhiredis-dev libjudy-dev libpcap-dev \
-libpng-dev libssl-dev libtool libyaml-0-2 libbz2-dev mininet openssl pkg-config python-dev \
-python-dpkt python-jsonpickle python-imaging-tk python-matplotlib python-nose python-numpy \
-python-pandas python-pip python-pygraph python-pygraphviz python-scipy \
-python-setuptools python-sympy python-yaml redis-server thrift-compiler \
-wireshark libgmp-dev
+sudo apt-get install -y                  \
+    automake                             \
+    bison                                \
+    doxygen                              \
+    ethtool                              \
+    flex                                 \
+    g++                                  \
+    git                                  \
+    ipython                              \
+    ipython-notebook                     \
+    libany-moose-perl                    \
+    libboost-dev                         \
+    libboost-filesystem-dev              \
+    libboost-program-options-dev         \
+    libboost-system-dev                  \
+    libboost-test-dev                    \
+    libboost-thread-dev                  \
+    libbsd-dev                           \
+    libedit-dev                          \
+    libevent-dev                         \
+    libfreetype6-dev                     \
+    libgmp-dev                           \
+    libhiredis-dev                       \
+    libjudy-dev                          \
+    libpcap-dev                          \
+    libpng-dev                           \
+    libssl-dev                           \
+    libtool                              \
+    libyaml-0-2                          \
+    libbz2-dev                           \
+    mininet                              \
+    openssl                              \
+    pkg-config                           \
+    python-dev                           \
+    python-dpkt                          \
+    python-jsonpickle                    \
+    python-imaging-tk                    \
+    python-matplotlib                    \
+    python-nose python-numpy             \
+    python-pandas                        \
+    python-pip                           \
+    python-pygraph                       \
+    python-pygraphviz                    \
+    python-scipy                         \
+    python-setuptools                    \
+    python-sympy                         \
+    python-yaml                          \
+    redis-server                         \
+    thrift-compiler                      \
+    wireshark                            \
+# Do not remove this line!
 
 sudo pip install --upgrade thrift
 sudo pip install tenjin
@@ -40,6 +82,13 @@ cd nanomsg-0.5-beta
 make -j4
 sudo make install
 sudo ldconfig
+cd ..
+
+# Install nnpy
+git clone https://github.com/nanomsg/nnpy.git
+cd nnpy
+sudo pip install cffi
+sudo pip install .
 cd ..
 
 # Install high level interpreter and scapy
