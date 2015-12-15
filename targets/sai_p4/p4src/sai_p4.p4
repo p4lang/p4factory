@@ -16,8 +16,8 @@ limitations under the License.
 /*
     sai_p4.p4
         v 0.1
-	Opencompute Switch Abstraction Interface(SAI) Compatible P4 
-		Realizing SAI (v 0.9.1) through P4 Match-Action abstraction
+    Opencompute Switch Abstraction Interface(SAI) Compatible P4 
+        Realizing SAI (v 0.9.1) through P4 Match-Action abstraction
 
 */
 
@@ -60,9 +60,9 @@ header_type ethernet_t {
 header_type vlan_t {
     fields {
         pcp : 3;
-	    cfi : 1;
-	    vid : 12;
-	    ethType : 16;
+        cfi : 1;
+        vid : 12;
+        ethType : 16;
     }
     //length  4;
     //max_length 4;
@@ -113,7 +113,7 @@ header_type udp_t {
 }
 
 header_type ingress_metadata_t {
-	fields {
+    fields {
         port_lag : 10;
         ip_src : 32;
         ip_dest : 32;
@@ -158,11 +158,11 @@ header_type ingress_metadata_t {
         router_mac : 1;     // routers' mac
         // multicast
         multicast_index: 16;
-	}
+    }
 }
 
 header_type egress_metadata_t {
-	fields {
+    fields {
         mirror_port : 16;
     }
 }
@@ -275,9 +275,9 @@ action set_switch(port_number, cpu_port, max_virtual_routers, fdb_table_size, on
 }
 
 table switch {
-	actions {
-		set_switch; // default and only action
-	}
+    actions {
+        set_switch; // default and only action
+    }
 }
 
 action  set_in_port(port, type_, oper_status, speed, admin_state, default_vlan, default_vlan_priority, ingress_filtering, drop_untagged, drop_tagged, port_loopback_mode, fdb_learning, stp_state, update_dscp, mtu, sflow, flood_storm_control, broadcast_storm_control, multicast_storm_control, global_flow_control, max_learned_address, fdb_learning_limit_violation) {
@@ -309,14 +309,14 @@ action drop_pkt() {
 }
 
 table port {
-	reads {
+    reads {
         intrinsic_metadata.ingress_port: exact;
-	}
-	actions {
+    }
+    actions {
         drop_pkt;           // miss action
-		set_in_port;
-//		set_lag_index;
-	}
+        set_in_port;
+//      set_lag_index;
+    }
 }
 
 action set_flood() {
@@ -340,10 +340,10 @@ action set_vlan(max_learned_address, multicast_index) {
 
 
 action_profile vlan {
-	actions {
+    actions {
         nop;
         set_vlan;
-	}
+    }
 }
 
 
@@ -357,7 +357,7 @@ counter vlan_counters {
 table ports {
     reads {
         vlan : valid;
-		vlan.vid : exact;
+        vlan.vid : exact;
         intrinsic_metadata.ingress_port : exact;
     }
     action_profile : vlan;
@@ -377,12 +377,12 @@ action generate_learn_notify() {
 }
 
 table learn_notify {
-	reads {
+    reads {
         intrinsic_metadata.ingress_port: exact;
-		ingress_metadata.vlan_id : exact;
-		eth.srcAddr : exact;
-	}
-	actions {
+        ingress_metadata.vlan_id : exact;
+        eth.srcAddr : exact;
+    }
+    actions {
         nop;
         generate_learn_notify;
     }
@@ -399,14 +399,14 @@ action flood_to_ports() {
 }
 
 table fdb {
-	reads {
-		ingress_metadata.vlan_id : exact;
-		eth.dstAddr : exact;
-	}
-	actions {
+    reads {
+        ingress_metadata.vlan_id : exact;
+        eth.dstAddr : exact;
+    }
+    actions {
         flood_to_ports;         // miss action - flood to ports of vlan
         fdb_set;
-	}
+    }
 }
 
 action route_set_nexthop(next_hop_id) {
@@ -429,15 +429,15 @@ action route_set_trap(trap_priority) {
 }
 
 table route {
-	reads {
-		ingress_metadata.vrf: exact;
+    reads {
+        ingress_metadata.vrf: exact;
         ipv4.dstAddr : lpm;
-	}
-	actions {
-		route_set_trap;
-		route_set_nexthop;
-		route_set_nexthop_group;
-	}
+    }
+    actions {
+        route_set_trap;
+        route_set_nexthop;
+        route_set_nexthop_group;
+    }
 }
 
 action set_next_hop(type_, ip, router_interface_id) {
@@ -445,12 +445,12 @@ action set_next_hop(type_, ip, router_interface_id) {
 }
 
 table next_hop {
-	reads {
-		ingress_metadata.nhop : exact;
-	}
-	actions {
+    reads {
+        ingress_metadata.nhop : exact;
+    }
+    actions {
         set_next_hop;
-	}
+    }
 }
 
 action set_next_hop_group(next_hop_count, type_, router_interface_id/*next_hop_list*/) {
@@ -516,23 +516,23 @@ action ing_acl_multicast() {
 
 
 table ingress_acl {
-	reads {
-		ingress_metadata.label : exact;
-		ingress_metadata.ip_dest : exact;
-		ingress_metadata.ip_src : exact;
+    reads {
+        ingress_metadata.label : exact;
+        ingress_metadata.ip_dest : exact;
+        ingress_metadata.ip_src : exact;
 /*
         ingress_metadata.srcPort;
         ingress_metadata.dstPort;
 */
-	}
-	actions {
+    }
+    actions {
         ing_acl_drop;
-		ing_acl_set_fields;
-		ing_acl_ingress_mirror;
-		ing_acl_redirect;
-		ing_acl_egress_mirror;
-		ing_acl_multicast;
-	}
+        ing_acl_set_fields;
+        ing_acl_ingress_mirror;
+        ing_acl_redirect;
+        ing_acl_egress_mirror;
+        ing_acl_multicast;
+    }
 }
 
 action set_qos(priority, number_of_cos_classes, port_trust, scheduling_algorithm, scheduling_weight, bandwidth_limit, buffer_limit) {
@@ -540,12 +540,12 @@ action set_qos(priority, number_of_cos_classes, port_trust, scheduling_algorithm
 }
 
 table qos {
-	reads {
-		intrinsic_metadata.ingress_port : exact;
-	}
-	actions {
-		set_qos;
-	}
+    reads {
+        intrinsic_metadata.ingress_port : exact;
+    }
+    actions {
+        set_qos;
+    }
 }
 
 action set_cos_map(cos_value) {
@@ -581,6 +581,9 @@ action router_interface_miss() {
 
 table router_interface {
     reads {
+        vlan : valid;
+        vlan.vid : exact;
+        intrinsic_metadata.ingress_port : exact; // when ignoring port set to 0?
         eth.dstAddr : exact;
     }
     actions {
@@ -615,7 +618,7 @@ action set_dmac(dst_mac_address, port_id) {
 action set_dmac_vlan(dmac_address, vlan_id, multicast_index) {
     modify_field(eth.dstAddr, dmac_address);
     modify_field(eth.srcAddr, ingress_metadata.def_smac);
-	modify_field(ingress_metadata.vlan_id, vlan_id);
+    modify_field(ingress_metadata.vlan_id, vlan_id);
     modify_field(ingress_metadata.multicast_index, multicast_index);
 }
 
@@ -625,15 +628,15 @@ action cpu_redirect() {
 }
 
 table neighbor {
-	reads {
-		ingress_metadata.ip_dest: exact;
-		ingress_metadata.router_intf: exact;
-	}
-	actions {
+    reads {
+        ingress_metadata.ip_dest: exact;
+        ingress_metadata.router_intf: exact;
+    }
+    actions {
         cpu_redirect;           // miss
-		set_dmac;               // for router interface of type Port
+        set_dmac;               // for router interface of type Port
         set_dmac_vlan;          // for router interface of type VLAN
-	}
+    }
 }
 
 
@@ -695,14 +698,14 @@ action eg_acl_copy_to_cpu() {
 
 
 table egress_acl {
-	reads {
-		ingress_metadata.label : exact;
-	}
-	actions {
-		eg_acl_egress_mirror;
-		eg_acl_drop;
-		eg_acl_copy_to_cpu;
-	}
+    reads {
+        ingress_metadata.label : exact;
+    }
+    actions {
+        eg_acl_egress_mirror;
+        eg_acl_drop;
+        eg_acl_copy_to_cpu;
+    }
 }
 
 control egress {
