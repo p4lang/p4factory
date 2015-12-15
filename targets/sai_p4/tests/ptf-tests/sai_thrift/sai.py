@@ -78,7 +78,7 @@ class L2Test(sai_base_test.ThriftInterfaceDataPlane):
         list1 = []
         list1.append(sai_attribute(id = 3, value = sai_attribute_value(u32=3)))
         list1.append(sai_attribute(id = 1, value = sai_attribute_value(u32=10)))
-        self.client.create_router_interface(sai_p4_sai_router_interface_match_spec_t("00:12:34:56:78:90"), sai_attribute_list(api_id=9, attr_list=list1))
+        self.client.create_router_interface(sai_p4_sai_router_interface_match_spec_t(0, 0, 3, "00:12:34:56:78:90"), sai_attribute_list(api_id=9, attr_list=list1))
 
         list1 = []
         list1.append(sai_attribute(id = 2, value = sai_attribute_value(u32=2)))
@@ -102,7 +102,7 @@ class L2Test(sai_base_test.ThriftInterfaceDataPlane):
 
         # delete entries
         self.client.delete_fdb(sai_p4_sai_fdb_match_spec_t(0, "00:11:11:11:11:11"))
-        self.client.delete_router_interface(sai_p4_sai_router_interface_match_spec_t("00:12:34:56:78:90"))
+        self.client.delete_router_interface(sai_p4_sai_router_interface_match_spec_t(0, 0, 3, "00:12:34:56:78:90"))
         self.client.delete_port(sai_p4_sai_port_match_spec_t(1))
         self.client.delete_switch()
 
@@ -121,9 +121,9 @@ class L3Test(sai_base_test.ThriftInterfaceDataPlane):
         self.client.create_port(sai_p4_sai_port_match_spec_t(1), sai_attribute_list(api_id=2, attr_list=list1))
 
         list1 = []
-        list1.append(sai_attribute(id = 3, value = sai_attribute_value(u32=3)))
+        list1.append(sai_attribute(id = 3, value = sai_attribute_value(u32=1)))
         list1.append(sai_attribute(id = 1, value = sai_attribute_value(u32=10)))
-        self.client.create_router_interface(sai_p4_sai_router_interface_match_spec_t("00:12:34:56:78:90"), sai_attribute_list(api_id=9, attr_list=list1))
+        self.client.create_router_interface(sai_p4_sai_router_interface_match_spec_t(0, 0, 1, "00:12:34:56:78:90"), sai_attribute_list(api_id=9, attr_list=list1))
 
         list1 = []
         list1.append(sai_attribute(id = 1, value = sai_attribute_value(u32=1)))
@@ -142,7 +142,7 @@ class L3Test(sai_base_test.ThriftInterfaceDataPlane):
         list1 = []
         list1.append(sai_attribute(id = 2, value = sai_attribute_value(u32=3)))
         list1.append(sai_attribute(id = 1, value = sai_attribute_value(u32=2)))
-        self.client.create_neighbor(sai_p4_sai_neighbor_match_spec_t(10, 0x0a000001, 2), sai_attribute_list(api_id=10, attr_list=list1))
+        self.client.create_neighbor(sai_p4_sai_neighbor_match_spec_t(0x0a000001, 2), sai_attribute_list(api_id=10, attr_list=list1))
 
         pkt = simple_tcp_packet(eth_dst='00:12:34:56:78:90',
                                 eth_src='00:22:22:22:22:22',
@@ -160,11 +160,11 @@ class L3Test(sai_base_test.ThriftInterfaceDataPlane):
         finally:
             print 'done'
         # delete the entries
-        self.client.delete_neighbor(sai_p4_sai_neighbor_match_spec_t(10, 0x0a000001, 2))
+        self.client.delete_neighbor(sai_p4_sai_neighbor_match_spec_t(0x0a000001, 2))
         self.client.delete_next_hop(sai_p4_sai_next_hop_match_spec_t(1))
         self.client.delete_route(sai_p4_sai_route_match_spec_t(10, 0x0a000001, 32))
         self.client.delete_virtual_router(sai_p4_sai_virtual_router_match_spec_t(10))
-        self.client.delete_router_interface(sai_p4_sai_router_interface_match_spec_t("00:12:34:56:78:90"))
+        self.client.delete_router_interface(sai_p4_sai_router_interface_match_spec_t(0, 0, 1, "00:12:34:56:78:90"))
 
         self.client.delete_port(sai_p4_sai_port_match_spec_t(1))
         self.client.delete_switch()
