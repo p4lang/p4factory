@@ -206,8 +206,9 @@ class ThriftClient(object):
             raise ValueError("Cannot parse %s to TType.STRING" % parameter)
           array = []
           array.append(v % 256)
+          v /= 256
           width -= 1
-          while v / 256 > 0:
+          while v > 0:
             array.append(v % 256)
             v /= 256
             width -= 1
