@@ -205,9 +205,6 @@ class ThriftClient(object):
             print "A valid input is 8w0x55 for a 64-bit field set to 0x55"
             raise ValueError("Cannot parse %s to TType.STRING" % parameter)
           array = []
-          array.append(v % 256)
-          v /= 256
-          width -= 1
           while v > 0:
             array.append(v % 256)
             v /= 256
