@@ -49,13 +49,6 @@ cd p4-hlir
 sudo python setup.py install
 cd ..
 
-# Install P4 dependency graph generator
-
-git clone https://github.com/p4lang/p4c-graphs.git
-cd p4c-graphs
-sudo python setup.py install
-cd ..
-
 sudo apt-get remove python-scapy
 git clone https://github.com/p4lang/scapy-vxlan.git
 cd scapy-vxlan

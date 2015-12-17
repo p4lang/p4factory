@@ -354,7 +354,7 @@ table ports {
     action_profile : vlan;
 }
 
-#define MAC_LEARN_RECIEVER          1024
+#define MAC_LEARN_RECEIVER          1024
 
 field_list mac_learn_digest {
     ingress_metadata.vlan_id;
@@ -364,7 +364,7 @@ field_list mac_learn_digest {
 }
 
 action generate_learn_notify() {
-    generate_digest(MAC_LEARN_RECIEVER, mac_learn_digest);
+    generate_digest(MAC_LEARN_RECEIVER, mac_learn_digest);
 }
 
 table learn_notify {

@@ -34,15 +34,12 @@ endif
 MAKEFILES_DIR := ${P4FACTORY}/makefiles
 
 # This target's P4 name
-export P4_INPUT := p4src/switch.p4
+export P4_INPUT := $(ROOT)/submodules/switch/p4src/switch.p4
 export P4_NAME := switch
 export P4_PREFIX := dc
 
 export TARGET_PARAMS := -DRATE_LIMITING
-
-SUBMODULES_CLEAN := $(SUBMODULE_SWITCHAPI)
-SUBMODULES_CLEAN += $(SUBMODULE_SWITCHSAI)
-SUBMODULES_CLEAN += $(SUBMODULE_SWITCHLINK)
+SUBMODULES_CLEAN := $(SUBMODULE_SWITCH)
 SUBMODULES_CLEAN += $(SUBMODULE_P4OFAGENT)
 
 include ${MAKEFILES_DIR}/common.mk
@@ -52,7 +49,7 @@ include ${MAKEFILES_DIR}/docker.mk
 ###################################
 #BUILD SWITCH API
 ###################################
-SWITCHAPI_INC := ${TARGET_ROOT}/p4src/includes
+SWITCHAPI_INC := ${ROOT}/submodules/switch/p4src/includes
 SWITCHAPI_INC += ${TARGET_ROOT}/build/inc
 SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHAPI_INC += ${C_INCLUDE_PATH}
@@ -87,7 +84,7 @@ switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
 	@rm -r ${THRIFT_TEMP_DIR}/switch_api/
 	@cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
-bm-switchapi : export LIB_SWITCHAPI_ENABLE=1
+bm-switchapi : export LIB_SWITCHAPI_ENABLE=1 GLOBAL_CFLAGS += -DUSE_SWITCHAPI=1
 bm-switchapi : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE=1 ${TARGET_PARAMS}
 bm-switchapi : $(BM_LIB) $(SWITCHAPI_LIB)
 bm-switchapi : ${bm-switchapi_BINARY} switchapi_THRIFT
@@ -96,10 +93,11 @@ bm-switchapi : ${bm-switchapi_BINARY} switchapi_THRIFT
 ###################################
 #BUILD SWITCH SAI
 ###################################
-SWITCHSAI_INC := ${TARGET_ROOT}/p4src/includes
+SWITCHSAI_INC := ${ROOT}/submodules/switch/p4src/includes
 SWITCHSAI_INC += ${TARGET_ROOT}/build/inc
 SWITCHSAI_INC += $(SUBMODULE_SWITCHAPI)/inc
 SWITCHSAI_INC += $(P4FACTORY)/modules/p4utils/module/inc
+SWITCHSAI_INC += $(ROOT)/modules/BMI/module/inc
 SWITCHSAI_INC += ${C_INCLUDE_PATH}
 SWITCHSAI_INC += ${TARGET_ROOT}
 SWITCHSAI_INC := $(subst $(space),:,$(SWITCHSAI_INC))
@@ -189,9 +187,9 @@ ${P4OFAGENT_LIB} : FORCE $(BM_LIB)
 BINARY := bm-p4ofagent
 ${BINARY}_LINK_LIBS := $(P4OFAGENT_LIB) $(BM_PLUGIN_LIBS) \
 	$(SWITCHAPI_LIB) ${bm-p4ofagent_LINK_LIBS} ${bm_LINK_LIBS} \
-	${BM_LIB} ${p4utils_LIB} 
+	${BM_LIB} ${p4utils_LIB}
 bm-p4ofagent : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
-	-lJudy -lthrift -ledit $(P4OFAGENT_LIB) 
+	-lJudy -lthrift -ledit $(P4OFAGENT_LIB)
 
 include ${MAKEFILES_DIR}/bin.mk
 ifndef bm-p4ofagent_BINARY
@@ -208,7 +206,7 @@ bm-p4ofagent : GLOBAL_CFLAGS += -DENABLE_PLUGIN_OPENFLOW
 bm-p4ofagent : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE
 bm-p4ofagent : GLOBAL_CFLAGS += -I$(SUBMODULE_P4OFAGENT)
 bm-p4ofagent : $(BM_LIB) $(SWITCHAPI_LIB) $(P4OFAGENT_LIB) switchapi_THRIFT
-bm-p4ofagent : ${bm-p4ofagent_BINARY} 
+bm-p4ofagent : ${bm-p4ofagent_BINARY}
 	cp ${bm-p4ofagent_BINARY} behavioral-model
 
 all: bm

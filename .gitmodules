@@ -1,18 +1,6 @@
 [submodule "submodules/p4c-behavioral"]
 	path = submodules/p4c-behavioral
 	url = https://github.com/p4lang/p4c-behavioral.git
-[submodule "submodules/p4c-graphs"]
-	path = submodules/p4c-graphs
-	url = https://github.com/p4lang/p4c-graphs.git
-[submodule "submodules/switchapi"]
-	path = submodules/switchapi
-	url = https://github.com/p4lang/switchapi.git
-[submodule "submodules/switchsai"]
-	path = submodules/switchsai
-	url = https://github.com/p4lang/switchsai.git
-[submodule "submodules/switchlink"]
-	path = submodules/switchlink
-	url = https://github.com/p4lang/switchlink.git
 [submodule "submodules/p4c-bm"]
 	path = submodules/p4c-bm
 	url = https://github.com/p4lang/p4c-bm.git
@@ -28,3 +16,6 @@
 [submodule "submodules/oftest"]
 	path = submodules/oftest
 	url = https://github.com/floodlight/oftest
+[submodule "submodules/switch"]
+	path = submodules/switch
+	url = https://github.com/p4lang/switch.git
