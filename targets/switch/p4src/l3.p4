@@ -142,7 +142,11 @@ action rewrite_ipv4_unicast_mac(smac) {
 
 action rewrite_ipv4_multicast_mac(smac) {
     modify_field(ethernet.srcAddr, smac);
+#ifndef __TARGET_BMV2__
     modify_field(ethernet.dstAddr, 0x01005E000000, 0xFFFFFF800000);
+#else
+    modify_field(ethernet.dstAddr, 0x01005E000000 & 0xFFFFFF800000);
+#endif
     add_to_field(ipv4.ttl, -1);
 }
 
@@ -154,7 +158,11 @@ action rewrite_ipv6_unicast_mac(smac) {
 
 action rewrite_ipv6_multicast_mac(smac) {
     modify_field(ethernet.srcAddr, smac);
+#ifndef __TARGET_BMV2__
     modify_field(ethernet.dstAddr, 0x333300000000, 0xFFFF00000000);
+#else
+    modify_field(ethernet.dstAddr, 0x333300000000 & 0xFFFF00000000);
+#endif
     add_to_field(ipv6.hopLimit, -1);
 }
 
