@@ -158,6 +158,8 @@ header_type ingress_metadata_t {
         router_mac : 1;     // routers' mac
         // multicast
         multicast_index: 16;
+        use_vlan : 1;       // use vlan router interface
+        input_port : 16;    // Input port metadata
     }
 }
 
@@ -171,6 +173,8 @@ header_type egress_metadata_t {
 header ethernet_t eth;
 header vlan_t vlan;
 header ipv4_t ipv4;
+header udp_t udp;
+header tcp_t tcp;
 
 field_list ipv4_checksum_list {
         ipv4.version;
@@ -229,6 +233,8 @@ metadata ingress_intrinsic_metadata_t intrinsic_metadata;
 #define VLAN_TYPE 0x8100
 #define IPV4_TYPE 0x0800
 
+#define IP_PROTOCOLS_TCP    6
+#define IP_PROTOCOLS_UDP    17
 
 parser start {
     return parse_eth;
@@ -250,9 +256,27 @@ parser parse_vlan {
     return ingress;
 }
 
+parser parse_udp {
+    extract(udp);
+    set_metadata(ingress_metadata.srcPort, latest.srcPort);
+    set_metadata(ingress_metadata.dstPort, latest.dstPort);
+    return ingress;
+}
+
+parser parse_tcp {
+    extract(tcp);
+    set_metadata(ingress_metadata.srcPort, latest.srcPort);
+    set_metadata(ingress_metadata.dstPort, latest.dstPort);
+    return ingress;
+}
+
 parser parse_ipv4 {
     extract(ipv4);
-    return ingress;
+    return select (ipv4.protocol) {
+        IP_PROTOCOLS_TCP : parse_tcp;
+        IP_PROTOCOLS_UDP : parse_udp;
+        default : ingress;
+    }
 }
 
 
@@ -296,6 +320,7 @@ action  set_in_port(port, type_, oper_status, speed, admin_state, default_vlan, 
     modify_field(ingress_metadata.update_dscp, update_dscp);
     modify_field(ingress_metadata.mtu, mtu);
     modify_field(ingress_metadata.vlan_id, default_vlan);
+    modify_field(ingress_metadata.input_port, intrinsic_metadata.ingress_port);
 }
 
 counter port_counters {
@@ -336,6 +361,8 @@ action set_vlan(max_learned_address, multicast_index) {
     modify_field(ingress_metadata.mac_limit, max_learned_address);
     modify_field(ingress_metadata.vlan_id, vlan.vid);
     modify_field(ingress_metadata.multicast_index, multicast_index);
+    modify_field(ingress_metadata.use_vlan, 1);
+    modify_field(ingress_metadata.input_port, 0);
 }
 
 
@@ -495,6 +522,13 @@ table nexthop {
 }
 
 
+action ing_acl_permit() {
+}
+
+action ing_acl_log() {
+    // send log packet to CPU/hostinterface
+}
+
 action ing_acl_drop() {
     drop();
 }
@@ -518,14 +552,19 @@ action ing_acl_multicast() {
 table ingress_acl {
     reads {
         ingress_metadata.label : exact;
+        ipv4.dstAddr : ternary;
+        ipv4.srcAddr : ternary;
+
+/*
         ingress_metadata.ip_dest : exact;
         ingress_metadata.ip_src : exact;
-/*
         ingress_metadata.srcPort;
         ingress_metadata.dstPort;
 */
     }
     actions {
+        ing_acl_permit;
+        ing_acl_log;
         ing_acl_drop;
         ing_acl_set_fields;
         ing_acl_ingress_mirror;
@@ -579,11 +618,10 @@ action router_interface_miss() {
     modify_field(ingress_metadata.router_mac, 0);
 }
 
-table router_interface {
+#if 0
+table router_interface_vlan {
     reads {
-        vlan : valid;
         vlan.vid : exact;
-        intrinsic_metadata.ingress_port : exact; // when ignoring port set to 0?
         eth.dstAddr : exact;
     }
     actions {
@@ -591,6 +629,34 @@ table router_interface {
         router_interface_miss;
     }
 }
+
+table router_interface_port {
+    reads {
+        intrinsic_metadata.ingress_port : exact;
+        eth.dstAddr : exact;
+    }
+    actions {
+        set_router_interface;
+        router_interface_miss;
+    }
+}
+#else
+
+
+table router_interface {
+    reads {
+        ingress_metadata.use_vlan : exact;
+        ingress_metadata.vlan_id : exact;   // if use_vlan == 1 use this
+        ingress_metadata.input_port : exact; // if use_vlan == 0 use this
+        eth.dstAddr : exact;
+    }
+    actions {
+        set_router_interface;
+        router_interface_miss;
+    }
+}
+
+#endif
 
 
 action set_router(admin_v4_state, admin_v6_state, src_mac_address, violation_ttl1_action, violation_ip_options) {
@@ -648,7 +714,16 @@ control ingress {
         /* get the VLAN properties */
 //        apply(ports);
         /* router interface properties */
+#if 0
+        if(ingress_metadata.vlan_id == 1) {
+            apply(router_interface_vlan);
+        }
+        else {
+            apply(router_interface_port);
+        }
+#else
         apply(router_interface);
+#endif
         /* SMAC check */
         if(ingress_metadata.learning != 0) {
             apply(learn_notify);
