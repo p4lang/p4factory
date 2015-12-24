@@ -128,9 +128,9 @@ main(int argc, char* argv[])
     add_to_rpc_server(pd_server_cookie);
 
     p4_pd_init();
-    p4_pd_basic_routing_init("ipc:///tmp/test_bm_learning.ipc",
-		  "ipc:///tmp/test_bm_ageing.ipc");
-    p4_pd_basic_routing_assign_device(0, 10001);
+    p4_pd_basic_routing_init();
+    p4_pd_basic_routing_assign_device(0, "ipc:///tmp/bmv2-0-notifications.ipc",
+                                      10001);
 
     while (1) pause();
 
