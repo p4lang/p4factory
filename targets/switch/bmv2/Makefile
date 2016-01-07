@@ -54,33 +54,20 @@ LIB_DIR := ${TARGET_ROOT}/build/
 MAKE_DIR := ${LIB_DIR}
 include ${MAKEFILES_DIR}/makedir.mk
 
-# Special p4 utils case:
-MODULE_BASE_DIR := $(P4FACTORY)
-
-MODULE := p4utils
-MODULE_LIB := $(LIB_DIR)/p4utils.a
-include $(MAKEFILES_DIR)/module.mk
-ifndef p4utils_OBJS_C
-  $(error No object files defined in p4utils_OBJS_C)
-endif
-$(p4utils_OBJS_C) : MODULE_INFO := p4utils
-
-
 SWITCHAPI_INC := ../../../submodules/switch/p4src/includes
 SWITCHAPI_INC += $(BMV2_PD_INC)
-SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHAPI_INC += ${C_INCLUDE_PATH}
 SWITCHAPI_INC += ${TARGET_ROOT}
 SWITCHAPI_INC := $(subst $(space),:,$(SWITCHAPI_INC))
 
-SWITCHAPI_LIB := $(SUBMODULE_SWITCHAPI)/libswitchapi.a
+SWITCHAPI_LIB := $(SUBMODULE_SWITCHAPI)/.libs/libswitchapi.a
 SWITCHAPI_SRC_DIR := $(SUBMODULE_SWITCHAPI)/src
 ${SWITCHAPI_LIB} : bmv2-pd FORCE $(BM_LIB)
 	@${MAKE} -C $(SUBMODULE_SWITCHAPI) C_INCLUDE_PATH=$(SWITCHAPI_INC) \
 		CPLUS_INCLUDE_PATH=$(SWITCHAPI_INC)
 
 BINARY := drivers-switchapi
-${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} $(BUILD_DIR)/main.o ${p4utils_LIB} $(PD_LIBS)
+${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} $(BUILD_DIR)/main.o $(PD_LIBS)
 drivers-switchapi : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
 	-lJudy -lthrift -ledit
 include ${MAKEFILES_DIR}/bin.mk
@@ -114,7 +101,7 @@ drivers-switchapi : ${drivers-switchapi_BINARY} switchapi_THRIFT
 
 SWITCHSAI_INC += $(SWITCHAPI_INC):$(SUBMODULE_SWITCHAPI)/inc
 
-SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/libswitchsai.a
+SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/.libs/libswitchsai.a
 SWITCHSAI_SRC_DIR := $(SUBMODULE_SWITCHSAI)/src
 ${SWITCHSAI_LIB} : FORCE $(BM_LIB)
 	@${MAKE} -C $(SUBMODULE_SWITCHSAI) C_INCLUDE_PATH=$(SWITCHSAI_INC)

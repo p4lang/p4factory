@@ -36,8 +36,13 @@ parser.add_argument('--jobs', '-j', type=int, required=False,
                     help='Number of jobs when running make')
 parser.add_argument('--no-bmv2', action='store_true', default=False,
                     help='Disable BMv2 tests')
+parser.add_argument('--no-bmv1', action='store_true', default=False,
+                    help='Disable BMv1 tests')
 parser.add_argument('--travis', action='store_true', default=False,
                     help='Skip some tests because of travis time limit')
+parser.add_argument('--test-type', type=str, default='all',
+                    help='Run specific test suite')
+
 
 args = parser.parse_args()
 
@@ -346,16 +351,26 @@ def main():
     check_ifaces()
 
     if not args.no_bmv2:
-        bmv2_pd_tests()
-        bmv2_switchapi_test()
-        bmv2_switchsai_test()
-        ifaces_up_down()
+        if args.test_type == 'pd' or args.test_type == 'all':
+            bmv2_pd_tests()
+        if args.test_type == 'api' or args.test_type == 'all':
+            bmv2_switchapi_test()
+        if args.test_type == 'sai' or args.test_type == 'all':
+            bmv2_switchsai_test()
+        if args.test_type == 'intf' or args.test_type == 'all':
+            ifaces_up_down()
 
-    pd_tests()
-    switchapi_test()
-    switchsai_test()
-    openflow_test()
-    sai_p4_test()
+    if not args.no_bmv1:
+        if args.test_type == 'pd' or args.test_type == 'all':
+            pd_tests()
+        if args.test_type == 'api' or args.test_type == 'all':
+            switchapi_test()
+        if args.test_type == 'sai' or args.test_type == 'all':
+            switchsai_test()
+        if args.test_type == 'oflow' or args.test_type == 'all':
+            openflow_test()
+        if args.test_type == 'saip4' or args.test_type == 'all':
+            sai_p4_test()
 
     print "**************************************"
 

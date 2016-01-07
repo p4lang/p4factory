@@ -14,9 +14,9 @@ Setting up the environment
 
             sudo apt-get install linux-generic-lts-vivid
 
-  * Install docker (important: do NOT do "apt-get install docker" or "apt-get install docker.io" ... if docker.io is already installed you may need to apt-get remove it...)
-
-            curl -sSL https://get.docker.com/ | sh
+  * Install docker by following the official docker [instructions](http://docs.docker.com/engine/installation/
+ubuntulinux/). (Important: do NOT do "apt-get install docker" or "apt-get install docker.io" ... if docker.io 
+is already installed you may need to apt-get remove it...)
 
   * Install other dependencies
 
