@@ -77,7 +77,6 @@ THRIFT_DEP_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
 THRIFT_SERVICE_NAMES := switch_api_rpc
 include ${MAKEFILES_DIR}/thrift-py.mk
 
-$(info gen thrift py mod [$(GEN_THRIFT_PY_MODULE)])
 switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE}
 	@echo "Copying python thrift files"
 	@mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
