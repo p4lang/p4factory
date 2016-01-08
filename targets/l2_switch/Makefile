@@ -41,7 +41,7 @@ $(BINARY)_LINK_LIBS := $(P4OFAGENT_LIB) $(BM_PLUGIN_LIBS) \
 	$(bm-p4ofagent_LINK_LIBS) $(bm_LINK_LIBS) \
 	$(BM_LIB) $(p4utils_LIB)
 bm-p4ofagent : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
-    -lJudy -lthrift -ledit $(P4OFAGENT_LIB)
+    -lJudy -lthrift -ledit $(P4OFAGENT_LIB) -lrt
 
 include $(MAKEFILES_DIR)/bin.mk
 ifndef bm-p4ofagent_BINARY
