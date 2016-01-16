@@ -90,6 +90,8 @@ install:
   # for bmv1 tests
   - sudo ln -s $HOME/thrift/include/thrift /usr/local/include/thrift
   - bash submodules/bm/build/travis/install-nanomsg.sh
+  - sudo ldconfig
+  - bash submodules/bm/build/travis/install-nnpy.sh
   - mkdir install_tmp && cd install_tmp/
   - git clone https://github.com/p4lang/p4-hlir.git && cd p4-hlir && sudo python setup.py install && cd ..
   - sudo apt-get remove python-scapy
