@@ -208,7 +208,7 @@ def bmv2_one_test(target, test_script="./run_tests.py",
     logfd = open(logfile, 'w')
     bm_proc = Popen(cmd, stdout = logfd, stderr = subprocess.STDOUT)
 
-    time.sleep(1)
+    time.sleep(5)
 
     bmv2_exes.add(drivers_exe)
     cmd = ['./' + drivers_exe]
