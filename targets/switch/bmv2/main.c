@@ -79,8 +79,8 @@ extern int start_switch_api_packet_driver(void);
 #endif /* SWITCHAPI_ENABLE */
 
 #ifdef SWITCHSAI_ENABLE
-#define SWITCH_SAI_THRIFT_RPC_SERVER_PORT 9092
-extern int start_p4_sai_thrift_rpc_server(int port);
+#define SWITCH_SAI_THRIFT_RPC_SERVER_PORT "9092"
+extern int start_p4_sai_thrift_rpc_server(char *port);
 #endif /* SWITCHSAI_ENABLE */
 
 static void

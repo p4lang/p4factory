@@ -17,6 +17,8 @@ limitations under the License.
 #ifndef _BMI_PORT_
 #define _BMI_PORT_
 
+#include <stdbool.h>
+
 typedef struct bmi_port_s bmi_port_t;
 
 typedef struct bmi_port_mgr_s bmi_port_mgr_t;
@@ -37,6 +39,9 @@ int bmi_port_send(bmi_port_mgr_t *port_mgr,
 int bmi_port_interface_add(bmi_port_mgr_t *port_mgr,
 			   const char *ifname, int port_num,
 			   const char *pcap_dump);
+
+int
+bmi_port_interface_is_up(bmi_port_mgr_t *port_mgr, int port_num, bool *is_up);
 
 int bmi_port_interface_remove(bmi_port_mgr_t *port_mgr, int port_num);
 

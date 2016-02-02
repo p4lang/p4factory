@@ -14,12 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <fcntl.h>
 #include <pthread.h>
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "bmi_interface.h"
 #include "BMI/bmi_port.h"
@@ -41,6 +44,8 @@ typedef struct bmi_port_mgr_s {
   pthread_t select_thread;
   pthread_mutex_t lock;
 } bmi_port_mgr_t;
+
+bmi_port_mgr_t* g_port_mgr = NULL;
 
 static inline int port_in_use(bmi_port_t *port) {
   return (port->bmi != NULL);
@@ -116,6 +121,7 @@ int bmi_port_create_mgr(bmi_port_mgr_t **port_mgr) {
   pthread_create(&port_mgr_->select_thread, NULL, run_select, port_mgr_);
 
   *port_mgr = port_mgr_;
+  g_port_mgr = *port_mgr;
   return 0;
 }
 
@@ -167,6 +173,38 @@ int bmi_port_interface_add(bmi_port_mgr_t *port_mgr,
   return 0;
 }
 
+int
+bmi_port_interface_is_up(bmi_port_mgr_t *port_mgr, int port_num, bool *is_up) {
+  if(!port_num_valid(port_num)) return -1;
+
+  bmi_port_t *port = get_port(port_mgr, port_num);
+  if(!port_in_use(port)) return -1;
+
+  char c = 0;
+  char path[1024] = {0};
+  sprintf(path, "/sys/class/net/%s/operstate", port->ifname);
+
+  int fd = open(path, O_RDONLY);
+  if (-1 == fd) {
+      perror("open");
+      return -1;
+  }
+  /* File should contain either "up" or "down", just read the first letter
+   * of the word. */
+  if (read(fd, &c, 1) != 1) {
+      perror("read");
+      return -1;
+  }
+  close(fd);
+  if (c == 'u') {
+    (*is_up) = true;
+  }
+  else {
+    (*is_up) = false;
+  }
+  return 0;
+}
+
 int bmi_port_interface_remove(bmi_port_mgr_t *port_mgr, int port_num) {
   if(!port_num_valid(port_num)) return -1;
 
@@ -202,6 +240,6 @@ int bmi_port_destroy_mgr(bmi_port_mgr_t *port_mgr) {
   pthread_mutex_destroy(&port_mgr->lock);
       
   free(port_mgr);
-
+  g_port_mgr = NULL;
   return 0;
 }

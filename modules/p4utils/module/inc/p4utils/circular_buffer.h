@@ -26,4 +26,7 @@ void *cb_read_with_wait(circular_buffer_t *cb, const struct timeval *timeout);
 
 void cb_resize(circular_buffer_t *cb, const int new_size, cb_cleanup cb_cleanup_function);
 
+// used to simulate q_full condition for UT - not real q full
+int cb_qfull(circular_buffer_t *cb);
+
 #endif

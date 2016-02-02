@@ -20,6 +20,7 @@ docker-image :
 	@cp -rf ${P4FACTORY}/* /tmp/docker_tmp/p4factory
 	@cp /tmp/docker_tmp/init.py /tmp/docker_tmp/p4factory/submodules/init.py
 	@cp /tmp/docker_tmp/start.sh /tmp/docker_tmp/p4factory/tools/start.sh
+	@cp /tmp/docker_tmp/startv2.sh /tmp/docker_tmp/p4factory/tools/startv2.sh
 	@cp /tmp/docker_tmp/bm_start.sh /tmp/docker_tmp/p4factory/tools/bm_start.sh
 	@echo -n "RUN cd /p4factory ; ./autogen.sh ; ./configure ; " \
 		>> /tmp/docker_tmp/Dockerfile

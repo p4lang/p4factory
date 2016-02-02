@@ -42,7 +42,7 @@ limitations under the License.
 #include <arpa/inet.h>
 
 #ifdef ENABLE_PLUGIN_OPENFLOW
-    #include "p4ofagent/p4ofagent.h"
+#include "p4ofagent/p4ofagent.h"
 #endif /* ENABLE_PLUGIN_OPENFLOW */
 
 TAILQ_HEAD(interfaces_head, entry) interfaces;
@@ -103,14 +103,14 @@ struct sigaction old_action_SIGINT;
     } while (0)
 
 #ifdef SWITCHAPI_ENABLE
-int switch_api_init(int device, unsigned int num_ports);
+extern int switch_api_init(int device, unsigned int num_ports);
 extern int start_switch_api_rpc_server(void);
 extern int start_switch_api_packet_driver(void);
 #endif /* SWITCHAPI_ENABLE */
 
 #ifdef SWITCHSAI_ENABLE
-#define SWITCH_SAI_THRIFT_RPC_SERVER_PORT 9092
-extern int start_p4_sai_thrift_rpc_server(int port);
+#define SWITCH_SAI_THRIFT_RPC_SERVER_PORT "9092"
+extern int start_p4_sai_thrift_rpc_server(char *port);
 #endif /* SWITCHSAI_ENABLE */
 
 #ifdef SWITCHLINK_ENABLE
@@ -269,11 +269,11 @@ parse_options(int argc, char **argv)
       OPT_NOPCAP,
       OPT_PDSERVER,
       OPT_NOVETH,
+      OPT_PPS,
+      OPT_QDEPTH,
       OPT_OFIP,
       OPT_OFIPV6,
-      OPT_IFPORT,
-      OPT_PPS,
-      OPT_QDEPTH
+      OPT_IFPORT
     };
     static struct option long_options[] = {
       {"verbose", no_argument, 0, 'v' },
@@ -288,11 +288,11 @@ parse_options(int argc, char **argv)
       {"pd-server", required_argument, 0, OPT_PDSERVER },
       {"no-pcap", no_argument, 0, OPT_NOPCAP },
       {"no-veth", no_argument, 0, OPT_NOVETH },
+      {"pps", required_argument, 0, OPT_PPS },
+      {"qdepth", required_argument, 0, OPT_QDEPTH },
       {"of-ip", required_argument, 0, OPT_OFIP },
       {"of-ipv6", no_argument, 0, OPT_OFIPV6 },
       {"ifport", required_argument, 0, OPT_IFPORT},
-      {"pps", required_argument, 0, OPT_PPS },
-      {"qdepth", required_argument, 0, OPT_QDEPTH },
       {0, 0, 0, 0 }
     };
     int c = getopt_long(argc, argv, "vtl:i:h",
@@ -339,6 +339,12 @@ parse_options(int argc, char **argv)
     case OPT_NOVETH:
       no_veth = true;
       break;
+    case OPT_PPS:
+      bm_pps = atoi(optarg);
+      break;
+    case OPT_QDEPTH:
+      bm_qdepth = atoi(optarg);
+      break;
     case OPT_OFIP:
       of_controller_str = strdup (optarg);
       break;
@@ -350,12 +356,6 @@ parse_options(int argc, char **argv)
       wpe->name = strdup(strtok(optarg, ":"));
       wpe->port_num = atoi(strtok(NULL, ":"));
       TAILQ_INSERT_TAIL(&if_with_ports, wpe, entries);
-      break;
-    case OPT_PPS:
-      bm_pps = atoi(optarg);
-      break;
-    case OPT_QDEPTH:
-      bm_qdepth = atoi(optarg);
       break;
     case 'h':
     case '?':
@@ -475,7 +475,6 @@ main(int argc, char* argv[])
 
     /* Start up the PD RPC server */
     CHECK(start_p4_pd_rpc_server(pd_server_addr.port));
-
 
     /* Start up the API RPC server */
 #ifdef SWITCHAPI_ENABLE

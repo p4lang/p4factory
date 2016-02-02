@@ -116,7 +116,7 @@ ifndef drivers-switchsai_BINARY
 endif
 
 SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../tests/pd_thrift/switch_sai_thrift
-SWITCHSAI_HEADER_FILES_DIR := $(SUBMODULE_SWITCHSAI)/submodules/ocpsai/sai/inc
+SWITCHSAI_HEADER_FILES_DIR := $(SUBMODULE_SWITCHSAI)/submodules/SAI/inc
 THRIFT_INPUT_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_DEP_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_SERVICE_NAMES := switch_sai_rpc

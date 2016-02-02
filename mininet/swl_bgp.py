@@ -17,6 +17,7 @@
 ##############################################################################
 # Topology with two switches and two hosts with BGP
 #
+#       2ffe:0101::/64          2ffe:0010::/64         2ffe:0102::/64
 #       172.16.101.0/24         172.16.10.0/24         172.16.102.0./24
 #  h1 ------------------- sw1 ------------------ sw2------- -------------h2
 #     .5               .1     .1               .2   .1                  .5
@@ -30,7 +31,7 @@ from p4_mininet import P4DockerSwitch
 from time import sleep
 import sys
 
-def main(cli=0):
+def main(cli=0, ipv6=0):
     net = Mininet( controller = None )
 
     # add hosts
@@ -59,9 +60,16 @@ def main(cli=0):
 
     net.start()
 
-    # configure hosts
+    # hosts configuration - ipv4
     h1.setDefaultRoute( 'via 172.16.101.1' )
     h2.setDefaultRoute( 'via 172.16.102.1' )
+
+    if ipv6:
+        # hosts configuration - ipv6
+        h1.setIP6('2ffe:0101::5', 64, 'h1-eth0')
+        h2.setIP6('2ffe:0102::5', 64, 'h2-eth0')
+        h1.setDefaultRoute( 'via 2ffe:0101::1', True )
+        h2.setDefaultRoute( 'via 2ffe:0102::1', True )
 
     sw1.cmd( 'service quagga start')
     sw2.cmd( 'service quagga start')
@@ -82,6 +90,20 @@ def main(cli=0):
         print "PING BETWEEN THE HOSTS"
         result = net.ping(hosts,30)
 
+        if result != 0:
+            print "PING FAILED BETWEEN HOSTS %s"  % (hosts)
+        else:
+            print "PING SUCCESSFUL!!!"
+
+        if ipv6:
+            # ping6 hosts
+            print "PING6 BETWEEN THE HOSTS"
+            result = net.ping6(hosts, 30)
+            if result != 0:
+                print "PING6 FAILED BETWEEN HOSTS %s" % (hosts)
+            else:
+                print "PING6 SUCCESSFUL!!!"
+
         # print host arp table & routes
         for host in hosts:
             print "ARP ENTRIES ON HOST"
@@ -92,10 +114,6 @@ def main(cli=0):
             intfList = host.intfNames()
             print intfList
 
-        if result != 0:
-            print "PING FAILED BETWEEN HOSTS %s"  % (hosts)
-        else:
-            print "PING SUCCESSFUL!!!"
 
     net.stop()
     return result
@@ -104,6 +122,11 @@ if __name__ == '__main__':
     args = sys.argv
     setLogLevel( 'info' )
     cli = 0
+    ipv6 = 0
     if "--cli" in args:
         cli = 1
-    main(cli)
+
+    if "--ipv6" in args:
+        ipv6 = 1
+
+    main(cli, ipv6)

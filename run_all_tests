@@ -133,7 +133,11 @@ def one_test(target, test_script="./run_tests.py",
 
     time.sleep(5)
 
-    test_dir = os.path.join("tests", test_subdir)
+    if target == "switch":
+        test_dir = os.path.join("..", "..", "submodules", "switch",
+                                "tests", test_subdir)
+    else:
+        test_dir = os.path.join("tests", test_subdir)
     cmd = ['sudo', test_script, '--test-dir', test_dir]
     if extra_args:
         cmd.append(extra_args)
@@ -229,7 +233,11 @@ def bmv2_one_test(target, test_script="./run_tests.py",
     # I consider it is a success. I need to take care of this.
     @timeout(600)
     def run_that_test():
-        test_dir = os.path.join("tests", test_subdir)
+        if target == "switch":
+            test_dir = os.path.join("..", "..", "submodules", "switch",
+                                    "tests", test_subdir)
+        else:
+            test_dir = os.path.join("tests", test_subdir)
         cmd = [test_script, '--test-dir', test_dir]
         print ' '.join(cmd)
         return subprocess.call(cmd)

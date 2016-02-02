@@ -21,7 +21,7 @@ limitations under the License.
 #include <sys/time.h>
 
 #include <p4utils/circular_buffer.h>
- 
+
 /* Circular buffer object */
 struct circular_buffer_s {
   int size;   /* maximum number of elements */
@@ -33,8 +33,25 @@ struct circular_buffer_s {
   pthread_mutex_t lock;
   pthread_cond_t cond_nonfull;
   pthread_cond_t cond_nonempty;
+  int dod_pkt_counter_;
 };
- 
+#ifndef RATE_LIMITING
+// global variable to simulate pkt drop
+static int simulate_tail_drop = 1;
+#else
+static int simulate_tail_drop = 0;
+#endif
+
+int
+cb_qfull(circular_buffer_t *cb)
+{
+    // for testing return qfull for every 10th pkt w/ deflect-on-drop flag set
+    // This function is called only when this flag is set
+    // Find a back-door to enable / disable this
+    // XXX is cb per thread or do we need a lock
+    return (int)(simulate_tail_drop && ((++cb->dod_pkt_counter_ % 10) == 0));
+}
+
 circular_buffer_t *cb_init(int size, cb_write_behavior_t wb, cb_read_behavior_t rb) {
   circular_buffer_t *cb = malloc(sizeof(circular_buffer_t));
   assert(size > 0);
@@ -49,7 +66,7 @@ circular_buffer_t *cb_init(int size, cb_write_behavior_t wb, cb_read_behavior_t 
   pthread_cond_init(&cb->cond_nonempty, NULL);
   return cb;
 }
- 
+
 void cb_destroy(circular_buffer_t *cb) {
   pthread_cond_destroy(&cb->cond_nonfull);
   pthread_cond_destroy(&cb->cond_nonempty);
@@ -95,13 +112,13 @@ int cb_write(circular_buffer_t *cb, void* elem) {
   int end = (cb->start + cb->count) % cb->size;
   cb->elems[end] = elem;
   ++cb->count;
-  if (cb->write_behavior == CB_WRITE_BLOCK) {
+  if (cb->read_behavior == CB_READ_BLOCK) {
     pthread_cond_signal(&cb->cond_nonempty);
   }
   pthread_mutex_unlock(&cb->lock);
   return 1;
 }
- 
+
 void *cb_read(circular_buffer_t *cb) {
   pthread_mutex_lock(&cb->lock);
 
@@ -118,7 +135,7 @@ void *cb_read(circular_buffer_t *cb) {
   void *elem = cb->elems[cb->start];
   cb->start = (cb->start + 1) % cb->size;
   --cb->count;
-  if (cb->read_behavior == CB_READ_BLOCK) {
+  if (cb->write_behavior == CB_WRITE_BLOCK) {
     pthread_cond_signal(&cb->cond_nonfull);
   }
   pthread_mutex_unlock(&cb->lock);
