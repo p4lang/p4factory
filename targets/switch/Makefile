@@ -118,7 +118,7 @@ ifndef bm-switchsai_BINARY
 endif
 
 SWITCHSAI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/tests/pd_thrift/switch_sai_thrift
-SWITCHSAI_HEADER_FILES_DIR := $(SUBMODULE_SWITCHSAI)/submodules/ocpsai/sai/inc
+SWITCHSAI_HEADER_FILES_DIR := $(SUBMODULE_SWITCHSAI)/submodules/SAI/inc
 THRIFT_INPUT_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_DEP_FILES := ${SWITCHSAI_SRC_DIR}/switch_sai.thrift
 THRIFT_SERVICE_NAMES := switch_sai_rpc
@@ -157,7 +157,7 @@ ${SWITCHLINK_LIB} : FORCE
 BINARY := bm-switchlink
 ${BINARY}_LINK_LIBS := ${bm-switchsai_LINK_LIBS} ${SWITCHLINK_LIB}
 bm-switchlink : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis -lJudy -lthrift \
-	$(shell pkg-config --libs libnl-3.0)
+	$(shell pkg-config --libs libnl-route-3.0)
 include ${MAKEFILES_DIR}/bin.mk
 ifndef bm-switchlink_BINARY
 	$(error Output binary not defined in bm-switchlink_BINARY)

@@ -133,7 +133,11 @@ def one_test(target, test_script="./run_tests.py",
 
     time.sleep(5)
 
-    test_dir = os.path.join("tests", test_subdir)
+    if target == "switch":
+        test_dir = os.path.join("..", "..", "submodules", "switch",
+                                "tests", test_subdir)
+    else:
+        test_dir = os.path.join("tests", test_subdir)
     cmd = ['sudo', test_script, '--test-dir', test_dir]
     if extra_args:
         cmd.append(extra_args)
@@ -229,7 +233,11 @@ def bmv2_one_test(target, test_script="./run_tests.py",
     # I consider it is a success. I need to take care of this.
     @timeout(600)
     def run_that_test():
-        test_dir = os.path.join("tests", test_subdir)
+        if target == "switch":
+            test_dir = os.path.join("..", "..", "submodules", "switch",
+                                    "tests", test_subdir)
+        else:
+            test_dir = os.path.join("tests", test_subdir)
         cmd = [test_script, '--test-dir', test_dir]
         print ' '.join(cmd)
         return subprocess.call(cmd)
@@ -260,6 +268,7 @@ def pd_tests():
         one_test(target)
 
     one_test("l2_switch")
+    if args.travis: return
     one_test("switch", test_subdir=os.path.join("ptf-tests", "pd-tests"))
 
 def bmv2_pd_tests():
@@ -292,6 +301,7 @@ def bmv2_switchapi_test():
     del os.environ["BMV2_TEST"]
 
 def switchsai_test():
+    if args.travis: return
     one_test("switch", test_subdir=os.path.join("ptf-tests", "sai-tests"),
              do_make_clean=False, make_tgt="bm-switchsai")
 

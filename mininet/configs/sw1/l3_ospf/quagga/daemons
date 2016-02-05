@@ -24,7 +24,7 @@
 zebra=yes
 bgpd=no
 ospfd=yes
-ospf6d=no
+ospf6d=yes
 ripd=no
 ripngd=no
 isisd=no

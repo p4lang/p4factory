@@ -27,7 +27,7 @@ sudo apt-get install -y                  \
     libgmp-dev                           \
     libhiredis-dev                       \
     libjudy-dev                          \
-    libnl-3-dev                          \
+    libnl-route-3-dev                    \
     libpcap-dev                          \
     libpng-dev                           \
     libssl-dev                           \

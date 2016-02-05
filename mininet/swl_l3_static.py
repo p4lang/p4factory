@@ -17,6 +17,7 @@
 ##############################################################################
 # Topology with two switches and two hosts with static routes
 #
+#       2ffe:0101::/64          2ffe:0010::/64         2ffe:0102::/64
 #       172.16.101.0/24         172.16.10.0/24         172.16.102.0./24
 #  h1 ------------------- sw1 ------------------ sw2------- -------------h2
 #     .5               .1     .1               .2   .1                  .5
@@ -30,7 +31,7 @@ from p4_mininet import P4DockerSwitch
 from time import sleep
 import sys
 
-def main(cli=0):
+def main(cli=0, ipv6=0):
     net = Mininet( controller = None )
 
     # add hosts
@@ -59,11 +60,21 @@ def main(cli=0):
 
     net.start()
 
-    # configure hosts
+    # hosts configuration - ipv4
     h1.setARP( ip = '172.16.101.1', mac = '00:01:00:00:00:01' )
     h2.setARP( ip = '172.16.102.1', mac = '00:02:00:00:00:01' )
+
     h1.setDefaultRoute( 'via 172.16.101.1' )
     h2.setDefaultRoute( 'via 172.16.102.1' )
+
+    if ipv6:
+        # hosts configuration - ipv6
+        h1.setIP6('2ffe:0101::5', 64, 'h1-eth0')
+        h2.setIP6('2ffe:0102::5', 64, 'h2-eth0')
+
+        h1.setDefaultRoute('via 2ffe:0101::1', True)
+        h2.setDefaultRoute('via 2ffe:0102::1', True)
+
     result = 0
 
     if cli:
@@ -75,11 +86,18 @@ def main(cli=0):
 
         # ping hosts
         print "ping between the hosts"
-        result = net.ping(hosts,30)
+        result = net.ping(hosts, 30)
         if result != 0:
             print "PING FAILED BETWEEN HOSTS %s" % (hosts)
         else:
             print "PING SUCCESSFUL"
+
+        if ipv6:
+            result = net.ping6(hosts, 30)
+            if result != 0:
+                print "PING6 FAILED BETWEEN HOSTS %s" % (hosts)
+            else:
+                print "PING6 SUCCESSFUL"
 
         # print host arp table & routes
         for host in hosts:
@@ -99,6 +117,11 @@ if __name__ == '__main__':
     args = sys.argv
     setLogLevel( 'info' )
     cli = 0
+    ipv6 = 0
     if "--cli" in args:
         cli = 1
-    main(cli)
+
+    if "--ipv6" in args:
+        ipv6 = 1
+
+    main(cli, ipv6)
