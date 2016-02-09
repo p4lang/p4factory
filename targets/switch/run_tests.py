@@ -21,8 +21,9 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--test-dir", required=False,
-                    default=os.path.join("tests", "ptf-tests", "pd-tests"),
-                    help="directory containing the tests (default tests/ptf-tests/pd-tests)")
+                    default=os.path.join("..", "..", "submodules", "switch",
+                                         "tests", "ptf-tests", "pd-tests"),
+                    help="directory containing the tests (default ../../submodules/switch/tests/ptf-tests/pd-tests)")
 args, unknown_args = parser.parse_known_args()
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
