@@ -21,9 +21,9 @@ sudo apt-get install -y                  \
     libboost-test-dev                    \
     libboost-thread-dev                  \
     libbsd-dev                           \
-    libcffi-dev                          \
     libedit-dev                          \
     libevent-dev                         \
+    libffi-dev                           \
     libfreetype6-dev                     \
     libgmp-dev                           \
     libhiredis-dev                       \
