@@ -23,6 +23,7 @@ sudo apt-get install -y                  \
     libbsd-dev                           \
     libedit-dev                          \
     libevent-dev                         \
+    libffi-dev                           \
     libfreetype6-dev                     \
     libgmp-dev                           \
     libhiredis-dev                       \
