@@ -161,7 +161,8 @@ class ThriftClient(object):
     return self.get_get_next_entry_handles_function(table_name)(self._session_handle, self._dev_target.dev_id, entry_handle, n)
 
   def show_entry(self, table_name, entry_handle):
-    return self.get_show_entry_function(table_name)(self._session_handle, self._dev_target.dev_id, entry_handle)
+    # 4096 is the max_length for returned string
+    return self.get_show_entry_function(table_name)(self._session_handle, self._dev_target.dev_id, entry_handle, 4096)
 
   def get_match_spec(self, table_name, match_spec_tuple):
     match_spec_class = self.get_spec_class(table_name, ThriftClient.MATCH_SPEC_T)
