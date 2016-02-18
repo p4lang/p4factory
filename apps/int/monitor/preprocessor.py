@@ -94,5 +94,6 @@ if __name__ == '__main__':
     cmd = "dst " + self_ip + " and udp and port 4790 "
     sniff(
         filter = cmd,
-        prn = lambda x: handle_packet(x, self_ip)
+        prn = lambda x: handle_packet(x, self_ip),
+        store = 0	
     )
