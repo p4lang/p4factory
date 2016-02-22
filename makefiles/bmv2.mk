@@ -9,11 +9,11 @@ $(BMV2_PD_DIR):
 
 bmv2-pd: $(P4_INPUT) | $(BMV2_PD_DIR)
 	@echo $(BUILD_DIR)
-	$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV)
-	$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV) 'DESTDIR=$(BUILD_DIR)' install
+	$(MAKE) -C $(SUBMODULE_P4C_BM)/ $(BMV2_PD_ENV)
+	$(MAKE) -C $(SUBMODULE_P4C_BM)/ $(BMV2_PD_ENV) 'DESTDIR=$(BUILD_DIR)' install
 
-BMV2_PD_INC := $(BUILD_DIR)/bmv2_pd/include/p4_pd/
-BMV2_PD_INC += $(BUILD_DIR)/bmv2_pd/include/pdfixed/
+BMV2_PD_INC := $(BUILD_DIR)/bmv2_pd/include/p4c_bm/p4_pd/
+BMV2_PD_INC += $(BUILD_DIR)/bmv2_pd/include/p4c_bm/pdfixed/
 
 BMV2_PD_LIB_DIR := $(BUILD_DIR)/bmv2_pd/lib/
 
@@ -36,7 +36,7 @@ bmv2 :$(BMV2_EXE) $(BMV2_JSON)
 
 bmv2-clean:
 	$(MAKE) -C $(SUBMODULE_BM) clean
-	$(MAKE) -C $(SUBMODULE_P4C_BM)/pd_mk/ $(BMV2_PD_ENV) clean
+	$(MAKE) -C $(SUBMODULE_P4C_BM)/ $(BMV2_PD_ENV) clean
 	rm -f $(BMV2_EXE) $(BMV2_JSON)
 
 .PHONY: bmv2-pd bmv2-pd-sane bmv2-clean bmv2 $(BMV2_EXE)
