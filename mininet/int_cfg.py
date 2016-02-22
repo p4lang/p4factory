@@ -201,7 +201,6 @@ class NetworkManager():
         h = self.net.get(l.node2)
         port = sw.port_cfgs[l.port1]
         h.cmd("route add default gw %s" % port.ip)
-        h.cmd("arp -s %s %s" % (port.ip, port.mac))
 
   def configSwitches(self):
     for s in self.switch_cfgs.values():
