@@ -72,22 +72,29 @@ def setup_bd(client, conn_mgr):
     ifindices = [1, 2]
 
     for ifindex in ifindices:
-        action_spec = dc_set_bd_action_spec_t(
+        action_spec = dc_set_bd_properties_action_spec_t(
                                 action_bd=0,
                                 action_vrf=0,
                                 action_rmac_group=0,
-                                action_ipv4_unicast_enabled=True,
-                                action_ipv6_unicast_enabled=True,
                                 action_bd_label=0,
+                                action_ipv4_unicast_enabled=True,
+                                action_ipv6_unicast_enabled=False,
+                                action_ipv4_multicast_enabled=False,
+                                action_ipv6_multicast_enabled=False,
                                 action_igmp_snooping_enabled=0,
                                 action_mld_snooping_enabled=0,
                                 action_ipv4_urpf_mode=0,
                                 action_ipv6_urpf_mode=0,
                                 action_stp_group=0,
+                                action_mrpf_group=0,
+                                action_ipv4_mcast_key_type=0,
+                                action_ipv4_mcast_key=0,
+                                action_ipv6_mcast_key_type=0,
+                                action_ipv6_mcast_key=0,
                                 action_stats_idx=0,
                                 action_learning_enabled=0)
         
-        mbr_hdl = client.bd_action_profile_add_member_with_set_bd(
+        mbr_hdl = client.bd_action_profile_add_member_with_set_bd_properties(
                                 sess_hdl, dev_tgt,
                                 action_spec)
         match_spec = dc_port_vlan_mapping_match_spec_t(
