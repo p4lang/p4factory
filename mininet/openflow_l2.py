@@ -40,6 +40,8 @@ import argparse
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--controller-ip', help='IPv4 address of openflow controller',
                     type=str, action="store", required=True)
+parser.add_argument('--cli', help='IPv4 address of openflow controller',
+                    action="store_true", default=False, required=False)
 
 parser_args = parser.parse_args()
 
@@ -189,8 +191,39 @@ def main():
 
     print "Ready !"
 
-    CLI( net )
+    result = 0
+    if parser_args.cli:
+        CLI( net )
+    else:
+        time.sleep(3)
+
+        node_values = net.values()
+        print node_values
+
+        hosts = net.hosts
+        print hosts
+
+        # ping hosts
+        print "PING BETWEEN THE HOSTS"
+        result = net.ping(hosts,30)
+
+        # print host arp table & routes
+        for host in hosts:
+            print "ARP ENTRIES ON HOST"
+            print host.cmd('arp -n')
+            print "HOST ROUTES"
+            print host.cmd('route')
+            print "HOST INTERFACE LIST"
+            intfList = host.intfNames()
+            print intfList
+
+        if result != 0:
+                print "PING FAILED BETWEEN HOSTS %s"  % (hosts)
+        else:
+            print "PING SUCCESSFUL!!!"
+
     net.stop()
+    return result
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
