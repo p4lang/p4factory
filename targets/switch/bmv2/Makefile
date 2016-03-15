@@ -54,17 +54,16 @@ LIB_DIR := ${TARGET_ROOT}/build/
 MAKE_DIR := ${LIB_DIR}
 include ${MAKEFILES_DIR}/makedir.mk
 
-SWITCHAPI_INC := ../../../submodules/switch/p4src/includes
-SWITCHAPI_INC += $(BMV2_PD_INC)
+SWITCHAPI_INC := $(BMV2_PD_INC)
 SWITCHAPI_INC += ${C_INCLUDE_PATH}
 SWITCHAPI_INC += ${TARGET_ROOT}
 SWITCHAPI_INC := $(subst $(space),:,$(SWITCHAPI_INC))
 
-SWITCHAPI_LIB := $(SUBMODULE_SWITCHAPI)/.libs/libswitchapi.a
+SWITCHAPI_LIB := $(SUBMODULE_SWITCHAPI)/libswitchapi.a
 SWITCHAPI_SRC_DIR := $(SUBMODULE_SWITCHAPI)/src
 ${SWITCHAPI_LIB} : bmv2-pd FORCE $(BM_LIB)
 	@${MAKE} -C $(SUBMODULE_SWITCHAPI) C_INCLUDE_PATH=$(SWITCHAPI_INC) \
-		CPLUS_INCLUDE_PATH=$(SWITCHAPI_INC)
+		CPPFLAGS=-DBMV2 CPLUS_INCLUDE_PATH=$(SWITCHAPI_INC)
 
 BINARY := drivers-switchapi
 ${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} $(BUILD_DIR)/main.o $(PD_LIBS)
@@ -101,15 +100,17 @@ drivers-switchapi : ${drivers-switchapi_BINARY} switchapi_THRIFT
 
 SWITCHSAI_INC += $(SWITCHAPI_INC):$(SUBMODULE_SWITCHAPI)/inc
 
-SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/.libs/libswitchsai.a
+SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/libswitchsai.a
 SWITCHSAI_SRC_DIR := $(SUBMODULE_SWITCHSAI)/src
 ${SWITCHSAI_LIB} : FORCE $(BM_LIB)
-	@${MAKE} -C $(SUBMODULE_SWITCHSAI) C_INCLUDE_PATH=$(SWITCHSAI_INC)
+	@${MAKE} -C $(SUBMODULE_SWITCHSAI) C_INCLUDE_PATH=$(SWITCHSAI_INC) \
+		CPPFLAGS=-DBMV2
 
 BINARY := drivers-switchsai
 ${BINARY}_LINK_LIBS := ${drivers-switchapi_LINK_LIBS} ${SWITCHSAI_LIB}
 drivers-switchsai : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
-	-lJudy -lthrift -ledit
+	-lJudy -lthrift -ledit \
+	$(SUBMODULE_SWITCHAPI)/third-party/tommyds/.libs/libtommyds.a
 include ${MAKEFILES_DIR}/bin.mk
 ifndef drivers-switchsai_BINARY
 	$(error Output binary not defined in drivers-switchsai_BINARY)
