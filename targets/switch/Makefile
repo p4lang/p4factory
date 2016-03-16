@@ -49,8 +49,7 @@ include ${MAKEFILES_DIR}/docker.mk
 ###################################
 #BUILD SWITCH API
 ###################################
-SWITCHAPI_INC := ${ROOT}/submodules/switch/p4src/includes
-SWITCHAPI_INC += ${TARGET_ROOT}/build/inc
+SWITCHAPI_INC := ${TARGET_ROOT}/build/inc
 SWITCHAPI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHAPI_INC += ${C_INCLUDE_PATH}
 SWITCHAPI_INC += ${TARGET_ROOT}
@@ -93,20 +92,19 @@ bm-switchapi : ${bm-switchapi_BINARY} switchapi_THRIFT
 ###################################
 #BUILD SWITCH SAI
 ###################################
-SWITCHSAI_INC := ${ROOT}/submodules/switch/p4src/includes
-SWITCHSAI_INC += ${TARGET_ROOT}/build/inc
-SWITCHSAI_INC += $(SUBMODULE_SWITCHAPI)/inc
+SWITCHSAI_INC := ${TARGET_ROOT}/build/inc
 SWITCHSAI_INC += $(P4FACTORY)/modules/p4utils/module/inc
 SWITCHSAI_INC += $(ROOT)/modules/BMI/module/inc
 SWITCHSAI_INC += ${C_INCLUDE_PATH}
 SWITCHSAI_INC += ${TARGET_ROOT}
+SWITCHSAI_INC += $(SUBMODULE_SWITCHSAI)/submodules/SAI/inc
 SWITCHSAI_INC := $(subst $(space),:,$(SWITCHSAI_INC))
 
 SWITCHSAI_LIB := $(SUBMODULE_SWITCHSAI)/libswitchsai.a
 SWITCHSAI_SRC_DIR := $(SUBMODULE_SWITCHSAI)/src
 ${SWITCHSAI_LIB} : FORCE $(BM_LIB)
 	@${MAKE} -C $(SUBMODULE_SWITCHSAI) libswitchsai.a \
-		AM_CPPFLAGS=-DSAI_BMLIB C_INCLUDE_PATH=$(SWITCHSAI_INC)
+		CPPFLAGS=-DSAI_BMLIB C_INCLUDE_PATH=$(SWITCHSAI_INC)
 
 BINARY := bm-switchsai
 ${BINARY}_LINK_LIBS := ${bm-switchapi_LINK_LIBS} ${SWITCHSAI_LIB}

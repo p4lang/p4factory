@@ -20,7 +20,7 @@ $(BUILD_DIR)/main.o: $(TARGET_ROOT)/main.c bmv2-pd
 	@echo Compiling : $(notdir $@)
 	$(VERBOSE)gcc -o $@ $(GLOBAL_INCLUDES) $(GLOBAL_CFLAGS) -c $<
 
-PD_LIBS := -L$(BMV2_PD_LIB_DIR)/ -Wl,-rpath=$(BMV2_PD_LIB_DIR) -lpd -lpdfixed -lpdthrift -lpdfixedthrift
+PD_LIBS := -L$(BMV2_PD_LIB_DIR)/ -Wl,-rpath=$(BMV2_PD_LIB_DIR) -lbmpd -lbmpdfixed -lbmpdthrift -lbmpdfixedthrift
 
 $(PD_LIBS): FORCE
 
