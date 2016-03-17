@@ -68,7 +68,8 @@ ${SWITCHAPI_LIB} : bmv2-pd FORCE $(BM_LIB)
 BINARY := drivers-switchapi
 ${BINARY}_LINK_LIBS := ${SWITCHAPI_LIB} $(BUILD_DIR)/main.o $(PD_LIBS)
 drivers-switchapi : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
-	-lJudy -lthrift -ledit
+	-lJudy -lthrift -ledit \
+	$(SUBMODULE_SWITCHAPI)/third-party/tommyds/.libs/libtommyds.a
 include ${MAKEFILES_DIR}/bin.mk
 ifndef drivers-switchapi_BINARY
 	$(error Output binary not defined in drivers-switchapi_BINARY)
