@@ -19,6 +19,7 @@ BMV2_PD_LIB_DIR := $(BUILD_DIR)/bmv2_pd/lib/
 
 BMV2_EXE := $(TARGET_ROOT)/$(P4_NAME)_bmv2
 
+BMV2_THRIFT_FIXED_PY_DIR = $(BUILD_DIR)/bmv2_pd/share/p4c_bm/pdfixed/gen-py/
 BMV2_THRIFT_PY_DIR = $(BUILD_DIR)/bmv2_pd/share/gen-py/
 
 $(BMV2_EXE):

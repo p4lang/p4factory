@@ -40,6 +40,7 @@ include ${MAKEFILES_DIR}/makedir.mk
 drivers : bmv2-pd
 drivers : ${drivers_BINARY} FORCE
 	cp -r $(BMV2_THRIFT_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
+	cp -r $(BMV2_THRIFT_FIXED_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
 
 bm: bmv2 bmv2-pd drivers
 
