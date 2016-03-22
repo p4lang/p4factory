@@ -39,6 +39,7 @@ export P4_NAME := switch
 export P4_PREFIX := dc
 
 SUBMODULES_CLEAN := $(SUBMODULE_SWITCH)
+SUBMODULES_CLEAN += $(SUBMODULE_P4OFAGENT)
 # SUBMODULES_CLEAN := $(SUBMODULE_SWITCHAPI)
 # SUBMODULES_CLEAN += $(SUBMODULE_SWITCHSAI)
 # SUBMODULES_CLEAN += $(SUBMODULE_SWITCHLINK)
@@ -136,11 +137,61 @@ drivers-switchsai : $(SWITCHAPI_LIB) $(SWITCHSAI_LIB)
 drivers-switchsai : ${drivers-switchsai_BINARY} switchsai_THRIFT
 	@echo "DONE!"
 
+###################################
+#BUILD P4OFAGENT
+###################################
+P4OFAGENT_LIB := $(SUBMODULE_P4OFAGENT)/libp4ofagent.a
+P4OFAGENT_INC += $(P4FACTORY)/modules/p4utils/module/inc
+P4OFAGENT_INC += $(BMV2_PD_INC)
+P4OFAGENT_INC += ${C_INCLUDE_PATH}
+P4OFAGENT_INC := $(subst $(space),:,$(P4OFAGENT_INC))
+P4OFAGENT_BMV2_FLAGS := -D_BMV2_
+
+${P4OFAGENT_LIB} : FORCE $(BM_LIB)
+	@${MAKE} -C $(SUBMODULE_P4OFAGENT) p4ofagent C_INCLUDE_PATH=$(P4OFAGENT_INC) \
+	CPPFLAGS=$(P4OFAGENT_BMV2_FLAGS)
+
+PD_LIBS += -lof
+
+BINARY := drivers-p4ofagent
+${BINARY}_LINK_LIBS := $(drivers-switchapi_LINK_LIBS) $(P4OFAGENT_LIB)
+drivers-p4ofagent : EXTRA_LINK_LIBS := -lpthread -lpcap -lhiredis \
+	-lJudy -lthrift -lof -ledit -lrt
+
+include ${MAKEFILES_DIR}/bin.mk
+ifndef drivers-p4ofagent_BINARY
+	$(error Output binary not defined in drivers-p4ofagent_BINARY)
+endif
+
+indigo-libs:
+	make -C $(SUBMODULE_P4OFAGENT) -f indigo-lib.mk indigo-lib
+
+p4ofagent-pd : P4_OPTIONS += --plugin of
+p4ofagent-pd : P4_OPTIONS += --openflow-mapping-dir $(TARGET_ROOT)/../openflow_mapping
+p4ofagent-pd : P4_OPTIONS += --openflow-mapping-mod l2
+p4ofagent-pd : P4_OPTIONS += -DOPENFLOW_ENABLE
+p4ofagent-pd : BMV2_PD_ENV+="P4_OPTIONS=$(P4_OPTIONS)"
+p4ofagent-pd : bmv2-pd
+
+drivers-p4ofagent : export LIB_P4OFAGENT_ENABLE=1
+drivers-p4ofagent : export LIB_SWITCHAPI_ENABLE=1
+drivers-p4ofagent : GLOBAL_CFLAGS += -DENABLE_PLUGIN_OPENFLOW
+drivers-p4ofagent : GLOBAL_CFLAGS += -DSWITCHAPI_ENABLE
+drivers-p4ofagent : GLOBAL_CFLAGS += -I$(SUBMODULE_P4OFAGENT)
+drivers-p4ofagent : $(SWITCHAPI_LIB) $(P4OFAGENT_LIB) 
+drivers-p4ofagent : ${drivers-p4ofagent_BINARY}
+	cp -r $(BMV2_THRIFT_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
+	cp ${drivers-p4ofagent_BINARY} behavioral-model
+
+###################################
+
 bm-switchapi: bmv2 bmv2-pd drivers-switchapi
 
 bm-switchsai: bmv2 bmv2-pd drivers-switchsai
 
+bm-p4ofagent: bmv2 indigo-libs p4ofagent-pd drivers-p4ofagent 
+
 clean-local :
 	@$(foreach d,${SUBMODULES_CLEAN},${MAKE} -C ${d} clean && ) true
 
-.PHONY: bm-switchapi clean-local FORCE
+.PHONY: bmswitch-sai bm-switchapi bm-p4ofagent indigo-libs clean-local FORCE
