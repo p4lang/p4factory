@@ -19,3 +19,6 @@
 [submodule "submodules/switch"]
 	path = submodules/switch
 	url = https://github.com/p4lang/switch.git
+[submodule "submodules/p4-build"]
+	path = submodules/p4-build
+	url = https://github.com/p4lang/p4-build.git

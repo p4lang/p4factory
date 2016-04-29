@@ -6,3 +6,7 @@ oft.log
 *.dot
 *.png
 *.pcap
+*.ts
+*.json
+ptf.log
+build

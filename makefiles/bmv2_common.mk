@@ -20,7 +20,8 @@ $(BUILD_DIR)/main.o: $(TARGET_ROOT)/main.c bmv2-pd
 	@echo Compiling : $(notdir $@)
 	$(VERBOSE)gcc -o $@ $(GLOBAL_INCLUDES) $(GLOBAL_CFLAGS) -c $<
 
-PD_LIBS := -L$(BMV2_PD_LIB_DIR)/ -Wl,-rpath=$(BMV2_PD_LIB_DIR) -lbmpd -lbmpdfixed -lbmpdthrift -lbmpdfixedthrift
+PD_LIBS := -L$(BMV2_PD_LIB_DIR)/ -Wl,-rpath=$(BMV2_PD_LIB_DIR) -lpd -lpdthrift
+PD_LIBS += -L$(BMV2_PDFIXED_LIB_DIR)/ -Wl,-rpath=$(BMV2_PDFIXED_LIB_DIR) -lbmpdfixed -lbmpdfixedthrift
 
 $(PD_LIBS): FORCE
 
@@ -37,10 +38,11 @@ THRIFT_PY_OUTPUT_DIR := $(TARGET_ROOT)/../tests/pd_thrift/
 MAKE_DIR := ${THRIFT_PY_OUTPUT_DIR}
 include ${MAKEFILES_DIR}/makedir.mk
 
+# -f necessary because some destination files may already exist and be protected
 drivers : bmv2-pd
 drivers : ${drivers_BINARY} FORCE
-	cp -r $(BMV2_THRIFT_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
-	cp -r $(BMV2_THRIFT_FIXED_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
+	cp -rf $(BMV2_THRIFT_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
+	cp -rf $(BMV2_THRIFT_FIXED_PY_DIR)/* $(THRIFT_PY_OUTPUT_DIR)
 
 bm: bmv2 bmv2-pd drivers
 
