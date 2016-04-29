@@ -1,32 +1,42 @@
 BMV2_PD_DIR = $(BUILD_DIR)/bmv2_pd/
 
-BMV2_PD_ENV := 'P4_PATH=$(TARGET_ROOT)/$(P4_INPUT)' 'P4_PREFIX=$(P4_PREFIX)'
+BMV2_P4C_MAIN := $(SUBMODULE_P4C_BM)/p4c_bm/__main__.py
+
+BMV2_PD_ENV := 'P4_PATH=$(TARGET_ROOT)/$(P4_INPUT)' 'P4_NAME=$(P4_NAME)' 'P4_PREFIX=$(P4_PREFIX)'
+BMV2_PD_ENV += 'P4C_BM=$(BMV2_P4C_MAIN)'
+BMV2_PD_ENV += 'CPPFLAGS=-I$(BUILD_DIR)/inst/include'
+
+BMV2_EXE := $(TARGET_ROOT)/$(P4_NAME)_bmv2
 
 $(BMV2_PD_DIR):
 	@echo $(BUILD_DIR)
 	@echo $(BMV2_PD_DIR)
 	mkdir -p $(BMV2_PD_DIR)
 
-bmv2-pd: $(P4_INPUT) | $(BMV2_PD_DIR)
+bmv2-pd.ts: $(BMV2_EXE) | $(BMV2_PD_DIR)
+	echo $(BMV2_EXE)
+	cd $(BMV2_PD_DIR); $(SUBMODULE_P4_BUILD)/configure --with-bmv2 --prefix=/inst $(BMV2_PD_ENV); cd -;
+	@touch $@
+
+bmv2-pd: $(P4_INPUT) bmv2-pd.ts
 	@echo $(BUILD_DIR)
-	$(MAKE) -C $(SUBMODULE_P4C_BM)/ $(BMV2_PD_ENV)
-	$(MAKE) -C $(SUBMODULE_P4C_BM)/ $(BMV2_PD_ENV) 'DESTDIR=$(BUILD_DIR)' install
+	$(MAKE) -C $(BMV2_PD_DIR)
+	$(MAKE) -C $(BMV2_PD_DIR) 'DESTDIR=$(BUILD_DIR)' install
 
-BMV2_PD_INC := $(BUILD_DIR)/bmv2_pd/include/p4c_bm/p4_pd/
-BMV2_PD_INC += $(BUILD_DIR)/bmv2_pd/include/p4c_bm/pdfixed/
+BMV2_PD_INC := $(BUILD_DIR)/inst/include
 
-BMV2_PD_LIB_DIR := $(BUILD_DIR)/bmv2_pd/lib/
+BMV2_PD_LIB_DIR := $(BUILD_DIR)/inst/lib/bmpd/$(P4_NAME)/
+BMV2_PDFIXED_LIB_DIR := $(BUILD_DIR)/inst/lib/
 
-BMV2_EXE := $(TARGET_ROOT)/$(P4_NAME)_bmv2
-
-BMV2_THRIFT_FIXED_PY_DIR = $(BUILD_DIR)/bmv2_pd/share/p4c_bm/pdfixed/gen-py/
-BMV2_THRIFT_PY_DIR = $(BUILD_DIR)/bmv2_pd/share/gen-py/
+PYTHON_VERSION = $(shell python -c "import sys; print sys.version[:3],")
+PYTHON_SITE_PACKAGES = $(BUILD_DIR)/inst/lib/python$(PYTHON_VERSION)/site-packages
+BMV2_THRIFT_FIXED_PY_DIR = $(PYTHON_SITE_PACKAGES)/bm/pdfixed/
+BMV2_THRIFT_PY_DIR = $(PYTHON_SITE_PACKAGES)/bmpd/$(P4_NAME)/
 
 $(BMV2_EXE):
 	$(MAKE) -C $(SUBMODULE_BM)
+	$(MAKE) -C $(SUBMODULE_BM) 'DESTDIR=$(BUILD_DIR)' install
 	ln -sf $(SUBMODULE_BM)/targets/simple_switch/simple_switch $(BMV2_EXE)
-
-BMV2_P4C_MAIN := $(SUBMODULE_P4C_BM)/p4c_bm/__main__.py
 
 BMV2_JSON := $(TARGET_ROOT)/$(P4_NAME)_bmv2.json
 
@@ -37,7 +47,10 @@ bmv2 :$(BMV2_EXE) $(BMV2_JSON)
 
 bmv2-clean:
 	$(MAKE) -C $(SUBMODULE_BM) clean
-	$(MAKE) -C $(SUBMODULE_P4C_BM)/ $(BMV2_PD_ENV) clean
+	if test -f $(SUBMODULE_P4_BUILD)/Makefile; then \
+		$(MAKE) -C $(SUBMODULE_P4_BUILD) clean; \
+	fi
 	rm -f $(BMV2_EXE) $(BMV2_JSON)
+	rm -f bmv2-pd.ts
 
-.PHONY: bmv2-pd bmv2-pd-sane bmv2-clean bmv2 $(BMV2_EXE)
+.PHONY: bmv2-clean bmv2 bmv2-pd

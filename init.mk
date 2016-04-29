@@ -63,6 +63,15 @@ ifndef SUBMODULE_P4C_BM
   endif
 endif
 
+ifndef SUBMODULE_P4_BUILD
+  ifdef SUBMODULES
+    SUBMODULE_P4_BUILD := $(SUBMODULES)/p4-build
+  else
+    SUBMODULE_P4_BUILD := $(ROOT)/submodules/p4-build
+    SUBMODULES_LOCAL += p4-build
+  endif
+endif
+
 ifndef SUBMODULE_SWITCH
   ifdef SUBMODULES
     SUBMODULE_SWITCH := $(SUBMODULES)/switch
@@ -122,6 +131,7 @@ export SUBMODULE_BM
 export SUBMODULE_OFT_INFRA
 export SUBMODULE_P4C_BEHAVIORAL
 export SUBMODULE_P4C_BM
+export SUBMODULE_P4_BUILD
 export SUBMODULE_P4C_GRAPHS
 export SUBMODULE_SWITCHAPI
 export SUBMODULE_SWITCHSAI
@@ -135,6 +145,7 @@ MODULE_DIRS := $(ROOT)/modules
 	@echo oft_infra @ $(SUBMODULE_OFT_INFRA)
 	@echo p4c_behavioral @ $(SUBMODULE_P4C_BEHAVIORAL)
 	@echo p4c_bm @ $(SUBMODULE_P4C_BM)
+	@echo p4_build @ $(SUBMODULE_P4_BUILD)
 	@echo p4c_graphs @ $(SUBMODULE_P4C_GRAPHS)
 	@echo switchapi @ $(SUBMODULE_SWITCHAPI)
 	@echo switchsai @ $(SUBMODULE_SWITCHSAI)

@@ -1,4 +1,3 @@
 cd submodules/switch/ && ./configure --with-p4factory "$@" && cd -
-cd submodules/bm/ && CXXFLAGS="$CXXFLAGS -O0 -g" CPPFLAGS="$CPPFLAGS -DBMLOG_DEBUG_ON" ./configure && cd -
-cd submodules/p4c-bm/ && CPPFLAGS="$CPPFLAGS -DHOST_BYTE_ORDER_CALLER" ./configure --with-pd-mk --prefix="/bmv2_pd" && cd -
+cd submodules/bm/ && CXXFLAGS="$CXXFLAGS -O0 -g" ./configure --with-pdfixed --prefix=/inst && cd -
 cd submodules/p4ofagent && ./configure && cd -

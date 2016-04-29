@@ -46,9 +46,9 @@ limitations under the License.
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <pd/pd.h>
-#include <thrift-src/pdfixed_rpc_server.h>
-#include <thrift-src/pd_rpc_server.h>
+#include <bmpd/switch/pd/pd.h>
+#include <bm/pdfixed/thrift-src/pdfixed_rpc_server.h>
+#include <bmpd/switch/thrift-src/pd_rpc_server.h>
 
 static char *pd_server_str = NULL;
 
