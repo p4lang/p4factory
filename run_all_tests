@@ -289,11 +289,11 @@ def bmv2_pd_tests():
     del os.environ["BMV2_TEST"]
 
 def switchapi_test():
+    if args.travis: return
     one_test("switch", test_subdir=os.path.join("ptf-tests", "api-tests"),
              do_make_clean=False, make_tgt="bm-switchapi")
 
 def bmv2_switchapi_test():
-    if args.travis: return
     os.environ["BMV2_TEST"]="1"
     bmv2_one_test("switch", test_subdir=os.path.join("ptf-tests", "api-tests"),
                   do_make_clean=False, make_tgt="bm-switchapi",

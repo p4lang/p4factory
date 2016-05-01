@@ -54,7 +54,12 @@ addons:
       - python-scipy
       - python-setuptools
       - python-yaml
-      - redis-server      
+      - redis-server
+
+# do not pull submodules, we need to do it manually because of the third-party
+# submodules (of submodules) which use ssh
+git:
+  submodules: false
 
 # need to replace github ssh references with https
 before_install:
