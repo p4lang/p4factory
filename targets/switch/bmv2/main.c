@@ -51,6 +51,8 @@ limitations under the License.
 #include <bmpd/switch/thrift-src/pd_rpc_server.h>
 
 static char *pd_server_str = NULL;
+static char *of_controller_str = NULL;
+static int of_ipv6 = 0;
 
 /**
  * The maximum number of ports to support:
@@ -83,6 +85,10 @@ extern int start_switch_api_packet_driver(void);
 extern int start_p4_sai_thrift_rpc_server(char *port);
 #endif /* SWITCHSAI_ENABLE */
 
+#ifdef OPENFLOW_ENABLE
+extern void p4ofagent_init(bool ipv6, char *ctl_ip);
+#endif /* ENABLE_PLUGIN_OPENFLOW */
+
 static void
 parse_options(int argc, char **argv)
 {
@@ -94,6 +100,8 @@ parse_options(int argc, char **argv)
     enum long_opts {
       OPT_START = 256,
       OPT_PDSERVER,
+      OPT_OFIP,
+      OPT_OFIPV6,
     };
     static struct option long_options[] = {
       {"help", no_argument, 0, 'h' },
@@ -109,12 +117,19 @@ parse_options(int argc, char **argv)
     case OPT_PDSERVER:
       pd_server_str = strdup(optarg);
       break;
+    case OPT_OFIP:
+      of_controller_str = strdup(optarg);
+      break;
+    case OPT_OFIPV6:
+      of_ipv6 = 1;
     case 'h':
     case '?':
       printf("Drivers! \n");
       printf("Usage: drivers [OPTION]...\n");
       printf("\n");
       printf(" --pd-server=IP:PORT Listen for PD RPC calls\n");
+      printf("--of-ip Specify openflow controller ip address\n"),
+      printf("--of-ipv6 Bool indicating openflow controller ip address is ipv6\n"),
       printf(" -h,--help Display this help message and exit\n");
       exit(c == 'h' ? 0 : 1);
       break;
@@ -151,7 +166,11 @@ main(int argc, char* argv[])
 
 #ifdef SWITCHSAI_ENABLE
     CHECK(start_p4_sai_thrift_rpc_server(SWITCH_SAI_THRIFT_RPC_SERVER_PORT));
-#endif /*SWITCHSAI_ENABLE */
+#endif /* SWITCHSAI_ENABLE */
+
+#ifdef ENABLE_PLUGIN_OPENFLOW 
+    p4ofagent_init (of_ipv6, of_controller_str); 
+#endif /* ENABLE_PLUGIN_OPENFLOW */
 
     while (1) pause();
 
