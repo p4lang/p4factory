@@ -33,7 +33,7 @@ parser parse_ethernet {
     extract(ethernet);
 #ifdef OPENFLOW_ENABLE
     return select(latest.etherType) {
-        ETHERTYPE_BF_FABRIC : fabric_header;
+        ETHERTYPE_BF_FABRIC : parse_fabric_header;
         default : ingress;
     }
 #else
