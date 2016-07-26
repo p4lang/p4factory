@@ -19,19 +19,12 @@ import os
 from subprocess import Popen
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--test-dir", required=False,
-                    default=os.path.join("tests", "of-tests"),
-                    help="directory containing the tests (default tests/of-tests/)")
-args, unknown_args = parser.parse_known_args()
-
 root_dir = os.path.dirname(os.path.realpath(__file__))
 oft_path = os.path.join(root_dir, '..', '..', 'submodules', 'oftest', 'oft')
 
 if __name__ == "__main__":
-    new_args = unknown_args
+    new_args = [] 
     new_args += ["-S 127.0.0.1", "-V1.3"]
-    new_args += ["--test-dir", args.test_dir]
     new_args += ["--interface", "0@veth1"]
     new_args += ["--interface", "2@veth5"]
     new_args += ["--interface", "3@veth7"]
@@ -39,6 +32,7 @@ if __name__ == "__main__":
     new_args += ["--interface", "5@veth11"]
     new_args += ["--interface", "6@veth13"]
     new_args += ["--interface", "7@veth15"]
+    new_args += ["--test-dir", os.path.join("..", "..", "submodules", "switch", "tests", "of-tests")]
 
     child = Popen([oft_path] + new_args)
     child.wait()
