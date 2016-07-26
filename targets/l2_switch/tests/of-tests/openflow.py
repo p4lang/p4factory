@@ -23,7 +23,6 @@ from utils import *
 sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
                              'targets', 'l2_switch', 'build', 'thrift')) 
 
-print sys.path
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
 
@@ -128,17 +127,15 @@ def repopulate_openflow_defaults(client, sess_hdl, dev_tgt):
     result = client.packet_out_set_default_action_nop(sess_hdl, dev_tgt)
 
     match_spec = l2_switch_packet_out_match_spec_t(
-        fabric_header_packetType = 5,
-        fabric_header_cpu_reasonCode = 1) 
+        fabric_header_packetType = 5)
 
-    result = client.packet_out_table_add_with_packet_out_unicast(
+    result = client.packet_out_table_add_with_terminate_cpu_packet(
         sess_hdl, dev_tgt, match_spec)
 
     match_spec = l2_switch_packet_out_match_spec_t(
-        fabric_header_packetType = 5,
-        fabric_header_cpu_reasonCode = 2) 
+        fabric_header_packetType = 2)
 
-    result = client.packet_out_table_add_with_packet_out_eth_flood(
+    result = client.packet_out_table_add_with_terminate_fabric_multicast_packet(
         sess_hdl, dev_tgt, match_spec)
 
     result = client.ofpat_group_egress_set_default_action_nop(
