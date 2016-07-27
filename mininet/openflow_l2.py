@@ -71,7 +71,7 @@ def setup_bd(client, conn_mgr):
     """
     sess_hdl = conn_mgr.client_init(16)
     dev_tgt = DevTarget_t(0, hex_to_i16(0xffff))
-    ifindices = [1, 2]
+    ifindices = [1, 2, 65]
 
     for ifindex in ifindices:
         action_spec = dc_set_bd_properties_action_spec_t(
