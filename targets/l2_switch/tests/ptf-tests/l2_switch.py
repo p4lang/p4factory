@@ -51,7 +51,7 @@ class SimpleReplicationTest(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "l2_switch")
 
     def runTest(self):
-        sess_hdl = self.conn_mgr.client_init(16)
+        sess_hdl = self.conn_mgr.client_init()
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
         setup_default_table_configurations(self.client, sess_hdl, dev_tgt)
