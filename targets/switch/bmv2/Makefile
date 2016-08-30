@@ -75,6 +75,9 @@ endif
 SWITCHAPI_THRIFT_PY_OUTPUT_DIR := ${TARGET_ROOT}/../tests/pd_thrift/switch_api_thrift
 THRIFT_INPUT_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
 THRIFT_DEP_FILES := ${SWITCHAPI_SRC_DIR}/switch_api.thrift
+SWITCHAPI_HEADER_FILES_DIR := ${SUBMODULE_SWITCHAPI}/include/switchapi
+SWITCHAPI_THIRDPARTY_INC := ${SUBMODULE_SWITCHAPI}/third-party/tommyds/include
+P4_INC := ${SUBMODULE_SWITCHAPI}/../p4src/includes/
 THRIFT_SERVICE_NAMES := switch_api_rpc
 include ${MAKEFILES_DIR}/thrift-py.mk
 
@@ -83,6 +86,10 @@ switchapi_THRIFT : ${GEN_THRIFT_PY_MODULE} FORCE
 	@mkdir -p ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}
 	@cp -r ${THRIFT_TEMP_DIR}/switch_api/* ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/
 	@rm -r ${THRIFT_TEMP_DIR}/switch_api/
+	@ctypesgen.py -I/usr/include -I${SWITCHAPI_HEADER_FILES_DIR} \
+		-I${SWITCHAPI_THIRDPARTY_INC} -I${P4_INC} \
+		${SWITCHAPI_HEADER_FILES_DIR}/*.h \
+		-o ${SWITCHAPI_THRIFT_PY_OUTPUT_DIR}/switch_api_headers.py > /dev/null 2>&1
 
 # @cp -r ${THRIFT_TEMP_DIR}/* ${BM_THRIFT_PY_OUTPUT_DIR}/
 
@@ -125,7 +132,8 @@ switchsai_THRIFT : switchapi_THRIFT FORCE
 	@mkdir -p ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}
 	@cp -r ${THRIFT_TEMP_DIR}/switch_sai/* ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/
 	@rm -r ${THRIFT_TEMP_DIR}/switch_sai/
-	@ctypesgen.py -I/usr/include -I$(SWITCHSAI_HEADER_FILES_DIR) $(SWITCHSAI_HEADER_FILES_DIR)/*.h -o ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/sai_headers.py
+	@ctypesgen.py -I/usr/include -I$(SWITCHSAI_HEADER_FILES_DIR) $(SWITCHSAI_HEADER_FILES_DIR)/*.h \
+		-o ${SWITCHSAI_THRIFT_PY_OUTPUT_DIR}/sai_headers.py > /dev/null 2>&1
 
 drivers-switchsai : export LIB_SWITCHSAI_ENABLE=1
 drivers-switchsai : export LIB_SWITCHAPI_ENABLE=1

@@ -16,12 +16,12 @@ from oftest.parse import parse_mac
 import openflow_base_tests
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'testutils')) 
+                             'testutils'))
 
 from utils import *
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'l2_switch', 'build', 'thrift')) 
+                             'targets', 'l2_switch', 'build', 'thrift'))
 
 from p4_pd_rpc.ttypes import *
 from res_pd_rpc.ttypes import *
@@ -31,7 +31,7 @@ import os
 import time
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', '..', '..',
-                             'targets', 'l2_switch', 'openflow_mapping')) 
+                             'targets', 'l2_switch', 'openflow_mapping'))
 from l2 import *
 
 ### TODO: generate expected packets
@@ -75,7 +75,7 @@ def get_action(action, arg):
         ofpaction = ofp.action.output(arg, ofp.OFPCML_NO_BUFFER)
     elif action == "GROUP":
         ofpaction = ofp.action.group(arg)
-    else: 
+    else:
         logging.info("No get_action for %s", action)
         exit(1)
     return ofpaction
@@ -142,7 +142,7 @@ def repopulate_openflow_defaults(client, sess_hdl, dev_tgt):
         sess_hdl, dev_tgt)
 
 def setup(self):
-        sess_hdl = self.conn_mgr.client_init(16)
+        sess_hdl = self.conn_mgr.client_init()
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
         self.client.clean_all(sess_hdl, dev_tgt)
@@ -177,7 +177,7 @@ class Output(openflow_base_tests.OFTestInterface):
                        buffer_id=buf, priority=1, cookie=41)
 
         exp_pkt = simple_tcp_packet()
-        
+
         self.controller.message_send(req)
         do_barrier(self.controller)
         self.dataplane.send(ports[-1], pkt)
@@ -204,7 +204,7 @@ class PacketIn(openflow_base_tests.OFTestInterface):
         pkt, match = get_match(table.match_fields)
 
         output = {
-            "OUTPUT": ofp.const.OFPP_CONTROLLER 
+            "OUTPUT": ofp.const.OFPP_CONTROLLER
         }
 
         instr = get_apply_actions(output)
