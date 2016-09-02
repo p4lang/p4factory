@@ -26,7 +26,7 @@ class EchoTest(pd_base_tests.ThriftInterfaceDataPlane):
         pd_base_tests.ThriftInterfaceDataPlane.__init__(self, "__PROJECT_NAME__")
 
     def runTest(self):
-        sess_hdl = self.conn_mgr.client_init(16)
+        sess_hdl = self.conn_mgr.client_init()
         dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
         
         self.conn_mgr.echo("TEST !!!")
