@@ -48,7 +48,7 @@ mc = mc_module.Client(mc_protocol)
 conn_mgr = conn_mgr_module.Client(conn_mgr_protocol)
 transport.open()
 
-sess_hdl = conn_mgr.client_init(16)
+sess_hdl = conn_mgr.client_init()
 dev_tgt = DevTarget_t(0, hex_to_i16(0xFFFF))
 
 client.copy_to_cpu_set_default_action_do_copy_to_cpu(sess_hdl, dev_tgt)

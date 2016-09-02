@@ -69,7 +69,7 @@ def setup_bd(client, conn_mgr):
     Instantiates port_vlan_mapping table entry setting bd == 0
     for untagged packets on ifindex 1.
     """
-    sess_hdl = conn_mgr.client_init(16)
+    sess_hdl = conn_mgr.client_init()
     dev_tgt = DevTarget_t(0, hex_to_i16(0xffff))
     ifindices = [1, 2, 65]
 

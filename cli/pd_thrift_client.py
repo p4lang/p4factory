@@ -53,7 +53,7 @@ class ThriftClient(object):
     self._utils = importlib.import_module("utils")
 
     self.setup(hostname, port)
-    self._session_handle = self._conn_mgr.client_init(16)
+    self._session_handle = self._conn_mgr.client_init()
     from res_pd_rpc.ttypes import DevTarget_t
     self._dev_target = DevTarget_t(0, self._utils.hex_to_i16(0xFFFF))
 
