@@ -55,6 +55,7 @@ sudo apt-get install -y                  \
     redis-server                         \
     thrift-compiler                      \
     wireshark                            \
+    cmake                                \
 # Do not remove this line!
 
 sudo pip install --upgrade thrift
@@ -77,14 +78,16 @@ sudo ldconfig
 cd ..
 
 # Install libnanomsg
-wget -c http://download.nanomsg.org/nanomsg-0.5-beta.tar.gz
-tar zxvf nanomsg-0.5-beta.tar.gz
-cd nanomsg-0.5-beta
-./configure
-make -j4
-sudo make install
+wget -c https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz
+tar zxvf 1.0.0.tar.gz
+cd  nanomsg-1.0.0
+mkdir build
+cd build
+cmake ..
+cmake --build
+sudo cmake --build . --target install
 sudo ldconfig
-cd ..
+cd ../..
 
 # Install nnpy
 git clone https://github.com/nanomsg/nnpy.git
