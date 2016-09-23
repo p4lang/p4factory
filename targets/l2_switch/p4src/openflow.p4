@@ -94,6 +94,7 @@ header_type fabric_header_cpu_t {
         ingressBd : 16;
 
         reasonCode : 16;
+        mcast_grp : 16;
     }
 }
 
