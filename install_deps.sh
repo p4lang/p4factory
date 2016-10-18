@@ -71,7 +71,7 @@ tar zxvf thrift-0.9.2.tar.gz
 cd thrift-0.9.2
 ./configure
 cd test/cpp ; ln -s . .libs ; cd ../..
-make -j4
+make
 sudo make install
 sudo ldconfig
 cd ..
@@ -81,7 +81,7 @@ wget -c http://download.nanomsg.org/nanomsg-0.5-beta.tar.gz
 tar zxvf nanomsg-0.5-beta.tar.gz
 cd nanomsg-0.5-beta
 ./configure
-make -j4
+make
 sudo make install
 sudo ldconfig
 cd ..
