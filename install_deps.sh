@@ -63,7 +63,7 @@ sudo pip install ctypesgen
 sudo pip install crc16
 
 # get core count of cpu
-NPROCS=grep processor /proc/cpuinfo | wc -l
+NPROCS=`grep processor /proc/cpuinfo | wc -l`
 
 # build thrift from sources
 mkdir install_tmp
