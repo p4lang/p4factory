@@ -62,6 +62,9 @@ sudo pip install tenjin
 sudo pip install ctypesgen
 sudo pip install crc16
 
+# get core count of cpu
+NPROCS=`grep processor /proc/cpuinfo | wc -l`
+
 # build thrift from sources
 mkdir install_tmp
 
@@ -71,7 +74,7 @@ tar zxvf thrift-0.9.2.tar.gz
 cd thrift-0.9.2
 ./configure
 cd test/cpp ; ln -s . .libs ; cd ../..
-make -j4
+make -j${NPROCS}
 sudo make install
 sudo ldconfig
 cd ..
@@ -81,7 +84,7 @@ wget -c http://download.nanomsg.org/nanomsg-0.5-beta.tar.gz
 tar zxvf nanomsg-0.5-beta.tar.gz
 cd nanomsg-0.5-beta
 ./configure
-make -j4
+make -j${NPROCS}
 sudo make install
 sudo ldconfig
 cd ..
