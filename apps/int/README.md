@@ -30,9 +30,10 @@ is already installed you may need to apt-get remove it...)
 
         cd p4factory
         sudo ./install_deps.sh
-        cd p4factory/targets/switch
-        make docker-image
-        make switchapi_THRIFT
+        cd p4factory/bmv2
+        make -f Makefile.bmv2 driver-switchlink
+        cd p4factory/makefiles
+        make -f docker.mk bmv2-docker-image
 
 * Build and install the VXLAN-GPE driver provided in the repo
 

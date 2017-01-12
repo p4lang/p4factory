@@ -1,0 +1,78 @@
+thisdir := $(shell pwd)
+dirsuffix ?=
+installdir := $(thisdir)/install$(dirsuffix)
+builddir := $(thisdir)/build$(dirsuffix)
+NPROCS:=1
+OS:=$(shell uname -s)
+ifeq ($(OS),Linux)
+	NPROCS:=$(shell grep -c ^processor /proc/cpuinfo)
+endif
+
+BLD_OPTIONS := -DSWITCHAPI_ENABLE -DSWITCHSAI_ENABLE
+P4FLAGS :=
+
+BMV2_PERF_FLAGS = -O2
+# BMV2_PERF_FLAGS = -O0 -g
+
+all: driver
+
+p4-bmv2.ts: SUBMODULE = $(thisdir)/../submodules/bm
+p4-bmv2.ts:
+	cd $(SUBMODULE); ./autogen.sh; cd -; \
+	mkdir -p $(builddir)/p4-bmv2; \
+	cd $(builddir)/p4-bmv2; $(SUBMODULE)/configure --prefix=$(installdir) --with-pdfixed; \
+	$(MAKE) -j$(NPROCS); $(MAKE) install; cd -;
+	@touch $@
+
+p4c-bmv2.ts: SUBMODULE = $(thisdir)/../submodules/p4c-bm
+p4c-bmv2.ts:
+	mkdir -p $(builddir)/p4c-bmv2; \
+	cd $(SUBMODULE); \
+        python setup.py build -b $(builddir)/p4c-bmv2 install --prefix $(installdir) --single-version-externally-managed --record $(builddir)/install_files.txt; \
+	cd -;
+	@touch $@
+
+setup-target.ts: p4-bmv2.ts p4c-bmv2.ts
+	cd ../submodules/switch; git submodule update --init --recursive; ./autogen.sh; cd -; \
+	mkdir -p $(builddir)/switch; cd $(builddir)/switch; \
+	$(thisdir)/../submodules/switch/configure --prefix=$(installdir) --with-bmv2 --enable-thrift --with-switchlink; cd -;
+	@touch $@
+
+flags.ts: FORCE
+	@echo '$(BLD_OPTIONS)' | cmp -s - $@ || echo '$(BLD_OPTIONS)' > $@
+
+p4-flags.ts: FORCE
+	@echo '$(P4FLAGS)' | cmp -s - $@ || echo '$(P4FLAGS)' > $@
+
+driver-clean.ts: flags.ts setup-target.ts
+	$(MAKE) -C $(builddir)/switch/switchapi clean
+	$(MAKE) -C $(builddir)/switch/switchsai clean
+	$(MAKE) -C $(builddir)/switch/switchlink clean
+	touch $(thisdir)/../submodules/switch/bmv2/bmv2_init.c
+	touch $(thisdir)/../submodules/switch/bmv2/main.c
+	@touch $@
+
+p4-clean.ts: p4-flags.ts setup-target.ts
+	$(MAKE) -C $(builddir)/switch clean
+	@touch $@
+
+driver-compile: setup-target.ts driver-clean.ts p4-clean.ts
+	$(MAKE) P4PPFLAGS='$(P4FLAGS)' CPPFLAGS="$(BLD_OPTIONS)" -j$(NPROCS) -C $(builddir)/switch
+	$(MAKE) P4PPFLAGS='$(P4FLAGS)' CPPFLAGS="$(BLD_OPTIONS)" -C $(builddir)/switch install
+
+driver: driver-compile
+	cp $(installdir)/bin/bmswitchp4_drivers $(installdir)/bin/driver-bmv2
+
+driver-switchlink: BLD_OPTIONS += -DSWITCHLINK_ENABLE
+driver-switchlink: driver-compile
+	cp $(installdir)/bin/bmswitchp4_drivers $(installdir)/bin/driver-bmv2
+
+
+clean:
+	rm -f p4-bmv2.ts p4c-bmv2.ts setup-target.ts flags.ts driver-clean.ts
+	rm -f p4-flags.ts p4-clean.ts
+
+full-clean: clean
+	rm -rf build* install*
+
+.PHONY: clean full-clean FORCE driver-compile

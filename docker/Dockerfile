@@ -4,8 +4,10 @@ MAINTAINER Antonin Bas <antonin@barefootnetworks.com>
 RUN apt-get update
 RUN apt-get install -y \
     automake \
+    autopoint \
     bridge-utils \
     build-essential \
+    cmake \
     ethtool \
     git \
     libboost-dev \
@@ -13,8 +15,11 @@ RUN apt-get install -y \
     libboost-program-options-dev \
     libboost-system-dev \
     libboost-test-dev \
+    libboost-thread-dev \
     libedit-dev \
     libevent-dev \
+    libffi-dev \
+    libgmp-dev \
     libglib2.0-dev \
     libhiredis-dev \
     libjudy-dev \
@@ -27,6 +32,7 @@ RUN apt-get install -y \
     packit \
     pkg-config \
     python-dev \
+    python-pip \
     python-pygraph \
     python-pygraphviz \
     python-setuptools \
@@ -37,17 +43,10 @@ RUN apt-get install -y \
     redis-tools \
     subversion \
     tshark \
+    vim \
     xterm
 
-# install thrift
-RUN mkdir -p /tmp/thrift ; \
-    cd /tmp/thrift ; \
-    wget -q http://archive.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz ; \
-    tar xvzf thrift-0.9.2.tar.gz; \
-    cd thrift-0.9.2; \
-    ./configure ; cd test/cpp ; ln -s . .libs ; cd ../.. ; \
-    make -j 4 install; ldconfig ; \
-    rm -fr /tmp/thrift
+RUN pip install tenjin
 
 # install scapy
 RUN mkdir -p /tmp/scapy ; \
@@ -81,5 +80,33 @@ RUN mkdir -p /tmp/ctypesgen ; \
     rm -fr /tmp/ctypesgen
 
 ADD p4factory /p4factory
+
+RUN mkdir -p /tmp/install_tmp ; \
+    cd install_tmp ; \
+    wget -c http://archive.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz ; \
+    tar zxvf thrift-0.9.2.tar.gz ; \
+    cd thrift-0.9.2 ; \
+    ./configure --with-cpp=yes --with-c_glib=no --with-java=no --with-ruby=no --with-erlang=no --with-go=no --with-nodejs=no ; \
+    make -j4 ; \
+    make install ; \
+    ldconfig ; \
+    cd .. ; \
+    wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz -O nanomsg-1.0.0.tar.gz ; \
+    tar -xzvf nanomsg-1.0.0.tar.gz ; \
+    cd nanomsg-1.0.0 ; \
+    mkdir build ; \
+    cd build ; \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr ; \
+    cmake --build . ; \
+    cmake --build . --target install ; \
+    cd ../../ ; \
+    git clone https://github.com/nanomsg/nnpy.git ; \
+    cd nnpy ; \
+    git checkout c7e718a5173447c85182dc45f99e2abcf9cd4065 ; \
+    ldconfig ; \
+    pip install cffi ; \
+    pip install . ; \
+    cd ../..; \
+    rm -rf /tmp/install_tmp
 
 ENV VTYSH_PAGER more
