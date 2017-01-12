@@ -1,7 +1,6 @@
 thisdir := $(shell pwd)
-dirsuffix ?=
-installdir := $(thisdir)/install$(dirsuffix)
-builddir := $(thisdir)/build$(dirsuffix)
+installdir := $(thisdir)/install
+builddir := $(thisdir)/build
 NPROCS:=1
 OS:=$(shell uname -s)
 ifeq ($(OS),Linux)
