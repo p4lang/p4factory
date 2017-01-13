@@ -26,14 +26,23 @@ is already installed you may need to apt-get remove it...)
             sudo pip3 install scapy-python3
             sudo pip3 install websockets 
 
-* Build a docker image for the switch
+* Install p4factory dependencies
 
         cd p4factory
         sudo ./install_deps.sh
-        cd p4factory/bmv2
-        make -f Makefile.bmv2 driver-switchlink
+
+
+* Build Switch docker image
+
+        cd p4factory/submodules
+        
+        Build and install bm, p4c-bm and switch submodules and provide installpath of binaries 
+        using --prefix option while running configure for each submodule.
+        Build and install switch submodule with switchlink
+        (./configure --with-bmv2 --with-switchlink --enable-thrift --prefix=$HOME/install).
+
         cd p4factory/makefiles
-        make -f docker.mk bmv2-docker-image
+        make -f docker.mk bmv2-docker-image installpath=$HOME/install
 
 * Build and install the VXLAN-GPE driver provided in the repo
 
