@@ -37,7 +37,7 @@ class BmDockerSwitch( DockerSwitch ):
 
 class Bmv2DockerSwitch( DockerSwitch ):
     def __init__( self, name, model_dir=None, pcap_dump=False, thrift_port=10001,
-                  json_file='switch.json', driver_name='driver-bmv2', 
+                  json_file='switch.json', driver_name='bmswitchp4_drivers', 
                   log_file=None, nanolog=None, **kwargs ):
         self.log_file = log_file
         self.nanolog = nanolog
