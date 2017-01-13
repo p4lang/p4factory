@@ -31,7 +31,7 @@ import os
 import sys
 import time
 
-lib_path = os.path.abspath(os.path.join('..', 'bmv2', 'build', 'switch', 'switchapi'))
+lib_path = os.path.abspath(os.path.join('..', 'submodules', 'switch', 'switchapi'))
 sys.path.append(lib_path)
 
 import switch_api_thrift.switch_api_rpc as api_rpc
