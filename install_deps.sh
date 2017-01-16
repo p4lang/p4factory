@@ -1,11 +1,11 @@
 # installation script for ubuntu 14.04
 trap 'exit' ERR
-
 sudo apt-get update
 
 sudo apt-get install -y                  \
     automake                             \
     bison                                \
+    cmake				 \
     doxygen                              \
     ethtool                              \
     flex                                 \
@@ -80,13 +80,17 @@ sudo ldconfig
 cd ..
 
 # Install libnanomsg
-wget -c http://download.nanomsg.org/nanomsg-0.5-beta.tar.gz
-tar zxvf nanomsg-0.5-beta.tar.gz
-cd nanomsg-0.5-beta
-./configure
-make -j${NPROCS}
-sudo make install
-sudo ldconfig
+wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz -O nanomsg-1.0.0.tar.gz
+tar -xzvf nanomsg-1.0.0.tar.gz
+cd nanomsg-1.0.0
+mkdir build
+cd build
+# I added -DCMAKE_INSTALL_PREFIX=/usr because on my Ubuntu 14.04 machine, the
+# library is installed in /usr/local/lib/x86_64-linux-gnu/ by default, and for
+# some reason ldconfig cannot find it
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build .
+sudo cmake --build . --target install
 cd ..
 
 # Install nnpy
@@ -97,7 +101,6 @@ sudo pip install .
 cd ..
 
 # Install high level interpreter and scapy
-
 git clone https://github.com/p4lang/p4-hlir.git
 cd p4-hlir
 sudo python setup.py install
@@ -111,4 +114,4 @@ cd ..
 
 cd ..
 
-# rm -rf install_tmp
+rm -rf install_tmp

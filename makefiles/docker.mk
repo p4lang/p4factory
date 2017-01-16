@@ -12,6 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+thisdir := $(shell pwd)
+installpath := $(installpath)
+
+setup-docker-image:
+	@sudo rm -fr /tmp/docker_tmp
+	@mkdir -p /tmp/docker_tmp/p4factory
+	@mkdir -p /tmp/docker_tmp/$(installpath)
+	@cp -r $(thisdir)/../docker/* /tmp/docker_tmp
+	@cp -rf $(installpath)/* /tmp/docker_tmp/$(installpath)
+	@cp -rf $(thisdir)/../tools /tmp/docker_tmp/p4factory
+	@cp /tmp/docker_tmp/start.sh /tmp/docker_tmp/p4factory/tools/start.sh
+	@cp /tmp/docker_tmp/startv2.sh /tmp/docker_tmp/p4factory/tools/startv2.sh
+	@cp /tmp/docker_tmp/bm_start.sh /tmp/docker_tmp/p4factory/tools/bm_start.sh
+
+bmv2-docker-image : setup-docker-image
+	@echo "ADD $(installpath) $(installpath) " >> /tmp/docker_tmp/Dockerfile
+	@echo "CMD /bin/bash" >> /tmp/docker_tmp/Dockerfile
+	@sudo docker build -t p4dockerswitch_bmv2 /tmp/docker_tmp
+	@rm -fr /tmp/docker_tmp
+
 docker-image :
 	@echo "    Building docker image for target ${DOCKER_IMAGE}"
 	@rm -fr /tmp/docker_tmp
