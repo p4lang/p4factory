@@ -4,7 +4,6 @@ MAINTAINER Antonin Bas <antonin@barefootnetworks.com>
 RUN apt-get update
 RUN apt-get install -y \
     automake \
-    autopoint \
     bridge-utils \
     build-essential \
     cmake \
@@ -43,7 +42,6 @@ RUN apt-get install -y \
     redis-tools \
     subversion \
     tshark \
-    vim \
     xterm
 
 RUN pip install tenjin
