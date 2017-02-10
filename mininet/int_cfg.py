@@ -13,19 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from docker.p4model import *
 from mininet.net import Mininet, VERSION
 from mininet.log import setLogLevel, info, error
 from mininet.cli import CLI
+from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
+                           macColonHex, ipStr, ipParse, netParse, ipAdd,
+                           waitListening )
+
 from distutils.version import StrictVersion
 from p4_mininet import P4DockerSwitch
 from p4_mininet import P4Host
-from mininet.link import TCLink
+from mininet.link import Link, TCIntf
 
+import pdb
 import os
 import sys
 import time
-lib_path = os.path.abspath(os.path.join('..', 'targets', 'switch', 'tests', 'pd_thrift'))
+
+lib_path = os.path.abspath(os.path.join('..', 'submodules', 'switch', 'switchapi'))
 sys.path.append(lib_path)
+
 import switch_api_thrift.switch_api_rpc as api_rpc
 from switch_api_thrift.ttypes import  *
 from thrift.transport import TSocket
@@ -44,18 +52,24 @@ class HostConfig():
 class SwitchConfig():
   def __init__(self, name, switch_id,
                swapi_port, port_cfgs, 
-               target_name = "p4dockerswitch", cls = P4DockerSwitch, 
+	       bmcli_port,
+               docker_name = "p4dockerswitch_bmv2", 
+	       cls = Bmv2DockerSwitch, 
                target_dir = 'switch',
-               int_transit_enable = True,  pcap_dump = True,
+               int_transit_enable = True,  
+	       pcap_dump = True,
                pps = 0,
                qdepth = 0,
-               config_fs = None ):
+               config_fs = None,
+	       model_dir = None ):
     self.name = name
     self.switch_id = switch_id
     self.swapi_port = swapi_port
+    self.bmcli_port = bmcli_port
     self.port_cfgs = port_cfgs
-    self.target_name = target_name
+    self.docker_name = docker_name
     self.target_dir = target_dir
+    self.model_dir = model_dir
     self.cls = cls
     self.int_transit_enable = int_transit_enable
     self.pcap_dump = pcap_dump
@@ -94,9 +108,22 @@ class VxlanConfig():
     self.veth_mac = veth_mac 
     self.mtu = mtu
 
+class TCLinkCustom( Link ):
+  def __init__( self, node1, node2, port1=None, port2=None,
+                intfName1=None, intfName2=None,
+                addr1=None, addr2=None, **params ):
+    Link.__init__( self, node1, node2, port1=port1, port2=port2,
+                   intfName1=intfName1, intfName2=intfName2,
+                   cls1=TCIntf,
+                   cls2=TCIntf,
+                   addr1=addr1, addr2=addr2,
+                   fast=False,
+                   params1=params,
+                   params2=params )
+
 class NetworkManager():
   def __init__(self, host_cfgs, switch_cfgs, link_cfgs):
-    self.net = Mininet( controller = None, link = TCLink )
+    self.net = Mininet( controller = None, link = TCLinkCustom )
     self.link_cfgs = link_cfgs
     self.host_cfgs = dict()
     self.switch_cfgs = dict()
@@ -112,7 +139,6 @@ class NetworkManager():
     self.addHosts()
     self.addSwitches()
     self.addLinks()
-
     self.net.start()
 
     print 'Waiting 10 seconds for switches to intialize...'
@@ -138,13 +164,17 @@ class NetworkManager():
 
   def addSwitches(self):
     for s in self.switch_cfgs.values():
-      if s.config_fs != None:
+      print( "Adding switch %s" % s.name )
+      if s.cls == Bmv2DockerSwitch:
+	fs_map = [[ os.path.join( os.getcwd(), s.config_fs ), '/configs' ]]
+	port_map = [[ s.swapi_port, 9091 ],
+                    [ s.bmcli_port, 10001 ]]
         self.net.addSwitch(
-          s.name,
-          target_name = s.target_name, cls       = s.cls, 
-          swapi_port  = s.swapi_port,  pcap_dump = s.pcap_dump,
-          target_dir  = s.target_dir,  config_fs = s.config_fs,
-          pps = s.pps, qdepth = s.qdepth)
+          s.name, model_dir = s.model_dir,
+	  pcap_dump = s.pcap_dump, 
+          image = s.docker_name, cls       = s.cls,
+	  fs_map    = fs_map, port_map    = port_map, 
+          pps = s.pps, qdepth = s.qdepth )
       else:
         self.net.addSwitch(
           s.name,
@@ -300,7 +330,7 @@ def open_connection(port):
     transport = TSocket.TSocket('localhost', port)
     transport = TTransport.TBufferedTransport(transport)
     protocol = TBinaryProtocol.TBinaryProtocol(transport)
-
+   
     client = api_rpc.Client(protocol)
     transport.open()
     return transport, client

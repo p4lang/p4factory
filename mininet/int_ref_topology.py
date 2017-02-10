@@ -16,7 +16,7 @@
 import os
 from int_cfg import *
 
-def run_cfg():
+def run_cfg(model_dir):
 
   vxlan_id = 10
   vxlan_group = '239.0.0.10'
@@ -48,22 +48,30 @@ def run_cfg():
     SwitchConfig( name       = 'leaf1', 
                   port_cfgs  = leaf1_port_cfgs,
                   swapi_port = 26000,
+		  bmcli_port = 27000,
                   config_fs  = 'configs/leaf1/l3_int_ref_topo',
+		  model_dir  = model_dir,
                   switch_id  = 0x000000A1, pps=400, qdepth=15 ),
     SwitchConfig( name       = 'leaf2',
                   port_cfgs  = leaf2_port_cfgs,
                   swapi_port = 26001,
+                  bmcli_port = 27001,
                   config_fs  = 'configs/leaf2/l3_int_ref_topo',
+                  model_dir  = model_dir,
                   switch_id  = 0x000000A2, pps=400, qdepth=15 ),
     SwitchConfig( name       = 'spine1',
                   port_cfgs  = [],
                   swapi_port = 26002,
+                  bmcli_port = 27002,
                   config_fs  = 'configs/spine1/l3_int_ref_topo',
+                  model_dir  = model_dir,
                   switch_id  = 0x000000B1, pps=400, qdepth=15 ),
     SwitchConfig( name       = 'spine2',
                   port_cfgs  = [],
                   swapi_port = 26003,
+                  bmcli_port = 27003,
                   config_fs  = 'configs/spine2/l3_int_ref_topo',
+                  model_dir  = model_dir,
                   switch_id  = 0x000000B2, pps=400, qdepth=15 ),
   ]
 
@@ -101,7 +109,23 @@ def run_cfg():
   mgr.cleanup()
   net.stop()
 
+args = sys.argv
+if len(args) < 2:
+    print('Too few arguments. Run the script as follows:')
+    print('eg: sudo ./%s --model-dir=$INSTALL_DIR' %
+          os.path.basename(__file__))
+    exit(1)
+
+if '--model-dir' in args[1]:
+    model_dir = args[1].split("=")[1]
+else:
+    print('Invalid format. Run the script as follows:')
+    print('eg: sudo ./%s --model-dir=$INSTALL_DIR' %
+          os.path.basename(__file__))
+    exit(1)
+
+model_dir = os.path.join(model_dir, 'bin')
 
 # cleanup from previous run
 os.system('./int_cleanup.sh > /dev/null 2>&1')
-run_cfg()
+run_cfg(model_dir)
