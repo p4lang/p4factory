@@ -76,15 +76,15 @@ Running Tests
 
 To run the pd thrift testcases,
 
-    sudo ./run_tests.py --test-dir tests/ptf-tests/pd-tests switch
+    sudo ./run_tests.py --test-dir ../../submodules/switch/tests/ptf-tests/pd-tests switch
 
 To run the api thrift testcases,
 
-    sudo ./run_tests.py --test-dir tests/ptf-tests/api-tests switch
+    sudo ./run_tests.py --test-dir ../../submodules/switch/tests/ptf-tests/api-tests switch
 
 To run the SAI thrift testcases,
 
-    sudo ./run_tests.py --test-dir tests/ptf-tests/sai-tests switch
+    sudo ./run_tests.py --test-dir ../../submodules/switch/tests/ptf-tests/sai-tests switch
 
 To run switchlink testcases,
 
@@ -130,7 +130,7 @@ Running Openflow Testcases
 
 To run the Openflow testcases,
 
-    sudo ./run_of_tests.py --test-dir tests/of-tests
+    sudo ./run_of_tests.py --test-dir ../../submodules/switch/tests/of-tests
 
 Trying it with bmv2
 ========
