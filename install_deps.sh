@@ -92,6 +92,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build .
 sudo cmake --build . --target install
 cd ..
+cd ..
 
 # Install nnpy
 git clone https://github.com/nanomsg/nnpy.git
@@ -114,4 +115,4 @@ cd ..
 
 cd ..
 
-rm -rf install_tmp
+sudo rm -rf install_tmp
