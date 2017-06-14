@@ -26,6 +26,13 @@ is already installed you may need to apt-get remove it...)
             sudo pip3 install scapy-python3
             sudo pip3 install websockets 
 
+* Git submodules
+
+        We often update the submodules for this repo. This is why we recommend
+        that you run the following command whenever pulling the latest version
+        of master:
+        git submodule update --init --recursive
+
 * Install p4factory dependencies
 
         cd p4factory
