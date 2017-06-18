@@ -100,7 +100,7 @@ SRC_FILES := $(notdir $(wildcard ${TARGET_ROOT}/*.c))
 OBJ_FILES := $(addprefix $(OBJ_DIR)/, $(SRC_FILES:%.c=%.o))
 $(OBJ_FILES) : $(OBJ_DIR)/%.o : %.c ${BM_TENJIN_TARGET}
 	@echo Compiling : $(notdir $@)
-	$(VERBOSE)gcc -o $@ $(COVERAGE_FLAGS) $(DEBUG_FLAGS) $(GLOBAL_INCLUDES) -I $(PUBLIC_INC_PATH) $(GLOBAL_CFLAGS) $(MAIN_CFLAGS) -c $<
+	$(VERBOSE)gcc -o $@ $(COVERAGE_FLAGS) $(DEBUG_FLAGS) $(GLOBAL_INCLUDES) -I $(PUBLIC_INC_PATH) $(GLOBAL_CFLAGS) -c $<
 
 ifdef PLUGIN_LIBS
 BM_PLUGIN_LIBS := $(addprefix $(LIB_DIR)/, $(PLUGIN_LIBS))
