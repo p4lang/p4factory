@@ -62,4 +62,4 @@ client.redirect_table_add_with_do_cpu_encap(sess_hdl, dev_tgt, match_spec)
 
 CPU_PORT_ID = 3
 CPU_MIRROR_SESSION_ID = 250
-client. mirroring_mapping_add(CPU_MIRROR_SESSION_ID, CPU_PORT_ID)
+client.mirroring_mapping_add(CPU_MIRROR_SESSION_ID, CPU_PORT_ID)
